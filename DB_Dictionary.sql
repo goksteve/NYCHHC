@@ -2,9 +2,9 @@ alter session set current_schema = cdw;
 
 select
 --  owner, table_name, 
-  lower(column_name)||',' col_name, data_type
+  lower(column_name)||',' col_name--, data_type
 from v_all_columns
-where owner = 'CDW' AND table_name = 'FACT_VISITS'
+where owner = 'CDW' AND table_name = 'DIM_PATIENTS'
 order by column_id;
 
 
@@ -17,9 +17,9 @@ from
   from v_all_columns
   where 1=1
   and owner in (/*'EPIC_CLARITY','UD_MASTER','HHC_CUSTOM',*/'CDW'/*,'PT005'*/)
---  and table_name = 'VALUE_DECODE'
+  and table_name = 'DIM_PATIENTS'
 --  and column_name like 'FIN%CLASS%'
-  and column_name IN ('ADMITTING_EMP_PROVIDER_ID')
+--  and column_name IN ('ADMITTING_EMP_PROVIDER_ID')
   group by owner, table_name
 ) g
 join all_tables t on t.owner = g.owner and t.table_name = g.table_name --and t.num_rows > 10 

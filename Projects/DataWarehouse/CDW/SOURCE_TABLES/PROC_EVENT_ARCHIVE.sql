@@ -1,3 +1,5 @@
+drop table bkp_proc_event_archive purge;
+
 CREATE TABLE proc_event_archive
 (
   network                     CHAR(3 BYTE) NOT NULL,

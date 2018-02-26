@@ -31,13 +31,13 @@ from
 order by proc_id desc;
 
 select * from dbg_log_data
-where proc_id IN (90)
+where proc_id IN (91)
 order by tstamp desc;
 
 select proc_id, action, cnt, seconds 
 from dbg_performance_data 
 where proc_id = 71
-order by seconds desc;
+order by seconds;
 
 select * from err_event;
 

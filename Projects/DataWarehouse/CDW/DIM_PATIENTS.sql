@@ -1,10 +1,9 @@
 CREATE TABLE dim_patients
 (
-  PATIENT_KEY                NUMBER(12),
-  NETWORK                    CHAR(3 BYTE),
+  PATIENT_KEY                NUMBER(12) NOT NULL,
+  NETWORK                    CHAR(3 BYTE) NOT NULL,
   PATIENT_ID                 NUMBER(12) NOT NULL,
-  ARCHIVE_NUMBER             NUMBER(12),
-  ARCHIVE_TIME               DATE,
+  ARCHIVE_NUMBER             NUMBER(12) NOT NULL,
   NAME                       VARCHAR2(100 BYTE),
   PCP_PROVIDER_ID            NUMBER(12),
   PCP_PROVIDER_NAME          VARCHAR2(60 BYTE),
@@ -26,11 +25,7 @@ CREATE TABLE dim_patients
   RELIGION_ID                NUMBER(12),
   RELIGION_DESC              VARCHAR2(100 BYTE),
   FREE_TEXT_RELIGION         VARCHAR2(100 BYTE),
-  OCCUPATION_ID              NUMBER(12),
-  OCCUPATION_DESC            VARCHAR2(100 BYTE),
   FREE_TEXT_OCCUPATION       VARCHAR2(100 BYTE),
-  EMPLOYER_ID                NUMBER(12),
-  EMPLOYER_NAME              VARCHAR2(100 BYTE),
   FREE_TEXT_EMPLOYER         VARCHAR2(150 BYTE),
   MOTHER_PATIENT_ID          NUMBER(12),
   COLLAPSED_INTO_PATIENT_ID  NUMBER(12),
@@ -49,19 +44,11 @@ CREATE TABLE dim_patients
   SUB_BUILDING_NAME          VARCHAR2(256 BYTE),
   BUILDING_NAME              VARCHAR2(256 BYTE),
   BUILDING_NBR               VARCHAR2(256 BYTE),
-  DEPENDENT_STREET           VARCHAR2(256 BYTE),
-  DEPENDENT_LOCALITY         VARCHAR2(256 BYTE),
-  UK_NHS_NUMBER              NUMBER(10),
-  UK_HA_RES_CODE             VARCHAR2(8 BYTE),
-  UK_PCT_RES_CODE            VARCHAR2(8 BYTE),
   HEAD_OF_HOUSE_PATIENT_ID   NUMBER(12),
-  PATIENT_ARCHIVE_TYPE_ID    NUMBER(12),
-  ARCHIVE_SOURCE_ID          NUMBER(12),
   CURRENT_FLAG               NUMBER(1) DEFAULT 1 NOT NULL CHECK(current_flag IN (0,1)),
   EFFECTIVE_FROM             DATE DEFAULT SYSDATE NOT NULL,
   EFFECTIVE_TO               DATE DEFAULT DATE '9999-12-31',
-  EPIC_FLAG                  CHAR(1 BYTE) DEFAULT 'N',
-  SOURCE                     VARCHAR2(30 BYTE),
+  SOURCE                     VARCHAR2(30 BYTE) DEFAULT 'QCPR',
   LOAD_DT                    DATE DEFAULT TRUNC(SYSDATE),
   LOADED_BY                  VARCHAR2(30 BYTE) DEFAULT SYS_CONTEXT('USERENV','OS_USER')
 )
@@ -78,20 +65,21 @@ PARTITION BY LIST (NETWORK)
   PARTITION SMN VALUES ('SMN')
 );
 
-ALTER TABLE dim_patients ADD CONSTRAINT pk_dim_patients PRIMARY KEY(patient_key) USING INDEX
-(
-  CREATE UNIQUE INDEX pk_dim_patients ON dim_patients(patient_key) PARALLEL 16
-);
+CREATE UNIQUE INDEX pk_dim_patients ON dim_patients(patient_key) PARALLEL 32;
+ALTER INDEX pk_dim_patients NOPARALLEL;
 
-CREATE UNIQUE INDEX uk_dim_patient ON dim_patients
+ALTER TABLE dim_patients ADD CONSTRAINT pk_dim_patients PRIMARY KEY(patient_key) USING INDEX pk_dim_patients;
+
+CREATE UNIQUE INDEX uk1_dim_patient ON dim_patients(patient_id, archive_number, network) PARALLEL 16 LOCAL;
+ALTER INDEX uk1_dim_patient NOPARALLEL;
+
+ALTER TABLE dim_patients ADD CONSTRAINT uk1_dim_patients UNIQUE(patient_id, archive_number, network) USING INDEX uk1_dim_patient;
+
+CREATE UNIQUE INDEX uk2_dim_patient ON dim_patients
 (
   CASE WHEN current_flag = 1 THEN patient_id END,
   CASE WHEN current_flag = 1 THEN network END
 ) PARALLEL 16;
-
-ALTER INDEX pk_dim_patients NOPARALLEL;
-ALTER INDEX uk_dim_patient NOPARALLEL;
-
- UNIQUE(patient_id, network, current_flag) DISABLE;
+ALTER INDEX uk2_dim_patient NOPARALLEL;
 
 CREATE OR REPLACE SYNONYM dim_patient FOR dim_patients;
