@@ -2,7 +2,7 @@ alter session set current_schema = pt005;
 
 UPDATE dbg_process_logs set result = 'Cancelled', end_time = systimestamp
 where end_time is null
-and proc_id < 39
+and proc_id < 106
 ;
 commit;
 
@@ -31,20 +31,11 @@ from
 order by proc_id desc;
 
 select * from dbg_log_data
-where proc_id IN (103)
+where proc_id IN (109)
+--where action in ('Adding data to EVENT','Adding data to PROC_EVENT','Adding data to PROC_EVENT_ARCHIVE','Adding data to RESULT')
 order by tstamp desc;
 
 select proc_id, action, cnt, seconds 
 from dbg_performance_data 
 where proc_id = 71
 order by seconds;
-
-select * from err_event;
-
-select * from etl_incremental_data_load_log;
-
-insert --+ parallel(32)
-into etl_incremental_data_load_log
-select 'PROC_EVENT', network, max(cid), null, sysdate
-from proc_event
-group by network;

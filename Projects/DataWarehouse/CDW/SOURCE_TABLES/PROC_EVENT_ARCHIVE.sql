@@ -70,3 +70,12 @@ COMPOUND TRIGGER
   END AFTER STATEMENT;
 END tr_insert_proc_event_archive;
 /
+
+create index idx_proc_event_archive_cbn_cid on proc_event_archive_cbn(cid) parallel 32;
+create index idx_proc_event_archive_gp1_cid on proc_event_archive_gp1(cid) parallel 32;
+create index idx_proc_event_archive_gp2_cid on proc_event_archive_gp2(cid) parallel 32;
+create index idx_proc_event_archive_nbn_cid on proc_event_archive_nbn(cid) parallel 32;
+create index idx_proc_event_archive_nbx_cid on proc_event_archive_nbx(cid) parallel 32;
+create index idx_proc_event_archive_qhn_cid on proc_event_archive_qhn(cid) parallel 32;
+create index idx_proc_event_archive_sbn_cid on proc_event_archive_sbn(cid) parallel 32;
+create index idx_proc_event_archive_smn_cid on proc_event_archive_smn(cid) parallel 32;
