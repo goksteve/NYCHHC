@@ -4,7 +4,7 @@ select
 --  owner, table_name, 
   lower(column_name)||',' col_name--, data_type
 from v_all_columns
-where owner = 'CDW' AND table_name = 'DIM_PATIENTS'
+where owner = 'CDW' AND table_name = 'BKP_DIM_PATIENTS'
 order by column_id;
 
 
@@ -17,7 +17,7 @@ from
   from v_all_columns
   where 1=1
   and owner in (/*'EPIC_CLARITY','UD_MASTER','HHC_CUSTOM',*/'CDW'/*,'PT005'*/)
-  and table_name = 'DIM_PATIENTS'
+  and table_name = 'BKP_DIM_PATIENTS'
 --  and column_name like 'FIN%CLASS%'
 --  and column_name IN ('ADMITTING_EMP_PROVIDER_ID')
   group by owner, table_name
@@ -42,3 +42,8 @@ from user_segments
 where segment_name like 'PROC_EVENT_ARCHIVE_%'
 group by segment_name
 ORDER BY segment_name;
+
+select ' '''||upper(column_name)||''''
+from user_tab_columns where table_name = 'DIM_PATIENTS'
+order by column_id;
+ 

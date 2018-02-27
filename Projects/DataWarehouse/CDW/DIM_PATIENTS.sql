@@ -70,7 +70,7 @@ ALTER INDEX pk_dim_patients NOPARALLEL;
 
 ALTER TABLE dim_patients ADD CONSTRAINT pk_dim_patients PRIMARY KEY(patient_key) USING INDEX pk_dim_patients;
 
-CREATE UNIQUE INDEX uk1_dim_patient ON dim_patients(patient_id, archive_number, network) PARALLEL 16 LOCAL;
+CREATE UNIQUE INDEX uk1_dim_patient ON dim_patients(patient_id, archive_number, network) PARALLEL 32 LOCAL;
 ALTER INDEX uk1_dim_patient NOPARALLEL;
 
 ALTER TABLE dim_patients ADD CONSTRAINT uk1_dim_patients UNIQUE(patient_id, archive_number, network) USING INDEX uk1_dim_patient;
@@ -79,7 +79,7 @@ CREATE UNIQUE INDEX uk2_dim_patient ON dim_patients
 (
   CASE WHEN current_flag = 1 THEN patient_id END,
   CASE WHEN current_flag = 1 THEN network END
-) PARALLEL 16;
+) PARALLEL 32;
 ALTER INDEX uk2_dim_patient NOPARALLEL;
 
 CREATE OR REPLACE SYNONYM dim_patient FOR dim_patients;

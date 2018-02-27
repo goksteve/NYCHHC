@@ -59,7 +59,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_dw_maintenance AS
     OPEN rcur FOR
     'SELECT * FROM cnf_dw_refresh'||
     CASE WHEN p_condition IS NOT NULL THEN '
-    WHERE '||p_condition 
+    '||p_condition 
     END || '
     ORDER BY etl_step_num';
     

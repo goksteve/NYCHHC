@@ -50,3 +50,23 @@ ALTER INDEX idx_proc_event_archive_cid NOPARALLEL;
 
 ALTER TABLE proc_event_archive ADD CONSTRAINT pk_proc_event_archive
  PRIMARY KEY(network, visit_id, event_id, archive_number) USING INDEX pk_proc_event_archive;
+
+CREATE OR REPLACE TRIGGER tr_insert_proc_event_archive
+FOR INSERT OR UPDATE ON proc_event_archive
+COMPOUND TRIGGER
+  BEFORE STATEMENT IS
+  BEGIN
+    dwm.init_max_cids('PROC_EVENT_ARCHIVE');
+  END BEFORE STATEMENT;
+
+  AFTER EACH ROW IS
+  BEGIN
+    dwm.max_cids(:new.network) := GREATEST(dwm.max_cids(:new.network), :new.cid);
+  END AFTER EACH ROW;
+
+  AFTER STATEMENT IS
+  BEGIN
+    dwm.record_max_cids('PROC_EVENT_ARCHIVE');
+  END AFTER STATEMENT;
+END tr_insert_proc_event_archive;
+/
