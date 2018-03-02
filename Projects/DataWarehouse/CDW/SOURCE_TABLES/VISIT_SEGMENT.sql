@@ -60,3 +60,23 @@ CREATE INDEX idx_visit_segment_cid ON visit_segment(cid, network) LOCAL PARALLEL
 ALTER INDEX idx_visit_segment_cid NOPARALLEL;
 
 GRANT SELECT ON visit_segment TO PUBLIC;
+
+CREATE OR REPLACE TRIGGER tr_insert_visit_segment
+FOR INSERT OR UPDATE ON visit_segment
+COMPOUND TRIGGER
+  BEFORE STATEMENT IS
+  BEGIN
+    dwm.init_max_cids('VISIT_SEGMENT');
+  END BEFORE STATEMENT;
+
+  AFTER EACH ROW IS
+  BEGIN
+    dwm.max_cids(:new.network) := GREATEST(dwm.max_cids(:new.network), :new.cid);
+  END AFTER EACH ROW;
+
+  AFTER STATEMENT IS
+  BEGIN
+    dwm.record_max_cids('VISIT_SEGMENT');
+  END AFTER STATEMENT;
+END tr_insert_visit_segment;
+/

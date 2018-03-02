@@ -16,32 +16,41 @@ GRANT SELECT ON cnf_dw_refresh TO PUBLIC;
 
 truncate table cnf_dw_refresh;
 
-INSERT INTO cnf_dw_refresh VALUES(401, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_cbnd', NULL, NULL, NULL, 'ERR_VISIT');
-INSERT INTO cnf_dw_refresh VALUES(402, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_gp1d', NULL, NULL, NULL, 'ERR_VISIT');
-INSERT INTO cnf_dw_refresh VALUES(403, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_gp2d', NULL, NULL, NULL, 'ERR_VISIT');
-INSERT INTO cnf_dw_refresh VALUES(404, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_nbnd', NULL, NULL, NULL, 'ERR_VISIT');
-INSERT INTO cnf_dw_refresh VALUES(405, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_nbxd', NULL, NULL, NULL, 'ERR_VISIT');
-INSERT INTO cnf_dw_refresh VALUES(406, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_qhnd', NULL, NULL, NULL, 'ERR_VISIT');
-INSERT INTO cnf_dw_refresh VALUES(407, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_sbnd', NULL, NULL, NULL, 'ERR_VISIT');
-INSERT INTO cnf_dw_refresh VALUES(408, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_smnd', NULL, NULL, NULL, 'ERR_VISIT');
+INSERT INTO cnf_dw_refresh VALUES(401, 'MERGE index(t) */', 'PROC', 'SELECT * FROM proc_cbnd', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(402, 'MERGE index(t) */', 'PROC', 'SELECT * FROM proc_gp1d', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(403, 'MERGE index(t) */', 'PROC', 'SELECT * FROM proc_gp2d', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(404, 'MERGE index(t) */', 'PROC', 'SELECT * FROM proc_nbnd', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(405, 'MERGE index(t) */', 'PROC', 'SELECT * FROM proc_nbxd', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(406, 'MERGE index(t) */', 'PROC', 'SELECT * FROM proc_qhnd', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(407, 'MERGE index(t) */', 'PROC', 'SELECT * FROM proc_sbnd', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(408, 'MERGE index(t) */', 'PROC', 'SELECT * FROM proc_smnd', NULL, NULL, NULL, NULL);
 
-INSERT INTO cnf_dw_refresh VALUES(411, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_cbnd vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(412, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_gp1d vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(413, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_gp2d vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(414, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_nbnd vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(415, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_nbxd vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(416, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_qhnd vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(417, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_sbnd vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(418, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_smnd vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(411, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_cbnd', NULL, NULL, NULL, 'ERR_VISIT');
+INSERT INTO cnf_dw_refresh VALUES(412, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_gp1d', NULL, NULL, NULL, 'ERR_VISIT');
+INSERT INTO cnf_dw_refresh VALUES(413, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_gp2d', NULL, NULL, NULL, 'ERR_VISIT');
+INSERT INTO cnf_dw_refresh VALUES(414, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_nbnd', NULL, NULL, NULL, 'ERR_VISIT');
+INSERT INTO cnf_dw_refresh VALUES(415, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_nbxd', NULL, NULL, NULL, 'ERR_VISIT');
+INSERT INTO cnf_dw_refresh VALUES(416, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_qhnd', NULL, NULL, NULL, 'ERR_VISIT');
+INSERT INTO cnf_dw_refresh VALUES(417, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_sbnd', NULL, NULL, NULL, 'ERR_VISIT');
+INSERT INTO cnf_dw_refresh VALUES(418, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT', 'SELECT * FROM visit_smnd', NULL, NULL, NULL, 'ERR_VISIT');
 
-INSERT INTO cnf_dw_refresh VALUES(421, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_cbnd vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(422, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_gp1d vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(423, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_gp2d vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(424, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_nbnd vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(425, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_nbxd vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(426, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_qhnd vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(427, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_sbnd vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(428, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_smnd vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(421, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_cbnd vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(422, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_gp1d vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(423, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_gp2d vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(424, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_nbnd vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(425, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_nbxd vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(426, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_qhnd vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(427, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_sbnd vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(428, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT', 'SELECT vs.* FROM visit_segment_smnd vs JOIN visit v ON v.network = vs.network AND v.visit_id = vs.visit_id', NULL, NULL, NULL, NULL);
+
+INSERT INTO cnf_dw_refresh VALUES(431, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_cbnd vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(432, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_gp1d vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(433, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_gp2d vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(434, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_nbnd vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(435, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_nbxd vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(436, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_qhnd vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(437, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_sbnd vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(438, 'MERGE /*+ PARALLEL(32) index(t) */', 'VISIT_SEGMENT_VISIT_LOCATION', 'SELECT vsl.* FROM visit_segment_visit_locat_smnd vsl JOIN visit v ON v.network = vsl.network AND v.visit_id = vsl.visit_id', NULL, NULL, NULL, NULL);
 
 INSERT INTO cnf_dw_refresh VALUES(501, 'MERGE /*+ PARALLEL(32) index(t) */', 'EVENT', 'SELECT * FROM event_cbnd', NULL, NULL, NULL, 'ERR_EVENT');
 INSERT INTO cnf_dw_refresh VALUES(502, 'MERGE /*+ PARALLEL(32) index(t) */', 'EVENT', 'SELECT * FROM event_gp1d', NULL, NULL, NULL, 'ERR_EVENT');

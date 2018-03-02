@@ -31,3 +31,23 @@ CREATE INDEX idx_visit_segm_location_cid ON visit_segment_visit_location(cid, ne
 ALTER INDEX idx_visit_segm_location_cid NOPARALLEL;
 
 GRANT SELECT ON visit_segment_visit_location TO PUBLIC;
+
+CREATE OR REPLACE TRIGGER tr_insert_visit_segm_loc
+FOR INSERT OR UPDATE ON visit_segment_visit_location
+COMPOUND TRIGGER
+  BEFORE STATEMENT IS
+  BEGIN
+    dwm.init_max_cids('VISIT_SEGMENT_VISIT_LOCATION');
+  END BEFORE STATEMENT;
+
+  AFTER EACH ROW IS
+  BEGIN
+    dwm.max_cids(:new.network) := GREATEST(dwm.max_cids(:new.network), :new.cid);
+  END AFTER EACH ROW;
+
+  AFTER STATEMENT IS
+  BEGIN
+    dwm.record_max_cids('VISIT_SEGMENT_VISIT_LOCATION');
+  END AFTER STATEMENT;
+END tr_insert_visit_segm_loc;
+/

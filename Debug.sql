@@ -31,8 +31,9 @@ from
 order by proc_id desc;
 
 select * from dbg_log_data
-where proc_id IN (110)
---where action in ('Adding data to EVENT','Adding data to PROC_EVENT','Adding data to PROC_EVENT_ARCHIVE','Adding data to RESULT')
+where proc_id IN (120)
+and action like 'Adding data to%'
+and comment_txt not like 'Operation%'
 order by tstamp desc;
 
 select proc_id, action, cnt, seconds 
