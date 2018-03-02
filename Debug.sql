@@ -31,7 +31,7 @@ from
 order by proc_id desc;
 
 select * from dbg_log_data
-where proc_id IN (109)
+where proc_id IN (110)
 --where action in ('Adding data to EVENT','Adding data to PROC_EVENT','Adding data to PROC_EVENT_ARCHIVE','Adding data to RESULT')
 order by tstamp desc;
 

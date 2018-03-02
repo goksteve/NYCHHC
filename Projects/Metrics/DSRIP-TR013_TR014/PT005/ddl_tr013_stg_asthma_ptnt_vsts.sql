@@ -1,0 +1,29 @@
+DROP TABLE tr013_stg_asthma_ptnt_vsts PURGE;
+
+CREATE TABLE tr013_stg_asthma_ptnt_vsts
+(
+  NETWORK                VARCHAR2(3 BYTE),
+  REPORT_RUN_DT          DATE,
+  MSRMNT_YR_END_DT       DATE,
+  BEGIN_DT               DATE,
+  END_DT                 DATE,
+  PATIENT_ID             NUMBER(12),
+  VISIT_ID               NUMBER(12),
+  FACILITY_ID            NUMBER(12),
+  FACILITY_NAME          VARCHAR2(100 BYTE),
+  LATEST_VISIT_TYPE_ID   NUMBER(12),
+  LATEST_VISIT_TYPE      VARCHAR2(50 BYTE),
+  INITIAL_VISIT_TYPE_ID  NUMBER(12),
+  INITIAL_VISIT_TYPE     VARCHAR2(50 BYTE),
+  ADMISSION_DATE_TIME    DATE,
+  DISCHARGE_DATE_TIME    DATE,
+  ICD_CODE               VARCHAR2(100 BYTE),
+  PROBLEM_DESCRIPTION    VARCHAR2(1024 BYTE),
+  PAYER_ID               NUMBER(12),
+  FINANCIAL_CLASS_ID     NUMBER(12),
+  FIN_PLAN_NAME          VARCHAR2(100 BYTE),
+  PTNT_PRB_RNUM          NUMBER,
+  PTNT_VST_RNUM          NUMBER,
+  CONSTRAINT pk_stg_asthma_ptnt_visit PRIMARY KEY(network,patient_id,visit_id)
+);
+
