@@ -111,7 +111,7 @@ CREATE OR REPLACE TRIGGER tr_v_dim_patients
 INSTEAD OF INSERT ON v_dim_patients FOR EACH ROW
 BEGIN
   IF :new.change <> 'NEW' THEN
-    UPDATE dim_patients SET effective_to = SYSDATE, current_flag = 0
+    UPDATE dim_patients SET effective_to = TRUNC(SYSDATE), current_flag = 0
     WHERE ROWID = :new.row_id;
   END IF;
   
