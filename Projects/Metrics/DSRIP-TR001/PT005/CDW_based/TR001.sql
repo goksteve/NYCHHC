@@ -58,12 +58,11 @@ FROM
   JOIN cdw.visit v
     ON v.discharge_date_time >= dt.begin_dt
 --   AND v.discharge_date_time < dt.end_dt -- this condition is commented-out because we need 'OP' and 'CP' Visits up to the current date 
-  JOIN cdw.visit_type vt ON vt.visit_type_id = v.visit_type_id AND vt.abbreviation IN ('IP','OP','CP')
-  JOIN cdw.active_problem ap ON ap.visit_id = v.visit_id
-  JOIN cdw.result_field rf ON rf.data_element_id = ap.data_element_id
-  JOIN cdw.problem prob ON prob.patient_id = ap.patient_id AND prob.problem_number = ap.problem_number
-  JOIN cdw.problem_icd_diagnosis pid ON pid.patient_id = prob.patient_id AND pid.problem_number = ap.problem_number
-  JOIN ref_hedis_value_sets vs ON vs.code = pid.icd_diagnosis_code AND vs.value_set_name = 'Mental Illness'
+  JOIN cdw.ref_visit_types vt ON vt.visit_type_id = v.visit_type_id AND vt.abbreviation IN ('IP','OP','CP')
+  JOIN cdw.active_problem ap ON ap.network = v.network AND ap.visit_id = v.visit_id
+  JOIN cdw.problem prob ON prob.network = ap.network AND prob.patient_id = ap.patient_id AND prob.problem_number = ap.problem_number
+  JOIN cdw.problem_icd_diagnosis pid ON pid.network = prob.network AND pid.patient_id = prob.patient_id AND pid.problem_number = ap.problem_number
+  JOIN pt005.ref_hedis_value_sets vs ON vs.code = pid.icd_diagnosis_code AND vs.value_set_name = 'Mental Illness'
  UNION
   SELECT
     dt.report_period_start_dt,
@@ -80,10 +79,10 @@ FROM
     v.resident_emp_provider_id
   FROM dt
   JOIN cdw.visit v ON v.admission_date_time >= dt.begin_dt  
-  JOIN cdw.visit_type vt ON vt.visit_type_id = v.visit_type_id AND vt.abbreviation IN ('OP','CP')
-  JOIN cdw.visit_segment_visit_location vl ON vl.visit_id = v.visit_id
-  JOIN cdw.hhc_location_dimension ld ON ld.location_id = vl.location_id
-  JOIN cdw.hhc_clinic_codes cc ON cc.code = ld.clinic_code AND cc.service = 'Mental Health'
+  JOIN cdw.ref_visit_types vt ON vt.visit_type_id = v.visit_type_id AND vt.abbreviation IN ('OP','CP')
+  JOIN cdw.visit_segment_visit_location vl ON vl.network = v.network AND vl.visit_id = v.visit_id
+  JOIN cdw.hhc_location_dimension ld ON ld.network = vl.network AND ld.location_id = vl.location_id
+  JOIN cdw.hhc_clinic_codes cc ON cc.cc.code = ld.clinic_code AND cc.service = 'Mental Health'
 ) q
 JOIN cdw.hhc_patient_dimension p ON p.patient_id = q.patient_id
 JOIN cdw.financial_class fc ON fc.financial_class_id = q.financial_class_id;

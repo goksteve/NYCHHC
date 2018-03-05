@@ -72,3 +72,23 @@ ALTER TABLE visit ADD CONSTRAINT pk_visit PRIMARY KEY(visit_id, network) USING I
 
 exec DBMS_ERRLOG.CREATE_ERROR_LOG('VISIT','ERR_VISIT');
 ALTER TABLE err_visit ADD entry_ts TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL;
+
+CREATE OR REPLACE TRIGGER tr_insert_visit
+FOR INSERT OR UPDATE ON visit
+COMPOUND TRIGGER
+  BEFORE STATEMENT IS
+  BEGIN
+    dwm.init_max_cids('VISIT');
+  END BEFORE STATEMENT;
+
+  AFTER EACH ROW IS
+  BEGIN
+    dwm.max_cids(:new.network) := GREATEST(dwm.max_cids(:new.network), :new.cid);
+  END AFTER EACH ROW;
+
+  AFTER STATEMENT IS
+  BEGIN
+    dwm.record_max_cids('VISIT');
+  END AFTER STATEMENT;
+END tr_insert_visit;
+/

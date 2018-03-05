@@ -12,7 +12,7 @@ INSERT INTO dim_nyc_hc_networks VALUES('NBX', 'North Bronx');
 INSERT INTO dim_nyc_hc_networks VALUES('QHN', 'Queens Health');
 INSERT INTO dim_nyc_hc_networks VALUES('SBN', 'South Brooklyn');
 INSERT INTO dim_nyc_hc_networks VALUES('SMN', 'South Manhattan');
-INSERT INTO dim_nyc_hc_networks VALUES('NYH', 'New York Health Organization');
-INSERT INTO dim_nyc_hc_networks VALUES('USH', 'United States Health Organization');
+--INSERT INTO dim_nyc_hc_networks VALUES('NYH', 'New York Health Organization');
+--INSERT INTO dim_nyc_hc_networks VALUES('USH', 'United States Health Organization');
 
 COMMIT;

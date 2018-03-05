@@ -13,4 +13,14 @@ CREATE TABLE log_incremental_data_load
 
 ALTER TABLE log_incremental_data_load ADD CONSTRAINT pk_incremental_data_load_log PRIMARY KEY(table_name, network);
 
+CREATE OR REPLACE TRIGGER bur_log_incremental_data_load
+BEFORE UPDATE ON log_incremental_data_load FOR EACH ROW
+BEGIN
+  IF :new.max_cid <> NVL(:old.max_cid, 0) THEN
+    :new.prev_max_cid := :old.max_cid;
+    :new.load_dt := SYSDATE;
+  END IF;
+END;
+/
+
 GRANT SELECT ON log_incremental_data_load TO PUBLIC;
