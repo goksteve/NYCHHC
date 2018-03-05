@@ -1,5 +1,6 @@
 CREATE OR REPLACE VIEW v_fact_visits AS
 SELECT
+ -- 05-Mar-2018, GK
   vi.network,
   vi.visit_id,
   p.patient_key,
@@ -18,7 +19,6 @@ SELECT
   vi.visit_type_id final_visit_type_id,
   vi.visit_status_id,
   vi.activation_time visit_activation_time,
-  vi.discharge_type_key,
   vi.financial_class_id,
   vi.physician_service_id,
   dp.payer_key first_payer_key,
@@ -44,7 +44,6 @@ FROM
     vs.activation_time,
     v.physician_service_id,
     v.financial_class_id,
-    dim_dtyp.discharge_type_key,
     LAST_VALUE(vl.location_id) OVER
     (
       PARTITION BY v.network, v.visit_id ORDER BY vl.visit_segment_number DESC, vl.location_id DESC
@@ -56,11 +55,7 @@ FROM
     ON vs.network = v.network AND vs.visit_id = v.visit_id AND vs.visit_segment_number = 1
   LEFT JOIN visit_segment_visit_location vl
     ON vl.network = v.network AND vl.visit_id = v.visit_id
-  LEFT JOIN discharge_type dtyp
-    ON v.discharge_type_id=dtyp.discharge_type_id
-  LEFT JOIN DIM_DISCHARGE_TYPE dim_dtyp
-    ON dtyp.name=dim_dtyp.discharge_type_desc  
---  where v.visit_id= 20792125 and v.network='CBN' 
+--  where v.visit_id= 20792125 and v.network='CBN'     
 ) vi
 JOIN dim_patients p
   ON p.network = vi.network AND p.patient_id = vi.patient_id AND p.current_flag=1
