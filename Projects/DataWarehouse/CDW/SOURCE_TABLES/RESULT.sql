@@ -40,6 +40,9 @@ ALTER TABLE result ADD CONSTRAINT pk_result
 CREATE INDEX idx_result_cid ON result(cid, network) LOCAL PARALLEL 32;
 ALTER INDEX idx_result_cid NOPARALLEL;
 
+CREATE BITMAP INDEX bidx_result_dtelem_id ON result(data_element_id, network) LOCAL PARALLEL 32;
+ALTER INDEX bidx_result_dtelem_id NOPARALLEL;
+
 CREATE OR REPLACE TRIGGER tr_insert_result
 FOR INSERT OR UPDATE ON result
 COMPOUND TRIGGER
