@@ -4,6 +4,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_dw_maintenance AS
    
   Change history
   ------------------------------------------------------------------------------
+  06-MAR-2018, OK: added procedure REFRESH_INCREMENTAL; 
   16-FEB-2018, OK added procedures INIT_MAX_CIDS and RECORD_MAX_CIDS;
   01-FEB-2018, OK: created
 */
@@ -91,8 +92,11 @@ CREATE OR REPLACE PACKAGE BODY pkg_dw_maintenance AS
     CLOSE rcur;
     RAISE;
   END;
-
+  
+  
   PROCEDURE refresh_incremental IS
   BEGIN
+    refresh_data('WHERE table_name IN (''PROC'',''VISIT'',''VISIT_SEGMENT'',''VISIT_SEGMENT_VISIT_LOCATION'',''EVENT'',''PROC_EVENT'',''PROC_EVENT_ARCHIVE'',''RESULT'')');
+  END;
 END;
 /
