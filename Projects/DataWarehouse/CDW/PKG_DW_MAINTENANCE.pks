@@ -4,6 +4,7 @@ CREATE OR REPLACE PACKAGE pkg_dw_maintenance AS
    
   Change history
   ------------------------------------------------------------------------------
+  06-MAR-2018, OK: added procedure REFRESH_INCREMENTAL;
   16-FEB-2018, OK added procedures INIT_MAX_CIDS and RECORD_MAX_CIDS;
   01-FEB-2018, OK: created
 */
@@ -16,6 +17,8 @@ CREATE OR REPLACE PACKAGE pkg_dw_maintenance AS
   PROCEDURE record_max_cids(p_table_name IN VARCHAR2); -- saves new MAX_CIDS values in the table ETL_MAX_CIDS;
 
   PROCEDURE refresh_data(p_condition IN VARCHAR2 DEFAULT NULL);
+  
+  PROCEDURE refresh_increental;
 END;
 /
 

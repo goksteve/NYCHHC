@@ -91,5 +91,8 @@ CREATE OR REPLACE PACKAGE BODY pkg_dw_maintenance AS
     CLOSE rcur;
     RAISE;
   END;
+
+  PROCEDURE refresh_incremental IS
+  BEGIN
 END;
 /
