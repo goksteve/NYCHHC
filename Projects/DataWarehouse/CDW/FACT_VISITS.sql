@@ -27,7 +27,8 @@ CREATE TABLE fact_visits
   first_payer_key           NUMBER(12),
   source	                  VARCHAR2(64 BYTE) DEFAULT 'QCPR',
   load_date	                DATE DEFAULT SYSDATE,
-  loaded_by                 VARCHAR2(30) DEFAULT SYS_CONTEXT('USERENV','OS_USER')
+  loaded_by                 VARCHAR2(30) DEFAULT SYS_CONTEXT('USERENV','OS_USER'),
+  cid                       NUMBER(14)
 )
 COMPRESS BASIC
 PARTITION BY LIST(network)
@@ -49,3 +50,23 @@ CREATE UNIQUE INDEX pk_fact_visits ON fact_visits(visit_id, network) LOCAL PARAL
 ALTER INDEX pk_fact_visits NOPARALLEL;
 
 ALTER TABLE fact_visits ADD CONSTRAINT pk_fact_visits PRIMARY KEY(visit_id, network) USING INDEX pk_fact_visits;
+
+CREATE OR REPLACE TRIGGER tr_insert_fact_visits
+FOR INSERT OR UPDATE ON fact_visits
+COMPOUND TRIGGER
+  BEFORE STATEMENT IS
+  BEGIN
+    dwm.init_max_cids('FACT_VISITS');
+  END BEFORE STATEMENT;
+
+  AFTER EACH ROW IS
+  BEGIN
+    dwm.max_cids(:new.network) := GREATEST(dwm.max_cids(:new.network), :new.cid);
+  END AFTER EACH ROW;
+
+  AFTER STATEMENT IS
+  BEGIN
+    dwm.record_max_cids('FACT_VISITS');
+  END AFTER STATEMENT;
+END tr_insert_fact_visits;
+/
