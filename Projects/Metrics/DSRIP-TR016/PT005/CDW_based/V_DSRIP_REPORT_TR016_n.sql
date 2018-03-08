@@ -8,6 +8,43 @@ WITH
       ADD_MONTHS(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')), -12) year_back_dt
     FROM dual
   ),
+  a1c_glucose_tests AS
+  (
+    SELECT  --+ ordered full(r) use_hash(e) use_hash(v) use_hash(mdm) materialize
+      NVL(TO_CHAR(mdm.eid), v.network||'-'||v.patient_id) patient_gid,
+      v.network,
+      v.facility_id,
+      v.patient_id,
+      v.visit_id,
+      v.visit_number,
+      v.visit_type_id,
+      vt.name visit_type,
+      v.admission_date_time admission_dt,
+      v.discharge_date_time discharge_dt,
+      mc.criterion_id test_type_id,
+      e.event_id,
+      e.date_time AS result_dt,
+      r.data_element_id,
+      rf.name data_element_name,
+      r.value result_value,
+      ROW_NUMBER() OVER(PARTITION BY NVL(TO_CHAR(mdm.eid), v.network||'-'||v.patient_id) ORDER BY e.date_time DESC, r.data_element_id) rnum
+    FROM report_dates dt
+    JOIN meta_conditions mc
+      ON mc.criterion_id IN (4, 23) -- A1C and Glucose Level results
+    JOIN cdw.result r
+      ON r.network = mc.network AND r.data_element_id = mc.value
+    JOIN cdw.event e
+      ON e.network = r.network AND e.visit_id = r.visit_id AND e.event_id = r.event_id
+     AND e.date_time >= dt.year_back_dt AND e.date_time < db.report_dt 
+    JOIN cdw.visit v
+      ON v.network = r.network AND v.visit_id = r.visit_id
+    JOIN cdw.ref_visit_types vt
+      ON vt.visit_type_id = v.visit_type_id
+    JOIN cdw.result_field rf
+      ON rf.network = r.network AND rf.data_element_id = r.data_element_id
+    LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
+      ON mdm.network = v.network AND mdm.patientid = TO_CHAR(v.patient_id) AND mdm.epic_flag = 'N'
+  ),
   prescriptions AS
   (
     SELECT --+ materialize
@@ -21,13 +58,15 @@ WITH
       pr.order_dt AS start_dt,
       NVL(pr.rx_dc_dt, DATE '9999-12-31') AS stop_dt,
       ROW_NUMBER() OVER(PARTITION BY NVL(TO_CHAR(mdm.eid), pr.network||'-'||pr.patient_id), NVL(dnm.drug_type_id, dscr.drug_type_id) ORDER BY pr.order_dt DESC) rnum
-    FROM report_dates rd
+    FROM report_dates dt
     JOIN fact_prescriptions pr
-      ON pr.order_dt <= rd.year_back_dt AND pr.network NOT IN ('QHN','SBN') -- exclude Networks that have switched to EPIC
+      ON pr.order_dt <= dt.year_back_dt AND pr.network NOT IN ('QHN','SBN') -- exclude Networks that switched to EPIC
     LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
       ON mdm.network = pr.network AND mdm.patientid = TO_CHAR(pr.patient_id) AND mdm.epic_flag = 'N'
-    LEFT JOIN ref_drug_names dnm ON dnm.drug_name = pr.drug_name 
-    LEFT JOIN ref_drug_descriptions dscr ON dscr.drug_description = pr.drug_description 
+    LEFT JOIN ref_drug_names dnm
+      ON dnm.drug_name = pr.drug_name 
+    LEFT JOIN ref_drug_descriptions dscr
+      ON dscr.drug_description = pr.drug_description 
     WHERE dnm.drug_type_id IN (33, 34) OR dscr.drug_type_id IN (33, 34) -- Diabetes and Antipsychotic Medications
   ),
   diagnoses AS
@@ -67,30 +106,6 @@ WITH
     FROM prescriptions
     WHERE drug_type_id = 33 -- Diabetes Prescriptions
     GROUP BY patient_gid
-  ),
-  a1c_glucose_tests AS
-  (
-    SELECT --+ materialize use_hash(mdm)
-      NVL(TO_CHAR(mdm.eid), a1c.network||'-'||a1c.patient_id) patient_gid,
-      a1c.network,
-      a1c.facility_id,
-      a1c.patient_id,
-      a1c.test_type_id,
-      a1c.visit_id,
-      a1c.visit_number,
-      a1c.visit_type_id,
-      a1c.visit_type,
-      a1c.admission_dt,
-      a1c.discharge_dt,
-      a1c.result_dt,
-      a1c.data_element_name,
-      a1c.result_value,
-      ROW_NUMBER() OVER(PARTITION BY NVL(TO_CHAR(mdm.eid), a1c.network||'-'||a1c.patient_id) ORDER BY a1c.result_dt DESC) rnum
-    FROM report_dates dt
-    JOIN dsrip_tr016_a1c_glucose_rslt a1c
-      ON a1c.result_dt >= dt.year_back_dt AND a1c.result_dt < dt.report_dt -- OK: this condition is not probably needed but it does not hurt to have it
-    LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
-      ON mdm.network = a1c.network AND mdm.patientid = TO_CHAR(a1c.patient_id) AND mdm.epic_flag = 'N'
   ),
   pcp_info AS
   (
@@ -136,22 +151,33 @@ SELECT --+ USE_HASH(f pd pm pr)
   tst.result_dt,
   tst.data_element_name,
   tst.result_value,
-  ROW_NUMBER() OVER(PARTITION BY amed.patient_gid, tst.network, tst.visit_id ORDER BY CASE WHEN pm.payer_group = 'Medicaid' THEN 1 ELSE 2 END, pr.payer_rank) rnum  
+  ROW_NUMBER() OVER
+  (
+    PARTITION BY amed.patient_gid, tst.network, tst.visit_id
+    ORDER BY CASE WHEN pm.payer_group = 'Medicaid' THEN 1 ELSE 2 END, pr.payer_rank
+  ) rnum  
 FROM prescriptions amed
 CROSS JOIN report_dates dt
-LEFT JOIN pcp_info pcp ON pcp.patient_gid = amed.patient_gid
-LEFT JOIN diabetes_diagnoses diab ON diab.patient_gid = amed.patient_gid 
-LEFT JOIN psychotic_diagnoses psych ON psych.patient_gid = amed.patient_gid AND psych.rnum = 1
-LEFT JOIN diabetes_prescriptions dmed ON dmed.patient_gid = amed.patient_gid
-LEFT JOIN a1c_glucose_tests tst ON tst.patient_gid = amed.patient_gid AND tst.rnum = 1
+LEFT JOIN pcp_info pcp
+  ON pcp.patient_gid = amed.patient_gid
+LEFT JOIN diabetes_diagnoses diab
+  ON diab.patient_gid = amed.patient_gid 
+LEFT JOIN psychotic_diagnoses psych
+  ON psych.patient_gid = amed.patient_gid AND psych.rnum = 1
+LEFT JOIN diabetes_prescriptions dmed
+  ON dmed.patient_gid = amed.patient_gid
+LEFT JOIN a1c_glucose_tests tst
+  ON tst.patient_gid = amed.patient_gid AND tst.rnum = 1
 LEFT JOIN patient_dimension pd
   ON pd.network = NVL(tst.network, amed.network)
  AND pd.patient_id = NVL(tst.patient_id, amed.patient_id)
  AND pd.current_flag = 1 
 LEFT JOIN facility_dimension f
   ON f.network = NVL(tst.network, amed.network) AND f.facility_id = amed.facility_id
-LEFT JOIN dsrip_tr016_payers pr ON pr.network = tst.network AND pr.visit_id = tst.visit_id
-LEFT JOIN pt008.payer_mapping pm ON pm.network = pr.network AND pm.payer_id = pr.payer_id
+LEFT JOIN dsrip_tr016_payers pr
+  ON pr.network = tst.network AND pr.visit_id = tst.visit_id
+LEFT JOIN pt008.payer_mapping pm
+  ON pm.network = pr.network AND pm.payer_id = pr.payer_id
 WHERE amed.rnum = 1 AND amed.drug_type_id = 34 -- Antipsychotic Medications
 AND pd.birthdate > ADD_MONTHS(dt.report_dt, -12*65) -- not 65 yet
 AND pd.birthdate <= ADD_MONTHS(dt.report_dt, -12*18) -- 18 or older
