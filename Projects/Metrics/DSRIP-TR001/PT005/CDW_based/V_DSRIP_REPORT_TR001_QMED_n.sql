@@ -18,7 +18,7 @@ WITH
   (
     SELECT /*+ materialize */ *
     FROM
-    (
+    (  -- Visits with BH Diagnoses:
       SELECT --+ ordered use_nl(ap cmv) index(ap)
         dt.report_period_start_dt,
         vst.network,
@@ -51,7 +51,7 @@ WITH
       JOIN meta_conditions mc
         ON mc.qualifier = DECODE(cmv.coding_scheme_id, 5, 'ICD9', 'ICD10')
        AND mc.value = cmv.code AND mc.criterion_id = 9 -- DIAGNOSES:MENTAL HEALTH
-     UNION
+     UNION -- Visits at BH Departments:
       SELECT
         dt.report_period_start_dt,
         vst.network,
@@ -242,7 +242,7 @@ FROM
   LEFT JOIN cdw.dim_providers prv
     ON prv.network = vpr.network AND prv.provider_id = vpr.provider_id
   WHERE q.visit_type_cd = 'IP'
-   AND q.patient_dob <= ADD_MONTHS(q.discharge_dt, -72) -- 6 years old or older as of discharge date
+   AND q.patient_dob <= ADD_MONTHS(q.discharge_dt, -72) -- 6 years or older as of discharge date
    AND (q.re_admission_dt IS NULL OR q.re_admission_dt >= q.discharge_dt+30) -- ignore IP Visits with re-admissions
 )
 WHERE payer_rnum = 1 AND provider_rnum = 1;
