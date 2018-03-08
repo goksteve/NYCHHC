@@ -19,7 +19,8 @@ CREATE TABLE fact_results
   result_value                   VARCHAR2(1023 BYTE),
   decode_source_id               VARCHAR2(40 BYTE),
   decoded_value                  VARCHAR2(1300 BYTE),
-  load_dt                        DATE DEFAULT TRUNC(SYSDATE)
+  load_dt                        DATE DEFAULT TRUNC(SYSDATE),
+  cid                            NUMBER(14)  
 )
 COMPRESS BASIC 
 PARTITION BY LIST(network)
@@ -45,3 +46,23 @@ ALTER INDEX pk_fact_results NOPARALLEL;
 ALTER TABLE fact_results ADD CONSTRAINT pk_fact_results
 PRIMARY KEY(event_id, result_report_number, multi_field_occurrence_number, item_number, visit_id, network)
 USING INDEX pk_fact_results;
+
+CREATE OR REPLACE TRIGGER tr_insert_fact_results
+FOR INSERT OR UPDATE ON fact_results
+COMPOUND TRIGGER
+  BEFORE STATEMENT IS
+  BEGIN
+    dwm.init_max_cids('FACT_RESULTS');
+  END BEFORE STATEMENT;
+
+  AFTER EACH ROW IS
+  BEGIN
+    dwm.max_cids(:new.network) := GREATEST(dwm.max_cids(:new.network), :new.cid);
+  END AFTER EACH ROW;
+
+  AFTER STATEMENT IS
+  BEGIN
+    dwm.record_max_cids('FACT_RESULTS');
+  END AFTER STATEMENT;
+END tr_insert_fact_results;
+/

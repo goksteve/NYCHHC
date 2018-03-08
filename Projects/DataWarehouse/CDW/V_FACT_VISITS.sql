@@ -1,6 +1,6 @@
 CREATE OR REPLACE VIEW v_fact_visits AS
 SELECT
- -- 05-Mar-2018, GK
+ -- 06-Mar-2018, GK
   vi.network,
   vi.visit_id,
   p.patient_key,
@@ -14,8 +14,8 @@ SELECT
   vi.admission_date_time AS admission_dt,
   FLOOR((ADD_MONTHS(TRUNC(vi.admission_date_time,'YEAR'),12)-1 - p.birthdate)/365)  patient_age_at_admission,
   vi.discharge_date_time discharge_dt,
-  vi.visit_number,
-  vi.initial_visit_type_id,
+  nvl(vi.visit_number, vsn.visit_secondary_number) AS visit_number, 
+  nvl(vi.initial_visit_type_id, vi.visit_type_id) AS initial_visit_type_id,
   vi.visit_type_id final_visit_type_id,
   vi.visit_status_id,
   vi.activation_time visit_activation_time,
@@ -77,5 +77,26 @@ LEFT JOIN visit_segment_payer vsp
   ON vsp.visit_id=vi.visit_id AND vsp.network=vi.network AND vsp.visit_segment_number=1 AND vsp.payer_number=1
 LEFT JOIN dim_payers dp 
   ON dp.payer_id=vsp.payer_id AND dp.network=vsp.network  
+LEFT JOIN visit_secondary_number vsn
+  ON vsn.visit_id = vi.visit_id
+ AND vsn.network = vi.network
+ AND vsn.visit_sec_nbr_type_id =
+ CASE
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'CBN' AND vi.facility_id = 4) THEN 22
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'CBN' AND vi.facility_id = 5) THEN 21
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'GP1' AND vi.facility_id = 1 AND visit_sec_nbr_nbr = 1) THEN 18
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'GP1' AND vi.facility_id = 2 AND visit_sec_nbr_nbr = 1) THEN 12
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'GP1' AND vi.facility_id = 3 AND visit_sec_nbr_nbr = 1) THEN 14
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'GP2' AND vi.facility_id = 2) THEN 4
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'NBN' AND vi.facility_id IN (1, 2)) THEN 9
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'NBX' AND vi.facility_id = 2) THEN 13
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'QHN' AND vi.facility_id = 2) THEN 13
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'SBN' AND vi.facility_id = 1) THEN 11
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'SMN' AND vi.facility_id = 1) THEN 15
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'SMN' AND vi.facility_id = 2) THEN 12
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'SMN' AND vi.facility_id = 7) THEN 17
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'SMN' AND vi.facility_id = 8) THEN 18
+  WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'SMN' AND vi.facility_id = 9) THEN 24
+END   
 WHERE vi.loc_rnum = 1;
 --AND p.patient_id=182221 and p.network='CBN' and p.current_flag=1;
