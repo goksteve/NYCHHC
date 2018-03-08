@@ -83,3 +83,5 @@ CREATE UNIQUE INDEX uk2_dim_patient ON dim_patients
 ALTER INDEX uk2_dim_patient NOPARALLEL;
 
 CREATE OR REPLACE SYNONYM dim_patient FOR dim_patients;
+
+GRANT SELECT ON dim_patients TO PUBLIC WITH GRANT OPTION;

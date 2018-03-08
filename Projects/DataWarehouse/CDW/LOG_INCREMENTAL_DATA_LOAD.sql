@@ -2,8 +2,8 @@ exec dbm.drop_tables('LOG_INCREMENTAL_DATA_LOAD');
 
 CREATE TABLE log_incremental_data_load
 (
-  dbname        CHAR(7 BYTE) as (network||'DW01'),
-  schema_name   VARCHAR2(30 BYTE) DEFAULT 'UD_MASTER' NOT NULL, 
+  dbname        VARCHAR(20 BYTE) NOT NULL,
+  schema_name   VARCHAR2(30 BYTE) NOT NULL, 
   table_name    VARCHAR2(30 BYTE),
   network       CHAR(3 BYTE) NOT NULL,
   max_cid       NUMBER(14) NOT NULL,

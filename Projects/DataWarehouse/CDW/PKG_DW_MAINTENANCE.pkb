@@ -41,8 +41,13 @@ CREATE OR REPLACE PACKAGE BODY pkg_dw_maintenance AS
       WHEN MATCHED THEN UPDATE
       SET t.prev_max_cid = t.max_cid, t.max_cid = s.max_cid, t.load_dt = SYSDATE
       WHERE t.max_cid <> s.max_cid
-      WHEN NOT MATCHED THEN INSERT(table_name, network, max_cid, load_dt)
-      VALUES(s.table_name, s.network, s.max_cid, SYSDATE);
+      WHEN NOT MATCHED THEN INSERT(dbname, schema_name, table_name, network, max_cid, load_dt)
+      VALUES
+      (
+        CASE WHEN s.table_name LIKE 'FACT%' THEN 'HIGGSDV3' ELSE s.network||'DW01' END,
+        CASE WHEN s.table_name LIKE 'FACT%' THEN 'CDW' ELSE 'UD_MASTER' END,
+        s.table_name, s.network, s.max_cid, SYSDATE
+      );
       
       idx := dwm.max_cids.NEXT(idx);
     END LOOP;
@@ -50,8 +55,9 @@ CREATE OR REPLACE PACKAGE BODY pkg_dw_maintenance AS
   
   
   PROCEDURE refresh_data(p_condition IN VARCHAR2 DEFAULT NULL) IS
-    rcur  SYS_REFCURSOR;
-    rec   cnf_dw_refresh%ROWTYPE;
+    rcur    SYS_REFCURSOR;
+    rec     cnf_dw_refresh%ROWTYPE;
+    v_msg   VARCHAR2(2048);
   BEGIN
     xl.open_log('DWM.REFRESH_DATA', 'Refreshing DW'||CASE WHEN p_condition IS NOT NULL THEN ': '||p_condition END, TRUE);
     
@@ -84,7 +90,25 @@ CREATE OR REPLACE PACKAGE BODY pkg_dw_maintenance AS
     
     CLOSE rcur;
     
-    xl.close_log('Successfully completed');
+    SELECT
+      'Successfully completed'||CHR(10)||
+      '-------------------------------------------------------------------------'||CHR(10)||
+      concat_v2_set
+      (
+        CURSOR
+        (
+          SELECT action||':'||CHR(9)||comment_txt 
+          FROM dbg_log_data
+          WHERE proc_id = xl.get_current_proc_id
+          AND action LIKE 'Adding data to%'
+          AND comment_txt NOT LIKE 'Operation%'
+          ORDER BY tstamp
+        ),
+        CHR(10)
+      )
+    INTO v_msg FROM dual;
+    
+    xl.close_log(v_msg);
   EXCEPTION
    WHEN OTHERS THEN
     ROLLBACK;

@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION insurance_type(p_plan_group IN VARCHAR2) RETURN VARCHAR2 RESULT_CACHE AS
+CREATE OR REPLACE FUNCTION insurance_type(p_plan_group IN VARCHAR2) RETURN VARCHAR2 DETERMINISTIC RESULT_CACHE AS
 BEGIN
   RETURN CASE
     WHEN p_plan_group IN ('Medicaid', 'Medicare') OR p_plan_group IS NULL THEN p_plan_group

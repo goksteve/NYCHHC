@@ -31,3 +31,5 @@ BEGIN
   :new.payer_key := seq_payer_mappings.NEXTVAL;
 END;
 /
+
+GRANT SELECT ON dim_payers TO public WITH GRANT OPTION;

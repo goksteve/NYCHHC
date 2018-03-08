@@ -70,3 +70,5 @@ COMPOUND TRIGGER
   END AFTER STATEMENT;
 END tr_insert_proc_event_archive;
 /
+
+GRANT SELECT ON proc_event_archive TO PUBLIC WITH GRANT OPTION;

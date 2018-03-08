@@ -36,7 +36,7 @@ CREATE TABLE dim_hc_departments
   CONSTRAINT fk_dim_hc_department_facility FOREIGN KEY(facility_key) REFERENCES dim_hc_facilities
 ) COMPRESS BASIC;
 
-GRANT SELECT ON dim_hc_departments TO PUBLIC;
+GRANT SELECT ON dim_hc_departments TO PUBLIC WITH GRANT OPTION;
 
 CREATE OR REPLACE TRIGGER bir_dim_hc_departments
 BEFORE INSERT ON dim_hc_departments FOR EACH ROW
