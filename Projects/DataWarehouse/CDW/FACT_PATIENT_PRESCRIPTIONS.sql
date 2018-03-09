@@ -6,7 +6,7 @@ CREATE TABLE fact_patient_prescriptions
   facility_id        NUMBER(12),
   patient_id         NUMBER(12) NOT NULL,
   mrn                VARCHAR2(512 BYTE),
-  order_dt           DATE,
+  order_dt           DATE NOT NULL,
   drug_name          VARCHAR2(175 BYTE),
   drug_description   VARCHAR2(512 BYTE),
   rx_quantity        NUMBER(12),
@@ -14,11 +14,10 @@ CREATE TABLE fact_patient_prescriptions
   frequency          VARCHAR2(2048 BYTE),
   rx_dc_dt           DATE,
   rx_exp_dt          DATE,
-  load_date          DATE DEFAULT TRUNC(SYSDATE)
+  load_dt            DATE DEFAULT TRUNC(SYSDATE)
 )
 COMPRESS BASIC
-PARALLEL 32
-PARTITION BY RANGE(order_dt)INTERVAL ( INTERVAL '1' YEAR )
+PARTITION BY RANGE(order_dt) INTERVAL ( INTERVAL '1' YEAR )
 SUBPARTITION BY LIST (network)
 SUBPARTITION TEMPLATE
 (
@@ -31,7 +30,9 @@ SUBPARTITION TEMPLATE
     SUBPARTITION sbn VALUES ('SBN'),
     SUBPARTITION smn VALUES ('SMN')
 )
-(PARTITION old_data VALUES LESS THAN (DATE '2010-01-01'));
+(
+  PARTITION old_data VALUES LESS THAN (DATE '2010-01-01')
+);
 
 CREATE BITMAP INDEX bmi_drag_prescription_desc
 ON fact_patient_prescriptions(drug_description)

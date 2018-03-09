@@ -1,7 +1,6 @@
-CREATE OR REPLACE VIEW v_ref_drug_descriptions
- -- 08-Mar-2018, SG: created
- AS
+CREATE OR REPLACE VIEW v_ref_drug_descriptions AS
 WITH
+ -- 08-Mar-2018, SG: created
   dscr as
   (
     SELECT --+ materialize

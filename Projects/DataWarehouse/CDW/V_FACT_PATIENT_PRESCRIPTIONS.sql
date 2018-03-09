@@ -1,7 +1,6 @@
-CREATE OR REPLACE VIEW v_fact_patient_prescriptions 
--- 08-Mar-2018, SG: created
-AS
- SELECT
+CREATE OR REPLACE VIEW v_fact_patient_prescriptions AS 
+SELECT
+  -- 08-Mar-2018, SG: created
   network,
   facility_id,
   patient_id,
@@ -14,5 +13,4 @@ AS
   frequency,
   rx_dc_time AS rx_dc_dt,
   rx_exp_date AS rx_exp_dt
- FROM
-  pt008.prescription_detail;
+FROM pt008.prescription_detail;
