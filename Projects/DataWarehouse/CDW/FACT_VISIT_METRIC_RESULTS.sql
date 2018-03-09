@@ -3,16 +3,7 @@ EXEC dbm.drop_tables('FACT_VISIT_METRIC_RESULTS');
 CREATE TABLE fact_visit_metric_results
 (
   network                   CHAR(3 BYTE),
-  visit_id                  NUMBER(12),
-  patient_key               NUMBER(12) NOT NULL,
-  provider_key				NUMBER(12),
-  admission_dt				DATE NOT NULL,
-  discharge_dt				DATE,
-  age_at_admission			NUMBER(3),
-  initial_visit_type_id		NUMBER(12),
-  current_visit_type_id		NUMBER(12),
-  result_dt                 DATE NOT NULL,
-  result_dtnum              NUMBER(8) Generated Always as (TO_NUMBER(TO_CHAR("RESULT_DT",'YYYYMMDD'))),
+  visit_id                  NUMBER(12) NOT NULL,
   a1c_final_orig_value      VARCHAR2(1023 BYTE),
   a1c_final_calc_value      NUMBER,
   bp_final_orig_value       VARCHAR2(1023 BYTE),

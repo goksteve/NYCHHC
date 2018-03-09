@@ -1,9 +1,11 @@
 CREATE OR REPLACE VIEW v_fact_visits AS
 SELECT
- -- 06-Mar-2018, GK
+ -- 09-Mar-2018, OK: added column PATIENT_ID
+ -- 06-Mar-2018, GK: created
   vi.network,
   vi.visit_id,
   p.patient_key,
+  p.patient_id,
   f.facility_key,
   d1.department_key first_department_key,
   d2.department_key last_department_key,
@@ -99,4 +101,3 @@ LEFT JOIN visit_secondary_number vsn
   WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'SMN' AND vi.facility_id = 9) THEN 24
 END   
 WHERE vi.loc_rnum = 1;
---AND p.patient_id=182221 and p.network='CBN' and p.current_flag=1;

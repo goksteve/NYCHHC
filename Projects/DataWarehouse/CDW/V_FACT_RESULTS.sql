@@ -1,5 +1,6 @@
 CREATE OR REPLACE VIEW v_fact_results AS
 SELECT
+ -- 09-Mar-2018, OK: added column PATIENT_ID
  -- 07-Mar-2018, GK: modified
   r.network,
   r.visit_id,
@@ -9,6 +10,7 @@ SELECT
   r.item_number,
   e.date_time AS result_dt,
   v.patient_key,
+  v.patient_id,
   NVL(pef.facility_key, p.facility_key) AS proc_facility_key,
   p.proc_key,
   e.event_status_id,
@@ -20,7 +22,7 @@ SELECT
   r.cid,
   SYSDATE AS load_dt
 FROM log_incremental_data_load ld
-JOIN result r ON r.network=ld.network AND r.cid>ld.max_cid AND ld.table_name='FACT_RESULTS'
+JOIN result r ON r.network=ld.network AND r.cid>ld.max_cid AND ld.table_name = 'FACT_RESULTS'
 JOIN proc_event pe ON pe.network = r.network AND pe.visit_id = r.visit_id AND pe.event_id = r.event_id
 JOIN event e ON e.network = r.network AND e.visit_id = r.visit_id AND e.event_id = r.event_id
 JOIN result_field rf ON rf.network = r.network AND rf.data_element_id = r.data_element_id
