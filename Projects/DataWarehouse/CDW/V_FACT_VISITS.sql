@@ -1,9 +1,11 @@
 CREATE OR REPLACE VIEW v_fact_visits AS
 SELECT
- -- 06-Mar-2018, GK
+ -- 09-Mar-2018, OK: added column PATIENT_ID
+ -- 09-Mar-2018, GK: added column CID
   vi.network,
   vi.visit_id,
   p.patient_key,
+  p.patient_id,
   f.facility_key,
   d1.department_key first_department_key,
   d2.department_key last_department_key,
@@ -22,7 +24,8 @@ SELECT
   vi.financial_class_id,
   vi.physician_service_id,
   dp.payer_key first_payer_key,
-  'QCPR' source
+  'QCPR' source,
+  vi.cid
 FROM
 (
   SELECT
@@ -49,7 +52,8 @@ FROM
       PARTITION BY v.network, v.visit_id ORDER BY vl.visit_segment_number DESC, vl.location_id DESC
       ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
     ) last_loc_id,
-    ROW_NUMBER() OVER(PARTITION BY v.network, v.visit_id ORDER BY vl.visit_segment_number, vl.location_id) loc_rnum
+    ROW_NUMBER() OVER(PARTITION BY v.network, v.visit_id ORDER BY vl.visit_segment_number, vl.location_id) loc_rnum,
+    v.cid
   FROM visit v
   LEFT JOIN visit_segment vs
     ON vs.network = v.network AND vs.visit_id = v.visit_id AND vs.visit_segment_number = 1
@@ -99,4 +103,3 @@ LEFT JOIN visit_secondary_number vsn
   WHEN (SUBSTR(ORA_DATABASE_NAME, 1, 3) = 'SMN' AND vi.facility_id = 9) THEN 24
 END   
 WHERE vi.loc_rnum = 1;
---AND p.patient_id=182221 and p.network='CBN' and p.current_flag=1;
