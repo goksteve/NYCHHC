@@ -1,7 +1,7 @@
 CREATE OR REPLACE VIEW v_fact_visits AS
 SELECT
  -- 09-Mar-2018, OK: added column PATIENT_ID
- -- 06-Mar-2018, GK: created
+ -- 09-Mar-2018, GK: added column CID
   vi.network,
   vi.visit_id,
   p.patient_key,
@@ -24,7 +24,8 @@ SELECT
   vi.financial_class_id,
   vi.physician_service_id,
   dp.payer_key first_payer_key,
-  'QCPR' source
+  'QCPR' source,
+  vi.cid
 FROM
 (
   SELECT
@@ -51,7 +52,8 @@ FROM
       PARTITION BY v.network, v.visit_id ORDER BY vl.visit_segment_number DESC, vl.location_id DESC
       ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
     ) last_loc_id,
-    ROW_NUMBER() OVER(PARTITION BY v.network, v.visit_id ORDER BY vl.visit_segment_number, vl.location_id) loc_rnum
+    ROW_NUMBER() OVER(PARTITION BY v.network, v.visit_id ORDER BY vl.visit_segment_number, vl.location_id) loc_rnum,
+    v.cid
   FROM visit v
   LEFT JOIN visit_segment vs
     ON vs.network = v.network AND vs.visit_id = v.visit_id AND vs.visit_segment_number = 1
