@@ -11,6 +11,7 @@ CREATE TABLE fact_results
   result_dt                      DATE NOT NULL,
   result_dtnum                   NUMBER(8) AS (TO_NUMBER(TO_CHAR(result_dt,'YYYYMMDD'))),
   patient_key                    NUMBER(12) NOT NULL,
+  patient_id                     NUMBER(12) NOT NULL,
   proc_facility_key              NUMBER(12) NOT NULL,
   proc_key                       NUMBER(12),
   event_status_id                NUMBER(12),

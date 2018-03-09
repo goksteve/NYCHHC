@@ -109,8 +109,14 @@ AND LOWER(p.name) NOT LIKE '%,test%ccd' AND LOWER(p.name) NOT LIKE 'test%ccd,%' 
 
 CREATE OR REPLACE TRIGGER tr_v_dim_patients
 INSTEAD OF INSERT ON v_dim_patients FOR EACH ROW
+DECLARE
+ d_from_dt DATE;
 BEGIN
-  IF :new.change <> 'NEW' THEN
+  IF :new.change = 'NEW' THEN
+    d_from_dt := DATE '1901-01-01';
+  ELSE
+    d_from_dt := TRUNC(SYSDATE); 
+     
     UPDATE dim_patients SET effective_to = TRUNC(SYSDATE), current_flag = 0
     WHERE ROWID = :new.row_id;
   END IF;
@@ -148,7 +154,7 @@ BEGIN
     :new.addr_string, :new.block_code,
     :new.last_edit_time, :new.county, :new.sub_building_name, :new.building_name, :new.building_nbr,
     :new.head_of_house_patient_id,
-    1, TRUNC(SYSDATE), DATE '9999-12-31', :new.source
+    1, d_from_dt, DATE '9999-12-31', :new.source
   );
 END;
 /

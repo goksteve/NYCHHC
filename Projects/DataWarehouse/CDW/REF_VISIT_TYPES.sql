@@ -7,4 +7,6 @@ CREATE TABLE ref_visit_types
   ABBREVIATION   CHAR(2 BYTE)
 );
 
+ALTER TABLE ref_visit_types ADD CONSTRAINT uk_visit_type UNIQUE(abbreviation);
+
 GRANT SELECT ON ref_visit_types TO PUBLIC;

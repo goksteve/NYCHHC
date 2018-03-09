@@ -4,7 +4,7 @@ select
 --  owner, table_name, 
   lower(column_name)||',' col_name--, data_type
 from v_all_columns
-where owner = 'CDW' AND table_name = 'PROBLEM'
+where owner = 'CDW' AND table_name = 'FACT_PATIENT_DIAGNOSES'
 order by column_id;
 
 
@@ -13,13 +13,13 @@ from
 (
   select
     owner, table_name,
-    listagg(lower(column_name)||', ') within group(order by column_id) col_list, count(1) cnt
+    listagg('bkp.'||lower(column_name)||', ') within group(order by column_id) col_list, count(1) cnt
   from v_all_columns
   where 1=1
   and owner in (/*'EPIC_CLARITY','UD_MASTER','HHC_CUSTOM',*/'CDW'/*,'PT005'*/)
---  and table_name = 'PROBLEM_CMV_NEW'
+  and table_name = 'DIM_PATIENTS'
 --  and column_name like 'FIN%CLASS%'
-  and column_name IN ('VISIT_SERVICE_TYPE_ID')
+--  and column_name IN ('VISIT_SERVICE_TYPE_ID')
   group by owner, table_name
 ) g
 join all_tables t on t.owner = g.owner and t.table_name = g.table_name --and t.num_rows > 10 
