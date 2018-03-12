@@ -18,6 +18,8 @@ CREATE OR REPLACE PACKAGE pkg_dw_maintenance AS
 
   PROCEDURE refresh_data(p_condition IN VARCHAR2 DEFAULT NULL);
   
+  PROCEDURE refresh_full;
+  
   PROCEDURE refresh_incremental;
 END;
 /
