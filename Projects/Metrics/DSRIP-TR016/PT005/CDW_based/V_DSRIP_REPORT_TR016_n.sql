@@ -12,6 +12,7 @@ WITH
   (
     SELECT --+ materialize
       pr.network,
+      pr.facility_id,
       pr.patient_id,
       NVL(TO_CHAR(mdm.eid), pr.network||'-'||pr.patient_id) AS patient_gid, 
       NVL(dnm.drug_type_id, dscr.drug_type_id) AS drug_type_id,
@@ -34,6 +35,14 @@ WITH
       ON dscr.drug_description = pr.drug_description 
     WHERE dnm.drug_type_id IN (33, 34) OR dscr.drug_type_id IN (33, 34) -- Diabetes and Antipsychotic Medications
   ),
+  bh_prescriptions AS
+  (
+    SELECT --+ materialize
+      patient_gid, network, facility_id, patient_id, medication,
+      ROW_NUMBER() OVER(PARTITION BY patient_gid ORDER BY start_dt DESC) rnum
+    FROM prescriptions
+    WHERE drug_type_id = 34 -- Antipsychotic Prescriptions
+  ),
   diabetes_prescriptions AS
   (
     SELECT --+ materialize
@@ -41,13 +50,6 @@ WITH
     FROM prescriptions
     WHERE drug_type_id = 33 -- Diabetes Prescriptions
     GROUP BY patient_gid
-  ),
-  bh_patients AS
-  ( -- Patients who take Anti-Psychotic medications:
-    SELECT --+ materialize
-      DISTINCT network, patient_id
-    FROM prescritptions
-    WHERE drug_type_id = 34 -- Antipsychotic Medications
   ),
   patient_info AS
   ( 
@@ -72,7 +74,12 @@ WITH
         PARTITION BY NVL(TO_CHAR(mdm.eid), pat.network||'-'||pat.patient_id)
         ORDER BY NVL2(dep.service_type, TRUNC(vst.admission_date_time), NULL) DESC NULLS LAST
       ) rnum
-    FROM bh_patients bhp
+    FROM
+    (
+      SELECT DISTINCT
+        network, patient_id
+      FROM bh_prescriptions 
+    ) bhp
     CROSS JOIN report_dates dt
     JOIN cdw.dim_patients pat
       ON pat.network = bhp.network AND pat.patient_id = bhp.patient_id AND pat.current_flag = 1
@@ -146,10 +153,12 @@ WITH
     CROSS JOIN patient_info pat
     JOIN cdw.visit vst
       ON vst.network = pat.network AND vst.patient_id = pat.patient_id
-     AND vst.admission_date_time >= dt.year_back_dt  
+     AND vst.admission_date_time >= dt.year_back_dt
+     AND vst.admission_date_time < dt.report_dt   
     JOIN cdw.event e
       ON e.network = r.network AND e.visit_id = vst.visit_id
-     AND e.date_time >= dt.year_back_dt AND e.date_time < db.report_dt 
+     AND e.date_time >= dt.year_back_dt
+     AND e.date_time < db.report_dt 
     JOIN meta_conditions mc
       ON mc.network = e.network AND mc.criterion_id IN (4, 23) -- A1C and Glucose Level results
     JOIN cdw.result r
@@ -162,8 +171,8 @@ WITH
   )
 SELECT --+ USE_HASH(f pd pm pr)
   dt.report_dt AS report_period_start_dt,
-  amed.patient_gid,
-  NVL(tst.network, amed.network) network,
+  pat.patient_gid,
+  NVL(tst.network, pat.network) network,
   NVL(tst.facility_id, amed.facility_id) facility_id,
   NVL(f.facility_name, 'Unknown') facility_name,
   NVL(tst.patient_id, amed.patient_id) patient_id, 
@@ -200,6 +209,8 @@ SELECT --+ USE_HASH(f pd pm pr)
     ORDER BY CASE WHEN pm.payer_group = 'Medicaid' THEN 1 ELSE 2 END, pr.payer_rank
   ) rnum  
 FROM patient_info pat
+JOIN bh_prescriptions amed
+  ON amed.patient_gid = pat.patient_gid AND amed.rnum = 1
 LEFT JOIN diabetes_diagnoses diab
   ON diab.patient_gid = amed.patient_gid 
 LEFT JOIN psychotic_diagnoses psych
@@ -210,7 +221,7 @@ LEFT JOIN a1c_glucose_tests tst
   ON tst.patient_gid = amed.patient_gid AND tst.rnum = 1
 LEFT JOIN cdw.dim_hc_facilities f
   ON f.network = NVL(tst.network, amed.network) AND f.facility_id = amed.facility_id
-LEFT JOIN dsrip_tr016_payers pr
+LEFT JOIN cdw.visit_segment_payer pr
   ON pr.network = tst.network AND pr.visit_id = tst.visit_id
 LEFT JOIN pt008.payer_mapping pm
   ON pm.network = pr.network AND pm.payer_id = pr.payer_id

@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW v_ref_drug_descriptions AS
+CREATE OR REPLACE VIEW v_ref_drug_names AS
 WITH
  -- 10-Mar-2018, OK: created
   nm as
