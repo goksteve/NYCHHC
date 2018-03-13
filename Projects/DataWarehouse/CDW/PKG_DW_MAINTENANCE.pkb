@@ -4,6 +4,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_dw_maintenance AS
    
   Change history
   ------------------------------------------------------------------------------
+  14-MAR-2018, OK: changed data type of DBG_PROCESS_LOGS.RESULT to CLOB;
   06-MAR-2018, OK: added procedure REFRESH_INCREMENTAL; 
   16-FEB-2018, OK added procedures INIT_MAX_CIDS and RECORD_MAX_CIDS;
   01-FEB-2018, OK: created
@@ -55,9 +56,9 @@ CREATE OR REPLACE PACKAGE BODY pkg_dw_maintenance AS
   
   
   PROCEDURE refresh_data(p_condition IN VARCHAR2 DEFAULT NULL) IS
-    rcur    SYS_REFCURSOR;
-    rec     cnf_dw_refresh%ROWTYPE;
-    v_msg   VARCHAR2(2048);
+    rcur        SYS_REFCURSOR;
+    rec         cnf_dw_refresh%ROWTYPE;
+    v_msg       VARCHAR2(20000);
   BEGIN
     xl.open_log('DWM.REFRESH_DATA', 'Refreshing DW'||CASE WHEN p_condition IS NOT NULL THEN ': '||p_condition END, TRUE);
     

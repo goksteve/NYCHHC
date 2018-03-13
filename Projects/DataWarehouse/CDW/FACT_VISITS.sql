@@ -1,4 +1,4 @@
-exec dbm.drop_tables('FACT_VISITS');
+exec dbm.drop_tables('FACT_VISITS,ERR_FACT_VISITS');
 
 CREATE TABLE fact_visits
 (
@@ -14,7 +14,7 @@ CREATE TABLE fact_visits
   admitting_provider_key	  NUMBER(12),
   visit_emp_provider_key	  NUMBER(12),
   admission_dt	            DATE NOT NULL,
-  admission_dtnum           NUMBER(15) AS (TO_NUMBER(TO_CHAR(admission_dt, 'YYYYMMDD'))) NOT NULL,
+  admission_dtnum           NUMBER(8),
   patient_age_at_admission  NUMBER(3),
   discharge_dt	            DATE,
   visit_number	            VARCHAR2(50 BYTE),
@@ -46,6 +46,9 @@ SUBPARTITION BY HASH(visit_id) SUBPARTITIONS 16
 );
 
 GRANT SELECT ON fact_visits TO PUBLIC;
+
+EXEC dbms_errlog.create_error_log('FACT_VISITS','ERR_FACT_VISITS');
+ALTER TABLE err_fact_visits ADD entry_ts TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL;
 
 CREATE UNIQUE INDEX pk_fact_visits ON fact_visits(visit_id, network) LOCAL PARALLEL 16;
 ALTER INDEX pk_fact_visits NOPARALLEL;
