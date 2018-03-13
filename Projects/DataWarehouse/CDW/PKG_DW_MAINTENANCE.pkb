@@ -118,9 +118,15 @@ CREATE OR REPLACE PACKAGE BODY pkg_dw_maintenance AS
   END;
   
   
+  PROCEDURE refresh_full IS
+  BEGIN
+    refresh_data('WHERE target_table NOT IN (''PROC'',''VISIT'',''VISIT_SEGMENT'',''VISIT_SEGMENT_VISIT_LOCATION'',''EVENT'',''PROC_EVENT'',''PROC_EVENT_ARCHIVE'',''RESULT'') AND target_table NOT LIKE ''FACT%''');
+  END;
+
+
   PROCEDURE refresh_incremental IS
   BEGIN
-    refresh_data('WHERE table_name IN (''PROC'',''VISIT'',''VISIT_SEGMENT'',''VISIT_SEGMENT_VISIT_LOCATION'',''EVENT'',''PROC_EVENT'',''PROC_EVENT_ARCHIVE'',''RESULT'')');
+    refresh_data('WHERE target_table IN (''PROC'',''VISIT'',''VISIT_SEGMENT'',''VISIT_SEGMENT_VISIT_LOCATION'',''EVENT'',''PROC_EVENT'',''PROC_EVENT_ARCHIVE'',''RESULT'')');
   END;
 END;
 /
