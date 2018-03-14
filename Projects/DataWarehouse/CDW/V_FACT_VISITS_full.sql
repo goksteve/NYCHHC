@@ -43,16 +43,18 @@ SELECT --+ ordered use_hash(p f d1 d2 pr1 pr2 pr3 pr4 vsp dp vsn)
   p.patient_key,
   p.patient_id,
   f.facility_key,
+  TO_NUMBER(TO_CHAR(vi.admission_date_time, 'YYYYMMDD')) AS admission_dt_key,
+  vi.admission_date_time AS admission_dt,
+  TO_NUMBER(TO_CHAR(vi.discharge_date_time, 'YYYYMMDD')) AS discharge_dt_key,
+  vi.discharge_date_time discharge_dt,
   d1.department_key first_department_key,
   d2.department_key last_department_key,
   pr1.provider_key attending_provider_key,
   pr2.provider_key resident_provider_key,
   pr3.provider_key admitting_provider_key,
   pr4.provider_key visit_emp_provider_key,
-  vi.admission_date_time AS admission_dt,
-  TO_NUMBER(TO_CHAR(vi.admission_date_time, 'YYYYMMDD')) AS admission_dtnum,
+  dp.payer_key first_payer_key,
   FLOOR((ADD_MONTHS(TRUNC(vi.admission_date_time,'YEAR'),12)-1 - p.birthdate)/365)  patient_age_at_admission,
-  vi.discharge_date_time discharge_dt,
   nvl(vi.visit_number, vsn.visit_secondary_number) AS visit_number, 
   nvl(vi.initial_visit_type_id, vi.visit_type_id) AS initial_visit_type_id,
   vi.visit_type_id final_visit_type_id,
@@ -60,12 +62,11 @@ SELECT --+ ordered use_hash(p f d1 d2 pr1 pr2 pr3 pr4 vsp dp vsn)
   vi.activation_time visit_activation_time,
   vi.financial_class_id,
   vi.physician_service_id,
-  dp.payer_key first_payer_key,
   'QCPR' source,
   vi.cid
 FROM visit_info vi
 JOIN dim_patients p
-  ON p.network = vi.network AND p.patient_id = vi.patient_id AND p.current_flag=1
+  ON p.network = vi.network AND p.patient_id = vi.patient_id AND p.current_flag = 1
 JOIN dim_hc_facilities f
   ON f.network = vi.network AND f.facility_id = vi.facility_id
 LEFT JOIN dim_hc_departments d1

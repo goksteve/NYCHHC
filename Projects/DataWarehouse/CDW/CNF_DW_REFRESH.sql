@@ -108,23 +108,24 @@ INSERT INTO cnf_dw_refresh VALUES(1101, 'REPLACE /*+ parallel(32)*/', 'FACT_PATI
 INSERT INTO cnf_dw_refresh VALUES(1102, 'REPLACE /*+ parallel(32)*/', 'REF_DRUG_DESCRIPTIONS', 'V_REF_DRUG_DESCRIPTIONS', NULL, NULL, NULL, NULL);
 INSERT INTO cnf_dw_refresh VALUES(1103, 'REPLACE /*+ parallel(32)*/', 'REF_DRUG_NAMES', 'V_REF_DRUG_NAMES', NULL, NULL, NULL, NULL);
 
-INSERT INTO cnf_dw_refresh VALUES(1201, 'INSERT /*+ parallel(32)*/', 'FACT_PATIENT_DIAGNOSES', 'V_FACT_PATIENT_DIAGNOSES', NULL, NULL, NULL, NULL);
-
 --INSERT INTO cnf_dw_refresh VALUES(2000, 'INSERT /*+ parallel(32)*/', 'FACT_VISITS', 'V_FACT_VISITS_FULL', NULL, NULL, NULL, 'ERR_FACT_VISITS');
-INSERT INTO cnf_dw_refresh VALUES(2001, 'MERGE /*+ parallel(32)*/', 'FACT_VISITS', 'V_FACT_VISITS_INCREMENTAL', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(2010, 'MERGE /*+ parallel(32)*/', 'FACT_VISITS', 'V_FACT_VISITS_INCREMENTAL', NULL, NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(2020, 'REPLACE /*+ parallel(32)*/', 'FACT_VISIT_DIAGNOSES', 'V_FACT_VISIT_DIAGNOSES', NULL, NULL, NULL, NULL);
 
---INSERT INTO cnf_dw_refresh VALUES(2101, 'INSERT /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''GP1''', NULL, NULL);
---INSERT INTO cnf_dw_refresh VALUES(2102, 'INSERT /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''QHN''', NULL, NULL);
---INSERT INTO cnf_dw_refresh VALUES(2103, 'INSERT /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''SMN''', NULL, NULL);-
---INSERT INTO cnf_dw_refresh VALUES(2104, 'INSERT /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''NBX''', NULL, NULL);
---INSERT INTO cnf_dw_refresh VALUES(2105, 'INSERT /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network IN (''GP2'',''SBN'')', NULL, NULL);
---INSERT INTO cnf_dw_refresh VALUES(2106, 'INSERT /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network IN (''CBN'',''NBN'')', NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(2110, 'INSERT /*+ parallel(32)*/', 'FACT_PATIENT_DIAGNOSES', 'V_FACT_PATIENT_DIAGNOSES', NULL, NULL, NULL, NULL);
 
-INSERT INTO cnf_dw_refresh VALUES(2101, 'MERGE /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''GP1''', NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(2102, 'MERGE /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''QHN''', NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(2103, 'MERGE /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''SMN''', NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(2104, 'MERGE /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''NBX''', NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(2105, 'MERGE /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network IN (''GP2'',''SBN'')', NULL, NULL);
-INSERT INTO cnf_dw_refresh VALUES(2106, 'MERGE /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network IN (''CBN'',''NBN'')', NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(3110, 'INSERT /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''GP1''', NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(3120, 'INSERT /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''QHN''', NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(3130, 'INSERT /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''SMN''', NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(3140, 'INSERT /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''NBX''', NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(3150, 'INSERT /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network IN (''GP2'',''SBN'')', NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(3160, 'INSERT /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network IN (''CBN'',''NBN'')', NULL, NULL);
+
+--INSERT INTO cnf_dw_refresh VALUES(3110, 'MERGE /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''GP1''', NULL, NULL);
+--INSERT INTO cnf_dw_refresh VALUES(3120, 'MERGE /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''QHN''', NULL, NULL);
+--INSERT INTO cnf_dw_refresh VALUES(3130, 'MERGE /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''SMN''', NULL, NULL);
+--INSERT INTO cnf_dw_refresh VALUES(3140, 'MERGE /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network=''NBX''', NULL, NULL);
+--INSERT INTO cnf_dw_refresh VALUES(3150, 'MERGE /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network IN (''GP2'',''SBN'')', NULL, NULL);
+--INSERT INTO cnf_dw_refresh VALUES(3160, 'MERGE /*+ parallel(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network IN (''CBN'',''NBN'')', NULL, NULL);
 
 COMMIT;
