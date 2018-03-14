@@ -1,5 +1,4 @@
 exec dbm.drop_tables('DIM_PROVIDERS');
---rename dim_providers to bkp_dim_providers;
 
 CREATE TABLE dim_providers
 (
