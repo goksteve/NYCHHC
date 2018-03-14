@@ -307,7 +307,8 @@ BEGIN
     :new.social_security, :new.sdg_emp_no, :new.prac_npi, :new.npi, :new.license_exp_date_id, :new.physician_service_id,
     :new.physician_service_name, :new.physician_service_id_1, :new.physician_service_name_1, :new.physician_service_id_2,
     :new.physician_service_name_2, :new.physician_service_id_3, :new.physician_service_name_3, :new.physician_service_id_4,
-    :new.physician_service_name_4, :new.physician_service_id_5, :new.physician_service_name_5, :new.source,  TRUNC(SYSDATE),  DATE '9999-12-31',  1
+    :new.physician_service_name_4, :new.physician_service_id_5, :new.physician_service_name_5, :new.source,
+    TRUNC(SYSDATE), DATE '9999-12-31',  1
   );
 END;
-/  
+/
