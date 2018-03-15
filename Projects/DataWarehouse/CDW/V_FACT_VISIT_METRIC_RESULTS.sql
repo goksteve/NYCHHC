@@ -14,10 +14,10 @@ SELECT
 FROM
 (
   SELECT
-      q.*,
+      q.* ,
       CASE
       WHEN q.criterion_id IN (10, 23) THEN -- result LDL
-      str_to_number(REGEXP_SUBSTR(q.result_value, '^[0-9\.]+'))
+      REGEXP_SUBSTR(q.result_value, '^[0-9\.]+')
       WHEN q.criterion_id = 4 THEN --- RESULTS:DIABETES A1C
       CASE
       WHEN SUBSTR(q.result_value, 1, 1) <> '0'
