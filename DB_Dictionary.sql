@@ -17,7 +17,7 @@ from
   from v_all_columns
   where 1=1
   and owner in (/*'EPIC_CLARITY','UD_MASTER','HHC_CUSTOM',*/'CDW'/*,'PT005'*/)
-  and table_name = 'DIM_PATIENTS'
+  and table_name = 'VISIT_SECONDARY_NUMBER'
 --  and column_name like 'FIN%CLASS%'
 --  and column_name IN ('VISIT_SERVICE_TYPE_ID')
   group by owner, table_name

@@ -1,182 +1,68 @@
-CREATE TABLE DIM_PROVIDERS
---partition by list(network)
---(
---partition pcbn values('CBN'),
---partition pgp1 values('GP1'),
---partition pgp2 values('GP2'),
---partition pnbn values('NBN'),
---partition pnbx values('NBX'),
---partition pqhn values('QHN'),
---partition psbn values('SBN'),
---partition psmn values('SMN')
---)
-AS
-SELECT DISTINCT
-                       'QCPR' AS SOURCE,
-                       EP.NETWORK,
-                       EP.EMP_PROVIDER_ID AS PROVIDER_ID,
-                       EP.NAME AS PROVIDER_NAME,
-                       EP.TITLE_ID,
-                       T.NAME AS TITLE_NAME,
-                       T.PREFIX AS TITLE_PREFIX,
-                       T.SUFFIX AS TITLE_SUFFIX,
-                       EP.PHYSICIAN AS PHYSICIAN_FLAG,
-                       EP.PHYSICIAN_GROUP_ID,
-                       PG.NAME AS PHYSICIAN_GROUP_NAME,
-                       EMP_ID.EXTERNAL_NUMBER_ID AS EMP_ID,
-                       EMP_ID.VALUE AS EMP_VALUE,
-                       LICENSE.EXTERNAL_NUMBER_ID AS LICENSE_ID,
-                       LICENSE.VALUE AS LICENSE_VALUE,
-                       SOCIAL_SECURITY.EXTERNAL_NUMBER_ID
-                          AS SOCIAL_SECURITY_ID,
-                       SOCIAL_SECURITY.VALUE AS SOCIAL_SECURITY_VALUE,
-                       SDG_EMP_NO.EXTERNAL_NUMBER_ID AS SDG_EMP_NO_ID,
-                       SDG_EMP_NO.VALUE AS SDG_EMP_NO_VALUE,
-                       PRAC_NPI.EXTERNAL_NUMBER_ID AS PRAC_NPI_ID,
-                       PRAC_NPI.VALUE AS PRAC_NPI_VALUE,
-                       NPI.EXTERNAL_NUMBER_ID AS NPI_ID,
-                       NPI.VALUE AS NPI_VALUE,
-                       LICENSE_EXP_DATE.EXTERNAL_NUMBER_ID
-                          AS LICENSE_EXP_DATE_ID,
-                       LICENSE_EXP_DATE.VALUE AS LICENSE_EXP_DATE_VALUE,
-                       MS.PHYSICIAN_SERVICE_ID,
-                       MS.NAME,
-                       --   pivot(MS.PARENT_PHYSICIAN_SERVICE_ID),
-                       'N' AS EPIC_FLAG,
-                       SYSDATE AS LOAD_DATE
-                  FROM EMP_PROVIDER EP,
-                       TITLE T,
-                       PHYSICIAN_GROUP PG,
-                       EMP_FACILITY_MED_SPEC EFMS,
-                       MEDICAL_SPECIALTY MS,
-                       (SELECT DISTINCT 
-                       EE.NETWORK,
-                       EP.EMP_PROVIDER_ID,
-                                        EE.EXTERNAL_NUMBER_ID,
-                                        EN.NAME,
-                                        EE.VALUE
-                          FROM EMP_PROVIDER EP
-                               JOIN EMP_FACILITY_EXTERNAL_NUMBER EE
-                                  ON EP.EMP_PROVIDER_ID = EE.EMP_PROVIDER_ID AND  EP.NETWORK=EE.NETWORK
-                               JOIN EXTERNAL_NUMBER EN
-                                  ON     EE.EXTERNAL_NUMBER_ID =
-                                            EN.EXTERNAL_NUMBER_ID 
-                                     AND EE.FACILITY_ID = EN.FACILITY_ID AND EE.NETWORK=EN.NETWORK
-                                                              WHERE EE.EXTERNAL_NUMBER_ID = '2' ) EMP_ID,
-                       (SELECT DISTINCT
-                       EP.NETWORK, 
-                       EP.EMP_PROVIDER_ID,
-                                        EE.EXTERNAL_NUMBER_ID,
-                                        EN.NAME,
-                                        EE.VALUE
-                          FROM EMP_PROVIDER EP
-                               JOIN EMP_FACILITY_EXTERNAL_NUMBER EE
-                                  ON EP.EMP_PROVIDER_ID = EE.EMP_PROVIDER_ID AND  EP.NETWORK=EE.NETWORK
-                               JOIN EXTERNAL_NUMBER EN
-                                  ON     EE.EXTERNAL_NUMBER_ID =
-                                            EN.EXTERNAL_NUMBER_ID
-                                     AND EE.FACILITY_ID = EN.FACILITY_ID AND  EE.NETWORK=EN.NETWORK
-                         WHERE EE.EXTERNAL_NUMBER_ID = '4') LICENSE,
-                       (SELECT DISTINCT 
-                       EP.NETWORK, 
-                       
-                       EP.EMP_PROVIDER_ID,
-                                        EE.EXTERNAL_NUMBER_ID,
-                                        EN.NAME,
-                                        EE.VALUE
-                          FROM EMP_PROVIDER EP
-                               JOIN EMP_FACILITY_EXTERNAL_NUMBER EE
-                                  ON EP.EMP_PROVIDER_ID = EE.EMP_PROVIDER_ID AND  EP.NETWORK=EE.NETWORK
-                               JOIN EXTERNAL_NUMBER EN
-                                  ON     EE.EXTERNAL_NUMBER_ID =
-                                            EN.EXTERNAL_NUMBER_ID
-                                     AND EE.FACILITY_ID = EN.FACILITY_ID AND  EE.NETWORK=EN.NETWORK
-                         WHERE EE.EXTERNAL_NUMBER_ID = '27') SOCIAL_SECURITY,
-                       (SELECT DISTINCT 
-                                              EP.NETWORK, 
+exec dbm.drop_tables('DIM_PROVIDERS');
 
-                       EP.EMP_PROVIDER_ID,
-                                        EE.EXTERNAL_NUMBER_ID,
-                                        EN.NAME,
-                                        EE.VALUE
-                          FROM EMP_PROVIDER EP
-                               JOIN EMP_FACILITY_EXTERNAL_NUMBER EE
-                                  ON EP.EMP_PROVIDER_ID = EE.EMP_PROVIDER_ID AND  EP.NETWORK=EE.NETWORK
-                               JOIN EXTERNAL_NUMBER EN
-                                  ON     EE.EXTERNAL_NUMBER_ID =
-                                            EN.EXTERNAL_NUMBER_ID
-                                     AND EE.FACILITY_ID = EN.FACILITY_ID AND  EE.NETWORK=EN.NETWORK
-                         WHERE EE.EXTERNAL_NUMBER_ID = '29') SDG_EMP_NO,
-                       (SELECT DISTINCT 
-                                              EP.NETWORK, 
+CREATE TABLE dim_providers
+(
+  NETWORK                   CHAR(3 BYTE) NOT NULL,
+  PROVIDER_KEY              NUMBER(12) NOT NULL,
+  PROVIDER_ID               NUMBER(12) NOT NULL,
+  ARCHIVE_NUMBER            NUMBER(12) NOT NULL,
+  PROVIDER_NAME             VARCHAR2(60 BYTE) NOT NULL,
+  TITLE_ID                  NUMBER(12),
+  TITLE_NAME                VARCHAR2(100 BYTE),
+  TITLE_PREFIX              VARCHAR2(20 BYTE),
+  TITLE_SUFFIX              VARCHAR2(50 BYTE),
+  PHYSICIAN_FLAG            VARCHAR2(5 BYTE),
+  EMP                       VARCHAR2(2048 BYTE),
+  LICENSE                   VARCHAR2(2048 BYTE),
+  SOCIAL_SECURITY           VARCHAR2(2048 BYTE),
+  SDG_EMP_NO                VARCHAR2(2048 BYTE),
+  PRAC_NPI                  VARCHAR2(2048 BYTE),
+  NPI                       VARCHAR2(2048 BYTE),
+  LICENSE_EXP_DATE_ID       VARCHAR2(2048 BYTE),
+  PHYSICIAN_SERVICE_ID      VARCHAR2(4000 BYTE),
+  PHYSICIAN_SERVICE_NAME    VARCHAR2(4000 BYTE),
+  PHYSICIAN_SERVICE_ID_1    VARCHAR2(4000 BYTE),
+  PHYSICIAN_SERVICE_NAME_1  VARCHAR2(4000 BYTE),
+  PHYSICIAN_SERVICE_ID_2    VARCHAR2(4000 BYTE),
+  PHYSICIAN_SERVICE_NAME_2  VARCHAR2(4000 BYTE),
+  PHYSICIAN_SERVICE_ID_3    VARCHAR2(4000 BYTE),
+  PHYSICIAN_SERVICE_NAME_3  VARCHAR2(4000 BYTE),
+  PHYSICIAN_SERVICE_ID_4    VARCHAR2(4000 BYTE),
+  PHYSICIAN_SERVICE_NAME_4  VARCHAR2(4000 BYTE),
+  PHYSICIAN_SERVICE_ID_5    VARCHAR2(4000 BYTE),
+  PHYSICIAN_SERVICE_NAME_5  VARCHAR2(4000 BYTE),
+  SOURCE                    CHAR(4 BYTE) DEFAULT 'QCPR' NOT NULL,
+  EFFECTIVE_FROM            DATE DEFAULT DATE '1901-01-01',
+  EFFECTIVE_TO              DATE DEFAULT DATE '9999-12-31',
+  CURRENT_FLAG              NUMBER(1) DEFAULT 1 NOT NULL CONSTRAINT chk_provider_curr_flag CHECK (current_flag IN (0,1)),
+  LOAD_DT                   DATE DEFAULT SYSDATE
+)
+COMPRESS BASIC 
+PARTITION BY LIST (NETWORK)
+(  
+  PARTITION CBN VALUES ('CBN'),
+  PARTITION GP1 VALUES ('GP1'),
+  PARTITION GP2 VALUES ('GP2'),
+  PARTITION NBN VALUES ('NBN'),
+  PARTITION NBX VALUES ('NBX'),
+  PARTITION QHN VALUES ('QHN'),
+  PARTITION SBN VALUES ('SBN'),
+  PARTITION SMN VALUES ('SMN')
+);
 
-                       EP.EMP_PROVIDER_ID,
-                                        EE.EXTERNAL_NUMBER_ID,
-                                        EN.NAME,
-                                        EE.VALUE
-                          FROM EMP_PROVIDER EP
-                               JOIN EMP_FACILITY_EXTERNAL_NUMBER EE
-                                  ON EP.EMP_PROVIDER_ID = EE.EMP_PROVIDER_ID AND  EP.NETWORK=EE.NETWORK
-                               JOIN EXTERNAL_NUMBER EN
-                                  ON     EE.EXTERNAL_NUMBER_ID =
-                                            EN.EXTERNAL_NUMBER_ID
-                                     AND EE.FACILITY_ID = EN.FACILITY_ID AND  EE.NETWORK=EN.NETWORK
-                         WHERE EE.EXTERNAL_NUMBER_ID = '36') PRAC_NPI,
-                       (SELECT DISTINCT 
-                                              EP.NETWORK, 
+CREATE UNIQUE INDEX pk_dim_providers ON dim_providers(provider_key) PARALLEL 32;
+ALTER INDEX pk_dim_providers1 NOPARALLEL;
 
-                       EP.EMP_PROVIDER_ID,
-                                        EE.EXTERNAL_NUMBER_ID,
-                                        EN.NAME,
-                                        EE.VALUE
-                          FROM EMP_PROVIDER EP
-                               JOIN EMP_FACILITY_EXTERNAL_NUMBER EE
-                                  ON EP.EMP_PROVIDER_ID = EE.EMP_PROVIDER_ID  AND  EP.NETWORK=EE.NETWORK
-                               JOIN EXTERNAL_NUMBER EN
-                                  ON     EE.EXTERNAL_NUMBER_ID =
-                                            EN.EXTERNAL_NUMBER_ID
-                                     AND EE.FACILITY_ID = EN.FACILITY_ID AND  EE.NETWORK=EN.NETWORK
-                         WHERE EE.EXTERNAL_NUMBER_ID = '39') NPI,
-                       (SELECT DISTINCT 
-                                              EP.NETWORK, 
+CREATE UNIQUE INDEX UK1_DIM_PROVIDERS ON DIM_PROVIDERS(provider_id, archive_number, network) LOCAL PARALLEL 32;
+ALTER INDEX UK_DIM_PROVIDERS1 NOPARALLEL;
 
-                       EP.EMP_PROVIDER_ID,
-                                        EE.EXTERNAL_NUMBER_ID,
-                                        EN.NAME,
-                                        EE.VALUE
-                          FROM EMP_PROVIDER EP
-                               JOIN EMP_FACILITY_EXTERNAL_NUMBER EE
-                                  ON EP.EMP_PROVIDER_ID = EE.EMP_PROVIDER_ID  AND  EP.NETWORK=EE.NETWORK
-                               JOIN EXTERNAL_NUMBER EN
-                                  ON     EE.EXTERNAL_NUMBER_ID =
-                                            EN.EXTERNAL_NUMBER_ID
-                                     AND EE.FACILITY_ID = EN.FACILITY_ID AND  EE.NETWORK=EN.NETWORK
-                         WHERE EE.EXTERNAL_NUMBER_ID = '40') LICENSE_EXP_DATE
-                 WHERE     EP.EMP_PROVIDER_ID = EMP_ID.EMP_PROVIDER_ID(+)
-                       AND  EP.NETWORK=EMP_ID.NETWORK(+)
-                       AND EP.EMP_PROVIDER_ID = LICENSE.EMP_PROVIDER_ID(+)
-                       AND  EP.NETWORK=LICENSE.NETWORK(+)
-                       AND EP.EMP_PROVIDER_ID = SOCIAL_SECURITY.EMP_PROVIDER_ID(+)
-                       AND  EP.NETWORK=SOCIAL_SECURITY.NETWORK(+)
-                       AND EP.EMP_PROVIDER_ID = SDG_EMP_NO.EMP_PROVIDER_ID(+)
-                       AND  EP.NETWORK=SDG_EMP_NO.NETWORK(+)
-                       AND EP.EMP_PROVIDER_ID = PRAC_NPI.EMP_PROVIDER_ID(+)
-                       AND  EP.NETWORK=PRAC_NPI.NETWORK(+)
-                       AND EP.EMP_PROVIDER_ID = NPI.EMP_PROVIDER_ID(+)
-                       AND  EP.NETWORK=NPI.NETWORK(+)
-                       
-                       AND EP.EMP_PROVIDER_ID = LICENSE_EXP_DATE.EMP_PROVIDER_ID(+)
-                       AND  EP.NETWORK=LICENSE_EXP_DATE.NETWORK(+)
-                       
-                       AND EP.TITLE_ID = T.TITLE_ID(+)
-                       AND  EP.NETWORK=T.NETWORK(+)
-                       
-                       AND EP.PHYSICIAN_GROUP_ID = PG.PHYSICIAN_GROUP_ID(+)
-                       AND  EP.NETWORK=PG.NETWORK(+)
-                       AND EP.EMP_PROVIDER_ID = EFMS.EMP_PROVIDER_ID(+)
-                       AND  EP.NETWORK=EFMS.NETWORK(+)
-                       
-                       AND EFMS.PHYSICIAN_SERVICE_ID = MS.PHYSICIAN_SERVICE_ID(+)
-                       AND EFMS.FACILITY_ID = MS.FACILITY_ID(+)
-                       AND  EFMS.NETWORK=MS.NETWORK(+);
-                       
+CREATE UNIQUE INDEX UK2_DIM_PROVIDERS ON DIM_PROVIDERS(CASE CURRENT_FLAG WHEN 1 THEN NETWORK END, CASE CURRENT_FLAG WHEN 1 THEN PROVIDER_ID END) PARALLEL 32;
+ALTER INDEX UK2_DIM_PROVIDERS NOPARALLEL;
+
+ALTER  TABLE dim_providers ADD
+(
+  CONSTRAINT pk_dim_providers PRIMARY KEY(provider_key) USING INDEX pk_dim_providers,
+  CONSTRAINT uk1_dim_providers UNIQUE(provider_id, archive_number, network) USING INDEX uk1_dim_providers
+);
+
+GRANT SELECT ON DIM_PROVIDERS TO PUBLIC;
