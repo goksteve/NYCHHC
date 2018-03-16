@@ -2,7 +2,7 @@ alter session set current_schema = pt005;
 
 UPDATE dbg_process_logs set result = 'Cancelled', end_time = systimestamp
 where end_time is null
-and proc_id < 106
+and proc_id < 190
 ;
 commit;
 

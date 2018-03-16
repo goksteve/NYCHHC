@@ -45,3 +45,7 @@ exception
   raise;
 end;
 /
+
+select * from log_incremental_data_load
+--where table_name = 'FACT_RESULTS'
+order by table_name, network;
