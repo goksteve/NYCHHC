@@ -23,8 +23,8 @@ WITH
     )
   )
 SELECT
-  q.report_period_start_dt,
   q.network,
+  q.report_period_start_dt,
   q.facility_id,
   q.patient_id,
   p.patient patient_name,

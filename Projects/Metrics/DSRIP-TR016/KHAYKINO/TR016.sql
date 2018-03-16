@@ -2,6 +2,7 @@ set line 100
 set verify off
 set feedback off
 set serverout on
+whenever sqlerror exit 1
 
 ALTER SESSION ENABLE PARALLEL DML;
 ALTER SESSION SET STAR_TRANSFORMATION_ENABLED=TRUE;

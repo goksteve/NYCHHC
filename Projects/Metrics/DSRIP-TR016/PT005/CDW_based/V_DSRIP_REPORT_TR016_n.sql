@@ -18,30 +18,26 @@ WITH
       NVL(dnm.drug_type_id, dscr.drug_type_id) AS drug_type_id,
       NVL(dnm.drug_name, dscr.drug_description) medication,
       pr.order_dt AS start_dt,
-      NVL(pr.rx_dc_dt, DATE '9999-12-31') AS stop_dt,
-      ROW_NUMBER() OVER
-      (
-        PARTITION BY NVL(TO_CHAR(mdm.eid), pr.network||'-'||pr.patient_id), NVL(dnm.drug_type_id, dscr.drug_type_id)
-        ORDER BY pr.order_dt DESC
-      ) rnum
-    FROM report_dates dt
-    JOIN fact_prescriptions pr
-      ON pr.order_dt <= dt.year_back_dt AND pr.network NOT IN ('QHN','SBN') -- exclude Networks that switched to EPIC
+      NVL(pr.rx_dc_dt, DATE '9999-12-31') AS stop_dt
+    FROM fact_prescriptions pr
     LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
       ON mdm.network = pr.network AND mdm.patientid = TO_CHAR(pr.patient_id) AND mdm.epic_flag = 'N'
     LEFT JOIN ref_drug_names dnm
       ON dnm.drug_name = pr.drug_name 
     LEFT JOIN ref_drug_descriptions dscr
       ON dscr.drug_description = pr.drug_description 
-    WHERE dnm.drug_type_id IN (33, 34) OR dscr.drug_type_id IN (33, 34) -- Diabetes and Antipsychotic Medications
+    WHERE pr.network NOT IN ('QHN','SBN') -- exclude Networks that switched to EPIC
+    AND dnm.drug_type_id IN (33, 34) OR dscr.drug_type_id IN (33, 34) -- Diabetes and Antipsychotic Medications
   ),
   bh_prescriptions AS
   (
     SELECT --+ materialize
       patient_gid, network, facility_id, patient_id, medication,
-      ROW_NUMBER() OVER(PARTITION BY patient_gid ORDER BY start_dt DESC) rnum
-    FROM prescriptions
-    WHERE drug_type_id = 34 -- Antipsychotic Prescriptions
+      ROW_NUMBER() OVER(PARTITION BY pr.patient_gid ORDER BY pr.start_dt DESC) rnum
+    FROM report_dates dt
+    JOIN prescriptions pr
+      ON pr.drug_type_id = 34 -- Antipsychotic Prescriptions
+     AND pr.start_dt <= dt.year_back_dt
   ),
   diabetes_prescriptions AS
   (
@@ -157,8 +153,7 @@ WITH
      AND vst.admission_date_time < dt.report_dt   
     JOIN cdw.event e
       ON e.network = r.network AND e.visit_id = vst.visit_id
-     AND e.date_time >= dt.year_back_dt
-     AND e.date_time < db.report_dt 
+     AND e.date_time >= dt.year_back_dt AND e.date_time < db.report_dt 
     JOIN meta_conditions mc
       ON mc.network = e.network AND mc.criterion_id IN (4, 23) -- A1C and Glucose Level results
     JOIN cdw.result r

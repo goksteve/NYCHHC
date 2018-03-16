@@ -56,7 +56,7 @@ BEGIN
   
   etl.add_data
   (
-    p_operation => 'INSERT /*+PARALLEL(16)*/',
+    p_operation => 'INSERT /*+ parallel(32) */',
     p_tgt => 'DSRIP_REPORT_TR016',
     p_src => 'V_DSRIP_REPORT_TR016',
     p_whr => 'WHERE rnum = 1',

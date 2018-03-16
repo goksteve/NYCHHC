@@ -5,7 +5,17 @@ set feedback on
 
 INSERT --+ parallel(8) 
 INTO dsrip_tr016_a1c_glucose_rslt
+WITH
+  db AS
+  (
+    SELECT --+ materialize
+      SUBSTR(name, 1, 3) network,
+      NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')) report_dt,
+      ADD_MONTHS(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')), -12) year_back_dt
+    FROM v$database
+  )
 SELECT
+  network,
   facility_id,
   patient_id,
   visit_id,
@@ -23,6 +33,7 @@ SELECT
 FROM
 (
   SELECT  --+ ordered full(r) use_hash(e) use_hash(v)
+    db.network,
     v.facility_id,
     v.patient_id,
     v.visit_id,
@@ -38,14 +49,7 @@ FROM
     rf.name data_element_name,
     r.value result_value,
     ROW_NUMBER() OVER(PARTITION BY v.patient_id ORDER BY e.event_id DESC, r.data_element_id) rnum
-  FROM
-  (
-    SELECT
-      SUBSTR(name, 1, 3) network,
-      NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')) report_dt,
-      ADD_MONTHS(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')), -12) year_back_dt
-    FROM v$database
-  ) db
+  FROM db
   JOIN meta_conditions mc ON mc.network = db.network AND mc.criterion_id IN (4, 23) -- A1C and Glucose Level results
   JOIN ud_master.result r ON r.data_element_id = mc.value
   JOIN ud_master.event e ON e.visit_id = r.visit_id AND e.event_id = r.event_id
