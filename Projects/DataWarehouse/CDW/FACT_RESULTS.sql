@@ -2,7 +2,7 @@ exec dbm.drop_tables('FACT_RESULTS');
 
 CREATE TABLE fact_results
 (
-  network                        VARCHAR2(3 BYTE),
+  network                        VARCHAR2(3 BYTE) NOT NULL,
   visit_id                       NUMBER(12) NOT NULL,
   event_id                       NUMBER(15) NOT NULL,
   result_report_number           NUMBER(12) NOT NULL,

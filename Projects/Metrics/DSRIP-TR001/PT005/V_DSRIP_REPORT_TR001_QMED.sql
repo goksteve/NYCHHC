@@ -1,4 +1,11 @@
 CREATE OR REPLACE VIEW v_dsrip_report_tr001_qmed AS
+WITH
+  report_dates AS
+  (
+    SELECT --+ materialize
+      TRUNC(NVL(TO_DATE(SYS_CONTEXT('USERENV', 'CLIENT_IDENTIFIER')), SYSDATE), 'MONTH') report_period_start_dt
+    FROM dual 
+  )
 SELECT
   report_period_start_dt,
   network,
@@ -44,29 +51,27 @@ FROM
     q.follow_up_dt,
     q.follow_up_facility,
     (
-      SELECT MIN(pd.provider_name||' - '||pd.physician_service_name) KEEP (DENSE_RANK FIRST ORDER BY CASE WHEN UPPER(pd.physician_service_name) LIKE '%PSYCH%' THEN 1 WHEN pd.physician_service_name IS NOT NULL THEN 2 ELSE 3 END)
+      SELECT --+ ordered use_nl(pd)
+        MIN(pd.provider_name||' - '||pd.physician_service_name) KEEP (DENSE_RANK FIRST ORDER BY CASE WHEN UPPER(pd.physician_service_name) LIKE '%PSYCH%' THEN 1 WHEN pd.physician_service_name IS NOT NULL THEN 2 ELSE 3 END)
       FROM dsrip_tr001_providers pr
-      JOIN provider_dimension pd ON pd.provider_id = pr.provider_id
-      WHERE pr.visit_id = q.follow_up_visit_id
+      JOIN provider_dimension pd
+        ON pd.provider_id = pr.provider_id AND pd.network = pr.network
+      WHERE pr.visit_id = q.follow_up_visit_id AND pr.network = q.network
       GROUP BY pr.visit_id
     ) bh_provider_info,
     (
-      SELECT
+      SELECT --+ ordered use_nl(pm) index(pm)
         MIN(pm.payer_group||'\'||pm.payer_name) KEEP (DENSE_RANK FIRST ORDER BY CASE WHEN pm.payer_group = 'Medicaid' THEN 1 ELSE 2 END, vp.payer_rank) 
       FROM dsrip_tr001_payers vp
-      JOIN pt008.payer_mapping pm ON pm.payer_id = vp.payer_id
-      WHERE vp.visit_id = q.visit_id AND pm.network = q.network
+      JOIN pt008.payer_mapping pm
+        ON pm.payer_id = vp.payer_id AND pm.network = vp.network
+      WHERE vp.visit_id = q.visit_id AND vp.network = q.network
       GROUP BY vp.visit_id
     ) payer_info,
     q.follow_up_fin_class,
     CASE WHEN q.follow_up_dt < q.discharge_dt+30 THEN 'Y' END follow_up_30_days,
     CASE WHEN q.follow_up_dt < q.discharge_dt+7 THEN 'Y' END follow_up_7_days
-  FROM
-  (
-    SELECT
-      TRUNC(NVL(TO_DATE(SYS_CONTEXT('USERENV', 'CLIENT_IDENTIFIER')), SYSDATE), 'MONTH') report_period_start_dt
-    FROM dual 
-  ) dt
+  FROM report_dates dt
   JOIN
   (
     SELECT

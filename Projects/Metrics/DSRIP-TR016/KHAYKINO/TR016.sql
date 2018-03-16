@@ -1,3 +1,7 @@
+rem You call this script from SQL Plus like this:
+rem SQL> @tr016.sql 01-FEB-2018
+rem The parameter is optional. By default, it will run for the current month.
+
 set line 100
 set verify off
 set feedback off
