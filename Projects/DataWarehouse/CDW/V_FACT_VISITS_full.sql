@@ -1,8 +1,6 @@
 CREATE OR REPLACE VIEW v_fact_visits_full AS
 WITH
  -- 13-Mar-2018, OK: new version
- -- 09-Mar-2018, OK: added column PATIENT_ID
- -- 09-Mar-2018, GK: added column CID
   visit_info AS
   (
     SELECT --+ ordered use_hash(vs vl) materialize

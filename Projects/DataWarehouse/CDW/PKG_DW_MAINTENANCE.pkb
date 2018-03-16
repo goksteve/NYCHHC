@@ -121,13 +121,25 @@ CREATE OR REPLACE PACKAGE BODY pkg_dw_maintenance AS
   
   PROCEDURE refresh_full IS
   BEGIN
-    refresh_data('WHERE target_table NOT IN (''PROC'',''VISIT'',''VISIT_SEGMENT'',''VISIT_SEGMENT_VISIT_LOCATION'',''EVENT'',''PROC_EVENT'',''PROC_EVENT_ARCHIVE'',''RESULT'') AND target_table NOT LIKE ''FACT%''');
+    xl.open_log('DWM.REFRESH_FULL','Nothing will be done!',true);
+--    refresh_data('WHERE target_table IN (''PROC'',''VISIT'',''VISIT_SEGMENT'',''VISIT_SEGMENT_VISIT_LOCATION'',''EVENT'',''PROC_EVENT'',''PROC_EVENT_ARCHIVE'',''RESULT'')');
+    xl.close_log('Nothing has been done!');
   END;
 
 
   PROCEDURE refresh_incremental IS
   BEGIN
     refresh_data('WHERE target_table IN (''PROC'',''VISIT'',''VISIT_SEGMENT'',''VISIT_SEGMENT_VISIT_LOCATION'',''EVENT'',''PROC_EVENT'',''PROC_EVENT_ARCHIVE'',''RESULT'')');
+  END;
+  
+  PROCEDURE set_parameter(p_name IN VARCHAR2, p_value IN VARCHAR2) IS
+  BEGIN
+    dbms_session.set_context('CTX_CDW_MAINTENANCE', p_name, p_value);
+  END;
+  
+  FUNCTION get_parameter(p_name IN VARCHAR2) RETURN VARCHAR2 IS
+  BEGIN
+    RETURN SYS_CONTEXT('CTX_CDW_MAINTENANCE', p_name);
   END;
 END;
 /

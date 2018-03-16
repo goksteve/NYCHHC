@@ -21,6 +21,10 @@ CREATE OR REPLACE PACKAGE pkg_dw_maintenance AS
   PROCEDURE refresh_full;
   
   PROCEDURE refresh_incremental;
+  
+  PROCEDURE set_parameter(p_name IN VARCHAR2, p_value IN VARCHAR2);
+  
+  FUNCTION get_parameter(p_name IN VARCHAR2) RETURN VARCHAR2;
 END;
 /
 

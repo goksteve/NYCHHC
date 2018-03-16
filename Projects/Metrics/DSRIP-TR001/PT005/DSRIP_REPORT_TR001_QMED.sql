@@ -35,4 +35,4 @@ CREATE TABLE dsrip_report_tr001_qmed
   CONSTRAINT pk_dsrip_report_tr001 PRIMARY KEY(report_period_start_dt, network, visit_id)
 ) COMPRESS BASIC;
 
-GRANT SELECT ON dsrip_report_tr001_qmed TO PT009; 
+GRANT SELECT ON dsrip_report_tr001_qmed TO PUBLIC; 

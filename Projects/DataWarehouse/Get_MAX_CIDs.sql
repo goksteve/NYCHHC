@@ -1,12 +1,3 @@
-select distinct
-  column_value table_name,
-  'INSERT /*+ parallel(32) */ INTO log_incremental_data_load SELECT network||''DW01'', ''UD_MASTER'', '''||column_value||''', network, MAX(cid), NULL, SYSDATE FROM '||lower(column_value)||' GROUP BY network;
-commit;
-' cmd 
-from table(split_string('EVENT,PROC,PROC_EVENT,PROC_EVENT_ARCHIVE,RESULT,VISIT,VISIT_SEGMENT,VISIT_SEGMENT_VISIT_LOCATION')) cmd
-order by 1
-;
-
 truncate table log_incremental_data_load;
 
 INSERT /*+ parallel(32) */ INTO log_incremental_data_load SELECT network||'DW01', 'UD_MASTER', 'EVENT', network, MAX(cid), NULL, SYSDATE FROM event GROUP BY network;
@@ -33,6 +24,24 @@ commit;
 INSERT /*+ parallel(32) */ INTO log_incremental_data_load SELECT network||'DW01', 'UD_MASTER', 'VISIT_SEGMENT_VISIT_LOCATION', network, MAX(cid), NULL, SYSDATE FROM visit_segment_visit_location GROUP BY network;
 commit;
 
-insert into log_incremental_data_load
-select 'HIGGSDV3','CDW','FACT_RESULTS',column_value,0,null, sysdate
-from table(split_string('CBN,GP1,GP2,NBN,NBX,QHN,SBN,SMN'));
+-- =============================================================================
+
+begin
+  xl.open_log('TST_OK', 'Getting Mac CIDs from the FACT_RESULTS table', true);
+  
+  etl.add_data
+  (
+    p_operation => 'MERGE /*+ parallel(32) */',
+    p_tgt => 'LOG_INCREMENTAL_DATA_LOAD',
+    p_src => 'SELECT ''HIGGSDV3'' dbname, ''CDW'' schema_name, ''FACT_RESULTS'' table_name, network, MAX(cid) max_cid' ||
+             ' FROM fact_results WHERE network IN ('''','''','''','''') GROUP BY network',
+    p_commit_at => -1
+  );
+
+  xl.close_log('Successfully completed');
+exception
+ when others then
+  xl.close_log(sqlerrm, true);
+  raise;
+end;
+/

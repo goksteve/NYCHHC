@@ -19,7 +19,7 @@ WITH
     SELECT /*+ materialize */ *
     FROM
     (  -- Visits with BH Diagnoses:
-      SELECT --+ ordered use_nl(ap cmv) index(ap)
+      SELECT --+ ordered
         dt.report_period_start_dt,
         vst.network,
         vst.facility_id,
@@ -34,15 +34,15 @@ WITH
         vst.attending_emp_provider_id,
         vst.resident_emp_provider_id
       FROM dt
-      JOIN cdw.ref_visit_types vt ON vt.abbreviation IN ('IP','OP','CP')
       JOIN cdw.visit vst
-        ON vst.visit_type_id = vt.visit_type_id 
-       AND
-       (
-          vt.abbreviation = 'IP' AND vst.discharge_date_time >= dt.begin_dt AND vst.discharge_date_time < dt.end_dt 
-          OR
-          vt.abbreviation IN ('OP','CP') AND vst.admission_date_time >= dt.begin_dt
-       )
+        ON 
+        (
+          vst.visit_type_id = 1 -- 1-Inpatient(IP) 
+          AND vst.discharge_date_time >= dt.begin_dt AND vst.discharge_date_time < dt.end_dt 
+         OR
+          vst.visit_type_id IN (3, 4) -- 3-Outpatient(OP), 4-Clinic(CP) 
+          AND vst.admission_date_time >= dt.begin_dt
+        )
       JOIN cdw.active_problem ap
         ON ap.network = vst.network AND ap.visit_id = vst.visit_id
       JOIN cdw.problem_cmv cmv
@@ -51,8 +51,10 @@ WITH
       JOIN meta_conditions mc
         ON mc.qualifier = DECODE(cmv.coding_scheme_id, 5, 'ICD9', 'ICD10')
        AND mc.value = cmv.code AND mc.criterion_id = 9 -- DIAGNOSES:MENTAL HEALTH
-     UNION -- Visits at BH Departments:
-      SELECT
+      JOIN cdw.ref_visit_types vt
+        ON vt.visit_type_id = vst.visit_type_id
+     UNION  
+      SELECT --+ ordered
         dt.report_period_start_dt,
         vst.network,
         vst.facility_id, 
@@ -68,9 +70,10 @@ WITH
         vst.resident_emp_provider_id
       FROM dt
       JOIN cdw.visit vst
-        ON vst.admission_date_time >= dt.begin_dt  
+        ON vst.visit_type_id IN (3, 4) -- 3-Outpatient(OP), 4-Clinic(CP)
+       AND vst.admission_date_time >= dt.begin_dt  
       JOIN cdw.ref_visit_types vt
-        ON vt.visit_type_id = vst.visit_type_id AND vt.abbreviation IN ('OP','CP')
+        ON vt.visit_type_id = vst.visit_type_id
       JOIN cdw.visit_segment_visit_location vl
         ON vl.network = vst.network AND vl.visit_id = vst.visit_id
       JOIN cdw.dim_hc_departments dp
@@ -91,7 +94,7 @@ WITH
       FROM visits
       WHERE resident_emp_provider_id IS NOT NULL
      UNION
-      SELECT --+ ordered index(pea) 
+      SELECT 
         vst.network, vst.visit_id, pea.emp_provider_id AS provider_id
       FROM visits vst
       JOIN cdw.proc_event_archive pea

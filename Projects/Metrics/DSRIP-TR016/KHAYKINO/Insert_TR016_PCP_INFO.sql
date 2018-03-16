@@ -6,12 +6,14 @@ set feedback on
 INSERT --+ parallel(8) 
 INTO dsrip_tr016_pcp_info
 SELECT
+  SUBSTR(db.name, 1, 3) network,
   patient_id,
   prim_care_provider,
   f.name pcp_visit_facility, 
   pcp_visit_number,
   pcp_visit_dt
-FROM
+FROM v$database db
+JOIN
 (
   SELECT
     p.patient_id,
@@ -23,9 +25,8 @@ FROM
   JOIN ud_master.visit_segment_visit_location vl ON vl.visit_id = v.visit_id
   JOIN hhc_custom.hhc_location_dimension ld ON ld.location_id = vl.location_id AND ld.clinic_code <> 'N/A'
   JOIN khaykino.ref_clinic_codes cc ON cc.code = TO_NUMBER(ld.clinic_code) AND cc.category_id = 'PCP'
-) pv 
-LEFT JOIN ud_master.facility f ON f.facility_id = pv.facility_id
-WHERE pv.rnum = 1;
+) pv ON pv.rnum = 1
+LEFT JOIN ud_master.facility f ON f.facility_id = pv.facility_id;
 
 set timi off
 set feedback off

@@ -39,13 +39,13 @@ SUBPARTITION BY HASH(visit_id) SUBPARTITIONS 16
 
 GRANT SELECT ON fact_results TO PUBLIC;
 
-CREATE UNIQUE INDEX pk_fact_results ON fact_results(event_id, result_report_number, multi_field_occurrence_number, item_number, visit_id, network)
- LOCAL PARALLEL 32;       
+CREATE UNIQUE INDEX pk_fact_results ON fact_results(visit_id, event_id, data_element_id, result_report_number, multi_field_occurrence_number, item_number, network)
+ LOCAL PARALLEL 32;
 
 ALTER INDEX pk_fact_results NOPARALLEL;
 
 ALTER TABLE fact_results ADD CONSTRAINT pk_fact_results
-PRIMARY KEY(event_id, result_report_number, multi_field_occurrence_number, item_number, visit_id, network)
+PRIMARY KEY(visit_id, event_id, data_element_id, result_report_number, multi_field_occurrence_number, item_number, network)
 USING INDEX pk_fact_results;
 
 CREATE OR REPLACE TRIGGER tr_insert_fact_results
