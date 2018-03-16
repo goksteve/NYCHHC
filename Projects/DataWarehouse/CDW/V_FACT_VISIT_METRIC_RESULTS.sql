@@ -23,7 +23,8 @@ FROM
       WHEN SUBSTR(q.result_value, 1, 1) <> '0'
       AND REGEXP_COUNT(q.result_value, '\.', 1) <= 1
       AND LENGTH(q.result_value) <= 38
-      AND REGEXP_REPLACE(REGEXP_REPLACE(q.result_value, '[^[:digit:].]'), '\.$') <= 50 THEN
+    --  AND REGEXP_REPLACE(REGEXP_REPLACE(q.result_value, '[^[:digit:].]'), '\.$') <= 50 
+THEN
       REGEXP_REPLACE(REGEXP_REPLACE(q.result_value, '[^[:digit:].]'), '\.$')
       END
       WHEN q.criterion_id = 13 THEN
@@ -57,7 +58,7 @@ FROM
         ROW_NUMBER() OVER(PARTITION BY r.network, r.visit_id, c.criterion_id ORDER BY r.event_id DESC) rnum
         FROM
         crit_metric c
-    JOIN fact_results r ON r.data_element_id = c.VALUE AND r.network = c.network
+    JOIN fact_results r ON r.data_element_id = c.VALUE AND r.network = c.network AND r.network =  sys_context('CTX_CDW_MAINTENANCE','NETWORK')
     JOIN crit_junk t ON r.result_value NOT LIKE t.VALUE
   ) q
  WHERE
