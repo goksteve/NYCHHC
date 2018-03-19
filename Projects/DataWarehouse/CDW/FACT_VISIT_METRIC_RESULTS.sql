@@ -11,8 +11,8 @@ CREATE TABLE fact_visit_metric_results
  ldl_final_orig_value       VARCHAR2(1023 BYTE),
  ldl_final_calc_value       VARCHAR2(1023 BYTE),
  bp_final_orig_value        VARCHAR2(1023 BYTE),
- bp_calc_systolic_bp        VARCHAR2(1023 BYTE),
- bp_calc_diastolic_bp       VARCHAR2(1023 BYTE)
+ bp_calc_systolic         VARCHAR2(1023 BYTE),
+ bp_calc_diastolic        VARCHAR2(1023 BYTE)
 )
 COMPRESS BASIC
 PARTITION BY LIST (network)
@@ -27,9 +27,11 @@ PARTITION BY LIST (network)
   PARTITION sbn VALUES ('SBN'),
   PARTITION smn VALUES ('SMN'));
 
-GRANT SELECT ON fact_visit_metric_results TO PUBLIC;
+
 
 CREATE UNIQUE INDEX pk_fact_visit_metric_results ON fact_visit_metric_results (visit_id, network) LOCAL PARALLEL 32;
 ALTER INDEX pk_fact_visit_metric_results NOPARALLEL;
 
 ALTER TABLE fact_visit_metric_results ADD CONSTRAINT pk_fact_visit_metric_results PRIMARY KEY (visit_id, network) USING INDEX pk_fact_visit_metric_results;
+
+GRANT SELECT ON fact_visit_metric_results TO PUBLIC;

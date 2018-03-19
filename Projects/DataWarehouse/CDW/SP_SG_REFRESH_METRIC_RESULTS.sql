@@ -1,9 +1,15 @@
 CREATE OR REPLACE PROCEDURE sp_sg_refresh_metric_results AS
 BEGIN
-  xl.open_log('SG_TST', 'Refreshing FACT_VISIT_METRIC_RESULTS', TRUE);
+  xl.open_log('SG_Metric_Results', 'Refreshing FACT_VISIT_METRIC_RESULTS', TRUE);
 
   EXECUTE IMMEDIATE 'ALTER SESSION ENABLE PARALLEL DML';
+ 
 
+ EXECUTE IMMEDIATE 'ALTER TABLE fact_visit_metric_results DROP CONSTRAINT pk_fact_visit_metric_results';
+
+  EXECUTE IMMEDIATE 'DROP INDEX pk_fact_visit_metric_results';
+
+  EXECUTE  IMMEDIATE 'TRUNCATE TABLE FACT_VISIT_METRIC_RESULTS';
   FOR r IN 
   (
     SELECT DISTINCT network
@@ -27,6 +33,13 @@ BEGIN
 
     xl.end_action;
   END LOOP;
+
+ EXECUTE IMMEDIATE
+  'CREATE UNIQUE INDEX pk_fact_visit_metric_results ON fact_visit_metric_results (visit_id, network) LOCAL PARALLEL 32';
+ EXECUTE IMMEDIATE 'ALTER INDEX pk_fact_visit_metric_results NOPARALLEL';
+
+ EXECUTE IMMEDIATE
+  'ALTER TABLE fact_visit_metric_results ADD CONSTRAINT pk_fact_visit_metric_results PRIMARY KEY (visit_id, network) USING INDEX pk_fact_visit_metric_results';
 
   xl.close_log('Successfully completed');
 EXCEPTION
