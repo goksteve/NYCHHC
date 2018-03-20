@@ -34,6 +34,7 @@ WITH
           ON p1.onset_date >= msrmnt_yr_start_dt AND p1.onset_date < ADD_MONTHS(msrmnt_yr_start_dt,6) 
         JOIN ud_master.problem_cmv cmv1 
           ON cmv1.patient_id=p1.patient_id 
+         AND cmv1.problem_number=p1.problem_number 
         JOIN mdm_extract.meta_conditions mc1
           ON mc1.value=cmv1.code AND mc1.criterion_id=36 AND mc1.include_exclude_ind='E'  
         WHERE cmv1.patient_id=p.patient_id     
