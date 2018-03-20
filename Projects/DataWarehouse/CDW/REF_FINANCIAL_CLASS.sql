@@ -9,3 +9,4 @@ CREATE TABLE ref_financial_class
 ) COMPRESS BASIC;
 
 GRANT SELECT ON ref_financial_class TO PUBLIC;
+
