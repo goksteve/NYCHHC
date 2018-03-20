@@ -1,3 +1,5 @@
+exec dbm.drop_tables('DSRIP_TR018_BP_RESULTS');
+
 CREATE TABLE dsrip_tr018_bp_results
 (
   report_period_start_dt  DATE,
@@ -24,6 +26,6 @@ CREATE TABLE dsrip_tr018_bp_results
   flag_140_90             NUMBER,
   flag_150_90             NUMBER,
   rnum_per_patient        NUMBER,
-  CONSTRAINT pk_tr018_bp_results PRIMARY KEY(network,patient_id,visit_id)
+  CONSTRAINT pk_tr018_bp_results1 PRIMARY KEY(network,patient_id,visit_id)
 )
 COMPRESS BASIC;

@@ -93,6 +93,7 @@ INSERT INTO cnf_dw_refresh VALUES(720, 'MERGE', 'REF_VISIT_TYPES', 'SELECT DISTI
 INSERT INTO cnf_dw_refresh VALUES(730, 'MERGE', 'REF_VISIT_SERVICE_TYPES', 'SELECT network,visit_type_id,visit_service_type_id,name,short_name,facility_id FROM visit_service_type WHERE active = ''active''', NULL, NULL, NULL, NULL);
 INSERT INTO cnf_dw_refresh VALUES(740, 'MERGE', 'REF_HC_SPECIALTIES', 'V_REF_HC_SPECIALTIES', NULL, NULL, NULL, NULL);
 INSERT INTO cnf_dw_refresh VALUES(750, 'MERGE', 'DIM_DISCHARGE_TYPES', 'V_DIM_DISCHARGE_TYPES', 'NETWORK,VISIT_TYPE_ID,DISCHARGE_TYPE_ID', NULL, NULL, NULL);
+INSERT INTO cnf_dw_refresh VALUES(760, 'MERGE', 'REF_FINANCIAL_CLASS', 'SELECT network,financial_class_id,name FROM financial_class', NULL, NULL, NULL, NULL);
 
 INSERT INTO cnf_dw_refresh VALUES(820, 'MERGE', 'REF_PROC_EVENT_ARCHIVE_TYPES', 'SELECT DISTINCT archive_type_id, name FROM proc_event_archive_type', NULL, 'WHERE archive_type_id <> 0', NULL, NULL);
 INSERT INTO cnf_dw_refresh VALUES(850, 'MERGE', 'DIM_PAYERS', 'PT008.PAYER_MAPPING', 'NETWORK,PAYER_ID', NULL, NULL, NULL);

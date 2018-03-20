@@ -120,7 +120,7 @@ WITH
       ON pm.payer_id=r.payer_id AND pm.network=r.network
     WHERE FLOOR((add_months(trunc(sysdate,'year'),12)-1 - p.birthdate)/365) BETWEEN 18 and 85
   )
-SELECT
+SELECT --+ parallel(16)
   network, 
   facility_name,         
   patient_id, 
@@ -157,4 +157,5 @@ SELECT
   numerator_flag2,
   numerator_flag3
 FROM pat_bp_results;
-
+select * from dsrip_tr018_bp_results;
+select * from patient_dimension;

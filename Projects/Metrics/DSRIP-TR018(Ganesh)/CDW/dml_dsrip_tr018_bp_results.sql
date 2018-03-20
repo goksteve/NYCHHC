@@ -1,4 +1,12 @@
 -- 03-13-2018 GK: Fix for diagnosis exclusion date conditions
+prompt Populating DSRIP_TR018_BP_RESULTS ...
+
+ALTER SESSION ENABLE PARALLEL DML;
+
+TRUNCATE TABLE dsrip_tr018_bp_results;
+
+INSERT --+ parallel(4) 
+INTO dsrip_tr018_bp_results
 WITH 
   dt AS 
   (
@@ -22,7 +30,7 @@ WITH
       ON p.onset_date >= msrmnt_yr_start_dt AND p.onset_date < ADD_MONTHS(msrmnt_yr_start_dt,6) 
     JOIN ud_master.problem_cmv cmv 
       ON cmv.patient_id=p.patient_id  
-     AND cmv.problme_number=p.problem_number 
+     AND cmv.problem_number=p.problem_number 
     JOIN mdm_extract.meta_conditions mc
       ON mc.value=cmv.code AND mc.criterion_id=36 AND include_exclude_ind='I'
     WHERE NOT EXISTS
@@ -208,7 +216,7 @@ WITH
     ) g
     WHERE g.rnum_per_day = 1
   )
-SELECT --+ parallel
+SELECT -- parallel
   v.report_period_start_dt, 
   v.report_period_end_dt, 
   v.network, 
