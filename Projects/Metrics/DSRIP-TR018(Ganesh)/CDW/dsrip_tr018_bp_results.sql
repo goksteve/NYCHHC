@@ -1,0 +1,2 @@
+@ddl_dsrip_tr018_bp_results.sql
+@dml_dsrip_tr018_bp_results.sql
