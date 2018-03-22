@@ -27,7 +27,7 @@ WITH
       ROW_NUMBER() OVER (PARTITION BY cmv.patient_id ORDER BY onset_date DESC) htn_ptnt_rnum   
     FROM dt
     JOIN ud_master.problem p 
-      ON p.onset_date >= msrmnt_yr_start_dt AND p.onset_date < ADD_MONTHS(msrmnt_yr_start_dt,1) AND p.status_id IN (0, 6, 7, 8)
+      ON p.onset_date >= msrmnt_yr_start_dt AND p.onset_date < ADD_MONTHS(msrmnt_yr_start_dt,6) AND p.status_id IN (0, 6, 7, 8)
     JOIN ud_master.problem_cmv cmv 
       ON cmv.patient_id=p.patient_id  
      AND cmv.problem_number=p.problem_number 
@@ -39,7 +39,7 @@ WITH
           distinct cmv1.patient_id
         FROM dt
         JOIN ud_master.problem p1 
-          ON p1.onset_date >= msrmnt_yr_start_dt AND p1.onset_date < ADD_MONTHS(msrmnt_yr_start_dt,1) AND p1.status_id IN (0, 6, 7, 8) 
+          ON p1.onset_date >= msrmnt_yr_start_dt AND p1.onset_date < ADD_MONTHS(msrmnt_yr_start_dt,6) AND p1.status_id IN (0, 6, 7, 8) 
         JOIN ud_master.problem_cmv cmv1 
           ON cmv1.patient_id=p1.patient_id 
          AND cmv1.problem_number=p1.problem_number 
