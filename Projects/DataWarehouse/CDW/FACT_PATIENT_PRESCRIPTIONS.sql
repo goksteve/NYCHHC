@@ -4,11 +4,11 @@ CREATE TABLE fact_patient_prescriptions
 (
  network            VARCHAR2(3 BYTE) NOT NULL,
  patient_key        NUMBER(12) NOT NULL,
- facility_key       NUMBER(12)  NULL,
+ facility_key       NUMBER(12) NULL,
+ order_dt_key       NUMBER(12) NOT NULL,
  patient_id         NUMBER(12) NOT NULL,
  mrn                VARCHAR2(512 BYTE),
  order_dt           DATE NOT NULL,
- order_dtnum      NUMBER(12) NOT NULL,
  drug_name          VARCHAR2(175 BYTE),
  drug_description   VARCHAR2(512 BYTE),
  rx_quantity        NUMBER(12),
@@ -19,23 +19,28 @@ CREATE TABLE fact_patient_prescriptions
  load_dt            DATE DEFAULT TRUNC(SYSDATE)
 )
 COMPRESS BASIC
-PARTITION BY RANGE
- (order_dt)
- INTERVAL ( INTERVAL '1' YEAR )
- SUBPARTITION BY LIST (network)
-  SUBPARTITION TEMPLATE(SUBPARTITION cbn
-                        VALUES ('CBN'),
-                        SUBPARTITION gp1 VALUES ('GP1'),
-                        SUBPARTITION gp2 VALUES ('GP2'),
-                        SUBPARTITION nbn VALUES ('NBN'),
-                        SUBPARTITION nbx VALUES ('NBX'),
-                        SUBPARTITION qhn VALUES ('QHN'),
-                        SUBPARTITION sbn VALUES ('SBN'),
-                        SUBPARTITION smn VALUES ('SMN'))
- (PARTITION old_data VALUES LESS THAN (DATE '2010-01-01'));
+PARALLEL 32
+PARTITION BY LIST (network)
+ SUBPARTITION BY HASH (patient_id)
+  SUBPARTITIONS 16
+ (PARTITION cbn VALUES ('CBN'),
+  PARTITION gp1 VALUES ('GP1'),
+  PARTITION gp2 VALUES ('GP2'),
+  PARTITION nbn VALUES ('NBN'),
+  PARTITION nbx VALUES ('NBX'),
+  PARTITION qhn VALUES ('QHN'),
+  PARTITION sbn VALUES ('SBN'),
+  PARTITION smn VALUES ('SMN'));
 
-CREATE BITMAP INDEX bmi_drag_prescription_desc
+
+
+CREATE BITMAP INDEX bmi_patient_prescriptions
  ON fact_patient_prescriptions(drug_description)
+ PARALLEL 32
  LOCAL;
 
+ALTER INDEX bmi_patient_prescriptions
+ NOPARALLEL;
+
 GRANT SELECT ON fact_patient_prescriptions TO PUBLIC;
+
