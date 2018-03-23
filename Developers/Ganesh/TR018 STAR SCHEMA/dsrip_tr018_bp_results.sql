@@ -17,17 +17,30 @@ WITH
       fpd.diag_code htn_dx_code,
       ROW_NUMBER() OVER (PARTITION BY fpd.patient_id ORDER BY fpd.onset_date DESC) htn_ptnt_rnum   
     FROM dt
-    JOIN fact_patient_diagnoses fpd on  fpd.onset_date >= dt.msrmnt_yr_start_dt AND fpd.onset_date  < ADD_MONTHS(msrmnt_yr_start_dt,1)  AND fpd.network='CBN'
+    JOIN fact_patient_diagnoses fpd on  fpd.onset_date >= dt.msrmnt_yr_start_dt 
+     AND fpd.onset_date <  
+          CASE 
+            WHEN TO_CHAR(TRUNC(SYSDATE,'MONTH'),'mm/dd') < '06/01'
+            THEN TRUNC(SYSDATE,'MONTH')
+            ELSE TO_DATE('07/01','MM/DD')
+          END    
+     AND fpd.network='CBN'
     JOIN pt005.meta_conditions mc
       ON mc.value=fpd.diag_code AND mc.criterion_id=36 AND include_exclude_ind='I'
     WHERE NOT EXISTS
       (
         SELECT 
-          distinct fpd.patient_id
+          distinct fpd1.patient_id,fpd1.network
         FROM dt
-        JOIN FACT_PATIENT_DIAGNOSES fpd1 on  fpd1.onset_date >= dt.msrmnt_yr_start_dt AND fpd1.onset_date  < ADD_MONTHS(msrmnt_yr_start_dt,1)  AND fpd1.network='CBN'
+        JOIN fact_patient_diagnoses fpd1 on  fpd1.onset_date >= dt.msrmnt_yr_start_dt 
+        AND fpd1.onset_date <  
+          CASE 
+            WHEN TO_CHAR(TRUNC(SYSDATE,'MONTH'),'mm/dd') < '06/01'
+            THEN TRUNC(SYSDATE,'MONTH')
+            ELSE TO_DATE('07/01','MM/DD')
+          END  
         JOIN pt005.meta_conditions mc ON mc.value=fpd1.diag_code AND mc.criterion_id=36 AND include_exclude_ind='E'  
-        WHERE fpd1.patient_id=fpd.patient_id     
+        WHERE fpd1.patient_id=fpd.patient_id AND fpd1.network=fpd.network    
       )
   ),
   htn_metadata_rslts_lkp AS 
@@ -65,14 +78,14 @@ WITH
       v.patient_id,
       lkp.onset_date,
       lkp.htn_dx_code,
-      v.last_department_key,
+      v.first_department_key,
       row_number() over (partition by v.patient_id,v.network order by v.admission_dt desc) rnum_ltst_visit
     FROM dt
     JOIN fact_visits v
       ON v.admission_dt >= dt.begin_dt
      AND v.admission_dt < dt.end_dt
     JOIN htn_ptnt_lkp lkp
-      ON lkp.patient_id=v.patient_id 
+      ON lkp.patient_id=v.patient_id AND lkp.network=v.network
      AND lkp.htn_ptnt_rnum=1
     JOIN ref_visit_types rvt
       ON rvt.visit_type_id=v.final_visit_type_id
@@ -128,7 +141,7 @@ WITH
       ON v.visit_id = r.visit_id
      AND v.network = r.network
     LEFT JOIN DIM_HC_DEPARTMENTS dept
-      ON dept.department_key=v.last_department_key
+      ON dept.department_key=v.first_department_key
      AND dept.service_type='PCP' 
   ),
 rslt_combo AS 
