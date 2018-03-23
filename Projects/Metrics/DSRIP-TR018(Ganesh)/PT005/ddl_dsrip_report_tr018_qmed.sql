@@ -1,3 +1,5 @@
+exec dbm.drop_tables('DSRIP_REPORT_TR018_QMED');
+
 CREATE TABLE dsrip_report_tr018_qmed
 (
   network                  VARCHAR2(3 BYTE),
@@ -35,6 +37,6 @@ CREATE TABLE dsrip_report_tr018_qmed
   numerator_flag1          CHAR(1 CHAR),
   numerator_flag2          CHAR(1 CHAR),
   numerator_flag3          CHAR(1 CHAR),
-  CONSTRAINT pk_tr018_bp_report PRIMARY KEY(network,patient_id,visit_id)
+  CONSTRAINT pk_tr018_bp_report1 PRIMARY KEY(network,patient_id,visit_id)
 )
 COMPRESS BASIC;

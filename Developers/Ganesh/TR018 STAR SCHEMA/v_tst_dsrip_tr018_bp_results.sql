@@ -1,3 +1,5 @@
+CREATE OR REPLACE VIEW v_tst_dsrip_tr018_bp_results
+AS
 WITH 
   dt AS 
   (
@@ -267,3 +269,5 @@ LEFT JOIN rslt_combo r
  AND rnum_per_patient =1
 WHERE v.rnum_ltst_visit=1
 AND v.network='CBN';
+
+--GRANT SELECT ON v_tst_dsrip_tr018_bp_results TO PUBLIC;

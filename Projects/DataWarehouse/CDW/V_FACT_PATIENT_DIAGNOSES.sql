@@ -1,5 +1,6 @@
 CREATE OR REPLACE VIEW v_fact_patient_diagnoses AS
 SELECT
+ -- 20-Mar-2018, GK: modified dim_patients join condition to use current_flag insted of effective_from,effective_to, Data issue(patient_id=157688 and network='QHN' and problem_number =1)
  -- 09-Mar-2018, OK: added column PATIENT_ID
  -- 08-Mar-2018, SG: created
   a.network,
@@ -25,8 +26,7 @@ FROM problem_cmv a
 JOIN problem b
   ON a.patient_id = b.patient_id AND a.problem_number = b.problem_number AND a.network = b.network
 JOIN dim_patients p
-  ON p.patient_id = b.patient_id AND p.network = b.network
- AND p.effective_from <= b.onset_date AND p.effective_to > b.onset_date
+  ON p.patient_id = b.patient_id AND p.network = b.network AND p.current_flag = 1
 LEFT JOIN problem_status c
   ON b.status_id = c.status_id AND b.network = c.network
 WHERE a.coding_scheme_id IN (5, 10)

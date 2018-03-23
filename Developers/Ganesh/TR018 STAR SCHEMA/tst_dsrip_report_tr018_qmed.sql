@@ -97,6 +97,7 @@ WITH
      AND fin.financial_class_id=v.financial_class_id
     LEFT JOIN dim_payers dp
       ON dp.payer_key=v.first_payer_key
+      
   ),
   rslt AS 
   (
@@ -111,6 +112,8 @@ WITH
       v.financial_class_id,
       v.visit_financial_class,               
       v.payer_id,
+      v.payer_name,
+      v.payer_group,
       v.admission_dt,
       v.discharge_dt,
       r.event_id,
@@ -162,6 +165,8 @@ rslt_combo AS
       g.financial_class_id,
       g.visit_financial_class,               
       g.payer_id,
+      g.payer_name,
+      g.payer_group,
       g.result_dt,
       g.event_id,
       g.systolic_bp,
@@ -185,6 +190,8 @@ rslt_combo AS
         financial_class_id,
         visit_financial_class,               
         payer_id,
+        payer_name,
+        payer_group,
         admission_dt,
         discharge_dt,
         event_id,
@@ -201,8 +208,8 @@ rslt_combo AS
           ELSE 0
         END flag_150_90          
       FROM rslt
-      GROUP BY report_period_start_dt, report_period_end_dt, network, facility_name, patient_id, visit_id, visit_type, financial_class_id, visit_financial_class, payer_id,                         
-              admission_dt, discharge_dt, result_dt, event_id,clinic_code,clinic_code_desc,clinic_code_service
+      GROUP BY report_period_start_dt, report_period_end_dt, network, facility_name, patient_id, visit_id, visit_type, financial_class_id, visit_financial_class, payer_id,
+      payer_name,payer_group,admission_dt, discharge_dt, result_dt, event_id,clinic_code,clinic_code_desc,clinic_code_service
       HAVING MAX (systolic_bp) BETWEEN 0 AND 311 AND MAX (diastolic_bp) BETWEEN 0 AND 284
     ) g
     WHERE g.rnum_per_day = 1
@@ -212,21 +219,32 @@ SELECT --+ parallel(32)
   v.report_period_end_dt,
   v.network, 
   v.facility_name, 
-  r.clinic_code,
-  r.clinic_code_service,
-  r.clinic_code_desc,
   v.patient_id,
-  CASE
-    WHEN r.patient_id IS NOT NULL
-    THEN r.visit_id
-    ELSE v.visit_id
-  END visit_id,   
+  p.name AS patient_name,
+  medical_record_number AS mrn,
+  birthdate,
+  apt_suite, 
+  street_address,
+  city,  
+  state, 
+  country,
+  mailing_code,
+  home_phone,
+  FLOOR((add_months(trunc(sysdate,'year'),12)-1 - p.birthdate)/365) AS age, 
   CASE
     WHEN r.patient_id IS NOT NULL
     THEN r.visit_type
     ELSE v.visit_type
-  END visit_type, 
+  END visit_type_name, 
   CASE
+    WHEN r.patient_id IS NOT NULL
+    THEN r.visit_id
+    ELSE v.visit_id
+  END visit_id, 
+  r.clinic_code,
+  r.clinic_code_service,
+  r.clinic_code_desc,
+ CASE
     WHEN r.patient_id IS NOT NULL
     THEN r.admission_dt
     ELSE v.admission_dt 
@@ -236,34 +254,97 @@ SELECT --+ parallel(32)
     THEN r.discharge_dt
     ELSE v.discharge_dt
   END discharge_dt, 
+  v.payer_group,
+  v.payer_name,
+  CASE 
+    WHEN FLOOR((ADD_MONTHS(TRUNC(SYSDATE,'year'),12)-1 - p.birthdate)/365) BETWEEN 18 AND 59 
+    THEN 'Y' 
+    ELSE 'N' 
+  END AGE_18_59,
+  CASE 
+    WHEN FLOOR((ADD_MONTHS(TRUNC(SYSDATE,'year'),12)-1 - p.birthdate)/365) BETWEEN 60 AND 85 
+    THEN 'Y' 
+    ELSE 'N' 
+  END AGE_60_85,
   CASE
-    WHEN r.patient_id IS NOT NULL
-    THEN r.financial_class_id
-    ELSE v.financial_class_id
-  END financial_class_id,   
-  CASE
-    WHEN r.patient_id IS NOT NULL
-    THEN r.visit_financial_class
-    ELSE v.visit_financial_class
-  END visit_financial_class,                 
-  CASE
-    WHEN r.patient_id IS NOT NULL
-    THEN r.payer_id
-    ELSE v.payer_id
-  END payer_id,
-  v.onset_date,
-  v.htn_dx_code,
-  r.result_dt, 
-  r.event_id, 
+    WHEN diab_prob_pat.patient_id IS NOT NULL
+    THEN 'Y'
+    ELSE 'N'
+  END diabetic, 
+  diab_prob_pat.diag_code diabetes_dx_code,
+  v.htn_dx_code hypertension_dx_code,
+  v.onset_date hypertension_onset_date, 
+  r.result_dt AS bp_reading_time, 
   r.systolic_bp, 
   r.diastolic_bp, 
-  r.flag_140_90, 
-  r.flag_150_90, 
-  r.rnum_per_patient
+  CASE 
+    WHEN ((FLOOR((add_months(trunc(sysdate,'year'),12)-1 - p.birthdate)/365) BETWEEN 18 AND 59)AND (systolic_bp < 140 AND diastolic_bp <90))
+    THEN 'Y'
+    ELSE 'N'
+  END numerator_flag1,
+  CASE 
+    WHEN FLOOR((add_months(trunc(sysdate,'year'),12)-1 - p.birthdate)/365) BETWEEN 60 AND 85 AND (systolic_bp < 140 AND diastolic_bp <90) AND diab_prob_pat.patient_id IS NOT NULL
+    THEN 'Y'
+    ELSE 'N'
+  END numerator_flag2,
+  CASE 
+    WHEN FLOOR((add_months(trunc(sysdate,'year'),12)-1 - p.birthdate)/365) BETWEEN 60 AND 85 AND (systolic_bp < 150 AND diastolic_bp <90) AND diab_prob_pat.patient_id IS NULL
+    THEN 'Y'
+    ELSE 'N'
+  END numerator_flag3
 FROM htn_op_visits v 
 LEFT JOIN rslt_combo r 
   ON v.patient_id=r.patient_id 
  AND r.result_dt >= v.onset_date 
  AND rnum_per_patient =1
+JOIN dim_patients p
+  ON p.patient_id = v.patient_id AND p.network = v.network AND p.current_flag=1 AND p.date_of_death IS NULL
+LEFT JOIN 
+(
+  SELECT 
+    g.patient_id,
+    g.network,
+    MAX(g.onset_date) onset_date,
+    MAX(g.diag_code) diag_code
+  FROM  
+  (
+    SELECT --+ materialize
+      fpd.network,
+      fpd.patient_id,
+      fpd.onset_date,
+      fpd.diag_code
+    FROM fact_patient_diagnoses fpd  
+    JOIN pt005.meta_conditions mc
+      ON mc.value=fpd.diag_code AND mc.criterion_id=37 AND include_exclude_ind='I'
+    WHERE fpd.network='CBN'
+    AND NOT EXISTS
+    (
+      SELECT 
+        distinct fpd1.patient_id,fpd1.network
+      FROM fact_patient_diagnoses fpd1  
+      JOIN pt005.meta_conditions mc ON mc.value=fpd1.diag_code AND mc.criterion_id=37 AND include_exclude_ind='E'  
+      WHERE fpd1.patient_id=fpd.patient_id AND fpd1.network=fpd.network    
+    )       
+    
+    UNION
+    
+    SELECT 
+      DISTINCT network, 
+       a.patient_id, 
+      null onset_date, 
+      null diag_code
+    FROM fact_patient_prescriptions a
+    JOIN ref_drug_descriptions b
+      ON a.drug_description = b.drug_description
+      AND b.drug_type_id = 33
+  )g
+  GROUP BY g.network,g.patient_id 
+)diab_prob_pat
+ON diab_prob_pat.patient_id = p.patient_id 
+AND diab_prob_pat.network = p.network
 WHERE v.rnum_ltst_visit=1
-AND v.network='CBN';
+AND v.network='CBN'
+AND FLOOR((add_months(trunc(sysdate,'year'),12)-1 - p.birthdate)/365) BETWEEN 18 and 85;;
+
+
+
