@@ -35,12 +35,12 @@ WITH
       r.clinic_code,
       r.clinic_code_service,
       r.clinic_code_desc,
-      r.admission_date_time,
-      r.discharge_date_time,
+      trunc(r.admission_date_time) admission_date_time,
+      trunc(r.discharge_date_time) discharge_date_time,
       r.onset_date,
       r.htn_dx_code,
       r.event_id,
-      r.date_time bp_reading_time,
+      trunc(r.date_time) bp_reading_time,
       r.systolic_bp,
       r.diastolic_bp,
       r.financial_class_id,
@@ -54,6 +54,7 @@ WITH
         ELSE 'N'
       END diabetic, 
       diab_prob_pat.diag_code diabetes_dx_code,
+      diab_prob_pat.onset_date diabetes_onset_date,
       CASE 
         WHEN ((FLOOR((add_months(trunc(sysdate,'year'),12)-1 - p.birthdate)/365) BETWEEN 18 AND 59)AND (systolic_bp < 140 AND diastolic_bp <90))
         THEN 'Y'
@@ -90,15 +91,16 @@ WITH
             cmv.network,
             cmv.onset_date,
             cmv.diag_code
-          FROM patient_diag_dimension cmv
+          FROM cdw.fact_patient_diagnoses cmv
           JOIN meta_conditions mc
             ON mc.value = cmv.diag_code AND mc.criterion_id = 37 AND mc.include_exclude_ind = 'I' 
-          WHERE NOT EXISTS
+          WHERE
+          NOT EXISTS
           (
             SELECT 
               DISTINCT 
               cmv1.patient_id,cmv1.network
-            FROM patient_diag_dimension cmv1
+            FROM cdw.fact_patient_diagnoses cmv1
             JOIN meta_conditions mc1 ON mc1.value=cmv1.diag_code AND mc1.criterion_id = 37 AND mc1.include_exclude_ind = 'E'
             WHERE cmv1.patient_id=cmv.patient_id and cmv1.network=cmv.network   
           )  
@@ -150,6 +152,7 @@ SELECT
   AGE_60_85,
   diabetic,  
   diabetes_dx_code,
+  diabetes_onset_date,
   htn_dx_code hypertension_dx_code,
   onset_date hypertension_onset_date,   
   bp_reading_time,       
@@ -159,4 +162,3 @@ SELECT
   numerator_flag2,
   numerator_flag3
 FROM pat_bp_results;
-

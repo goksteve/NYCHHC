@@ -88,7 +88,7 @@ WITH
             cmv.network,
             cmv.onset_date,
             cmv.diag_code
-          FROM patient_diag_dimension cmv
+          FROM fact_patient_diagnoses cmv
           JOIN meta_conditions mc
             ON mc.value = cmv.diag_code AND mc.criterion_id = 37 AND mc.include_exclude_ind = 'I' 
           WHERE NOT EXISTS
@@ -96,7 +96,7 @@ WITH
             SELECT 
               DISTINCT 
               cmv1.patient_id,cmv1.network
-            FROM patient_diag_dimension cmv1
+            FROM fact_patient_diagnoses cmv1
             JOIN meta_conditions mc1 ON mc1.value=cmv1.diag_code AND mc1.criterion_id = 37 AND mc1.include_exclude_ind = 'E'
             WHERE cmv1.patient_id=cmv.patient_id and cmv1.network=cmv.network   
           )  

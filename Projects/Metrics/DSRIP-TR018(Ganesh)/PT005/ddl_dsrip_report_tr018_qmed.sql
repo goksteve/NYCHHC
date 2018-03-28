@@ -36,7 +36,9 @@ CREATE TABLE dsrip_report_tr018_qmed
   diastolic_bp             NUMBER,
   numerator_flag1          CHAR(1 CHAR),
   numerator_flag2          CHAR(1 CHAR),
-  numerator_flag3          CHAR(1 CHAR),
-  CONSTRAINT pk_tr018_bp_report1 PRIMARY KEY(network,patient_id,visit_id)
+  numerator_flag3          CHAR(1 CHAR)
 )
 COMPRESS BASIC;
+
+ALTER TABLE dsrip_report_tr018_qmed ADD CONSTRAINT pk_tr018_bp_report
+PRIMARY KEY(network,patient_id,visit_id);

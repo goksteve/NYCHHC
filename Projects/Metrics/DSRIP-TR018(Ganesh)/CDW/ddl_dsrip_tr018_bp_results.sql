@@ -1,4 +1,4 @@
-exec dbm.drop_tables('DSRIP_TR018_BP_RESULTS');
+DROP TABLE DSRIP_TR018_BP_RESULTS;
 
 CREATE TABLE dsrip_tr018_bp_results
 (
@@ -25,7 +25,11 @@ CREATE TABLE dsrip_tr018_bp_results
   diastolic_bp            NUMBER,
   flag_140_90             NUMBER,
   flag_150_90             NUMBER,
-  rnum_per_patient        NUMBER,
-  CONSTRAINT pk_tr018_bp_results1 PRIMARY KEY(network,patient_id,visit_id)
+  rnum_per_patient        NUMBER
 )
 COMPRESS BASIC;
+
+
+
+ALTER TABLE dsrip_tr018_bp_results ADD CONSTRAINT pk_tr018_bp_results1
+PRIMARY KEY(network,patient_id,visit_id);

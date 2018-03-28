@@ -1,5 +1,6 @@
 CREATE OR REPLACE VIEW v_fact_visits_incremental AS
 WITH
+ -- 28-MAR-2018, GK: reverted the dim_patients join logic to use current_flag, as there was an issue found with NBX.
  -- 14-MAR-2018, OK: used EFFICIENT_FROM and EFFICIENT_TO in DIM_PATIENTS join
   visit_info AS
   (
@@ -67,8 +68,7 @@ SELECT --_ ordered use_nl(p f d1 d2 pr1 pr2 pr3 pr4 vsp dp vsn)
   vi.cid
 FROM visit_info vi
 JOIN dim_patients p
-  ON p.network = vi.network AND p.patient_id = vi.patient_id
- AND p.effective_from <= vi.admission_date_time AND p.effective_to > vi.admission_date_time
+  ON p.network = vi.network AND p.patient_id = vi.patient_id AND p.current_flag = 1
 JOIN dim_hc_facilities f
   ON f.network = vi.network AND f.facility_id = vi.facility_id
 LEFT JOIN dim_hc_departments d1

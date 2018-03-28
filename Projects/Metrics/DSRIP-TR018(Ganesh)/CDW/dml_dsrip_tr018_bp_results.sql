@@ -1,12 +1,13 @@
--- 03-13-2018 GK: Fix for diagnosis exclusion date conditions
+SET TIMING ON;
 prompt Populating DSRIP_TR018_BP_RESULTS ...
 
 ALTER SESSION ENABLE PARALLEL DML;
-
 TRUNCATE TABLE dsrip_tr018_bp_results;
 
 INSERT --+ parallel(4) 
 INTO dsrip_tr018_bp_results
+-- 13-Mar-2018, GK: Fix for diagnosis exclusion date conditions
+-- 26-Mar-2018, GK: Added logic to cap the diagnosis date to last day of previous month if the sysdate is less than Jun of measurement year. 
 WITH 
   dt AS 
   (
@@ -27,7 +28,14 @@ WITH
       ROW_NUMBER() OVER (PARTITION BY cmv.patient_id ORDER BY onset_date DESC) htn_ptnt_rnum   
     FROM dt
     JOIN ud_master.problem p 
-      ON p.onset_date >= msrmnt_yr_start_dt AND p.onset_date < ADD_MONTHS(msrmnt_yr_start_dt,6) AND p.status_id IN (0, 6, 7, 8)
+      ON p.onset_date >= msrmnt_yr_start_dt 
+     AND p.onset_date <   
+         CASE 
+            WHEN TO_CHAR(TRUNC(SYSDATE,'MONTH'),'mm/dd') < '06/01'
+            THEN TRUNC(SYSDATE,'MONTH')
+            ELSE TO_DATE('07/01','MM/DD')
+         END 
+     AND p.status_id IN (0, 6, 7, 8)
     JOIN ud_master.problem_cmv cmv 
       ON cmv.patient_id=p.patient_id  
      AND cmv.problem_number=p.problem_number 
@@ -39,7 +47,14 @@ WITH
           distinct cmv1.patient_id
         FROM dt
         JOIN ud_master.problem p1 
-          ON p1.onset_date >= msrmnt_yr_start_dt AND p1.onset_date < ADD_MONTHS(msrmnt_yr_start_dt,6) AND p1.status_id IN (0, 6, 7, 8) 
+          ON p1.onset_date >= msrmnt_yr_start_dt 
+         AND p1.onset_date <   
+             CASE 
+              WHEN TO_CHAR(TRUNC(SYSDATE,'MONTH'),'mm/dd') < '06/01'
+              THEN TRUNC(SYSDATE,'MONTH')
+              ELSE TO_DATE('07/01','MM/DD')
+             END  
+         AND p1.status_id IN (0, 6, 7, 8) 
         JOIN ud_master.problem_cmv cmv1 
           ON cmv1.patient_id=p1.patient_id 
          AND cmv1.problem_number=p1.problem_number 
@@ -220,7 +235,11 @@ SELECT --+ parallel
   v.report_period_start_dt, 
   v.report_period_end_dt, 
   v.network, 
-  v.facility_id, 
+  CASE
+    WHEN r.patient_id IS NOT NULL
+    THEN r.facility_id
+    ELSE v.facility_id
+  END facility_id,    
   r.clinic_code,
   r.clinic_code_service,
   r.clinic_code_desc,
@@ -275,3 +294,5 @@ LEFT JOIN rslt_combo r
  AND r.date_time >= v.onset_date 
  AND rnum_per_patient =1
 WHERE v.rnum_ltst_visit=1;
+
+COMMIT;
