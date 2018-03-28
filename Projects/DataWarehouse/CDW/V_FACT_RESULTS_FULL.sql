@@ -12,6 +12,7 @@ SELECT --+ ordered use_hash(v pe prc e r rf pef vd) cardinality(pat 5000000)
   v.patient_id,
   NVL(pef.facility_key, prc.facility_key) AS proc_facility_key,
   prc.proc_key,
+  pe.modified_proc_name,
   e.event_status_id,
   e.event_type_id,
   r.data_element_id,

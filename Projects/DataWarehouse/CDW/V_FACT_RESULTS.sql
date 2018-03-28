@@ -1,5 +1,6 @@
 CREATE OR REPLACE VIEW v_fact_results AS
 SELECT
+-- 09-Mar-2018, OK: added column PATIENT_ID
  -- 09-Mar-2018, OK: added column PATIENT_ID
  -- 07-Mar-2018, GK: modified
   ld.network,
@@ -13,6 +14,7 @@ SELECT
   v.patient_id,
   NVL(pef.facility_key, p.facility_key) AS proc_facility_key,
   p.proc_key,
+  pe.modified_proc_name,
   e.event_status_id,
   e.event_type_id,
   r.data_element_id,
