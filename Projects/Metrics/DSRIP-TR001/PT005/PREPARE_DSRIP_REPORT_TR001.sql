@@ -30,7 +30,7 @@ BEGIN
   (
     p_operation => 'INSERT /*+ parallel(32) */',
     p_tgt => 'DSRIP_REPORT_TR001_QMED',
-    p_src => 'V_DSRIP_REPORT_TR001_QMED',
+    p_src => 'V_DSRIP_REPORT_TR001_QMED_N',
     p_commit_at => -1
   );
   
