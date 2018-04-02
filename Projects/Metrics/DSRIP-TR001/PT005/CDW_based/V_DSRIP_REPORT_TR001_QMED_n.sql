@@ -1,5 +1,6 @@
 CREATE OR REPLACE VIEW v_dsrip_report_tr001_qmed_n AS
 WITH
+ -- 02-Apr-2018, SS:Fixed MRN issue caused by mdm.dc_flag 
  -- 07-Mar-2018, OK: created
   dt AS
   (
@@ -232,7 +233,7 @@ FROM
         ON pat.network = vst.network AND pat.patient_id = vst.patient_id 
       LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
         ON mdm.network = vst.network AND TO_NUMBER(mdm.patientid) = vst.patient_id
-       AND mdm.epic_flag = 'N' AND mdm.dc_flag IS NULL
+       AND mdm.epic_flag = 'N' --AND mdm.dc_flag IS NULL
     )
     WHERE mdm_rnum = 1
   ) q

@@ -1,6 +1,7 @@
 CREATE OR REPLACE VIEW v_fact_results AS
 SELECT
--- 09-Mar-2018, OK: added column PATIENT_ID
+ -- 29-Mar-2018, GK: modified patient join condition to current_flag logic
+ -- 09-Mar-2018, OK: added column PATIENT_ID
  -- 09-Mar-2018, OK: added column PATIENT_ID
  -- 07-Mar-2018, GK: modified
   ld.network,
@@ -38,7 +39,8 @@ JOIN fact_visits v
   ON v.network = r.network AND v.visit_id = r.visit_id
 JOIN dim_patients pat
   ON pat.network = v.network AND pat.patient_id = v.patient_id
- AND pat.effective_from <= e.date_time AND pat.effective_to > e.date_time     
+-- AND pat.effective_from <= e.date_time AND pat.effective_to > e.date_time 
+ AND pat.current_flag = 1     
 LEFT JOIN value_decode vd
   ON vd.network = r.network AND vd.decode_source_id = rf.decode_source_id AND vd.encoded_value = r.value
 LEFT JOIN dim_hc_facilities pef
