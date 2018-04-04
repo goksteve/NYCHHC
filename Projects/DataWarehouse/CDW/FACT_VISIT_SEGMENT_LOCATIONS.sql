@@ -1,6 +1,6 @@
-EXEC dbm.drop_tables('STG_VISIT_SEGMENT_LOCATIONS');
+EXEC dbm.drop_tables('FACT_VISIT_SEGMENT_LOCATIONS');
 
-CREATE TABLE stg_visit_segment_locations
+CREATE TABLE fact_visit_segment_locations
 (
  network                     CHAR(3 BYTE) NOT NULL,
  visit_id                    NUMBER(12) NOT NULL,
@@ -36,13 +36,13 @@ PARTITION BY LIST (network)
   PARTITION sbn VALUES ('SBN'),
   PARTITION smn VALUES ('SMN'));
 
-GRANT SELECT ON stg_visit_segment_locations TO PUBLIC;
+GRANT SELECT ON fact_visit_segment_locations TO PUBLIC;
 
 CREATE UNIQUE INDEX pk_stg_visit_seg_loc
- ON stg_visit_segment_locations(network, visit_id, visit_segment_number,location_id)  LOCAL  PARALLEL 32;
+ ON fact_visit_segment_locations(network, visit_id, visit_segment_number,location_id)  LOCAL  PARALLEL 32;
 
 ALTER INDEX pk_stg_visit_seg_loc NOPARALLEL;
 
-ALTER TABLE stg_visit_segment_locations
+ALTER TABLE fact_visit_segment_locations
  ADD CONSTRAINT pk_stg_visit_seg_loc PRIMARY KEY(network, visit_id, visit_segment_number, location_id)
      USING INDEX pk_stg_visit_seg_loc;

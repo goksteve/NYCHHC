@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW v_stg_visit_segment_locations AS
+CREATE OR REPLACE VIEW v_fact_visit_segment_locations AS
  SELECT
   s.network,
   s.visit_id,
