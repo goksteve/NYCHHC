@@ -1,5 +1,6 @@
 CREATE OR REPLACE VIEW v_dsrip_report_tr001_qmed AS
 WITH
+ -- 02-Apr-2018, SS:Fixed MRN issue caused by mdm.dc_flag 
   report_dates AS
   (
     SELECT --+ materialize
@@ -129,7 +130,7 @@ FROM
       FROM dsrip_tr001_visits v
       JOIN facility_dimension fd ON fd.network = v.network AND fd.facility_id = v.facility_id
       LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
-        ON mdm.network = v.network AND TO_NUMBER(mdm.patientid) = v.patient_id AND mdm.epic_flag = 'N' AND mdm.dc_flag IS NULL
+        ON mdm.network = v.network AND TO_NUMBER(mdm.patientid) = v.patient_id AND mdm.epic_flag = 'N' --AND mdm.dc_flag IS NULL
     )
     WHERE mdm_rnum = 1
   ) q

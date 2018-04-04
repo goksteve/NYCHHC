@@ -1,5 +1,4 @@
 INSERT INTO meta_changes(comments) VALUES('Adding meta-data for the PQI90 reports #7 and #8');
-
 INSERT INTO dsrip_reports VALUES
 (
   'PQI90-78',
@@ -12,6 +11,7 @@ INSERT INTO dsrip_reports VALUES
   NULL,
   NULL
 );
+
 
 INSERT INTO meta_criteria VALUES(38, 'DIAGNOSES:HYPERTENSION:PQI90-7', 'List of Hypertension Diagnoses included into the Numerator of the report PQI90 #7');  
 INSERT INTO meta_criteria VALUES(39, 'DIAGNOSES:HEART FAILURE:PQI90-8', 'List of Heart Failure Diagnoses included into the Numerator of the report PQI90 #8');  

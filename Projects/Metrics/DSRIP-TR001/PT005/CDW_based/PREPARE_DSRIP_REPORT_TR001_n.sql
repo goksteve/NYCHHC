@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE prepare_dsrip_report_tr001(p_report_month IN DATE DEFAULT NULL) AS
+CREATE OR REPLACE PROCEDURE prepare_dsrip_report_tr001_n(p_report_month IN DATE DEFAULT NULL) AS
 /*
   2017-12-26, OK: removed where condition "rnum=1" for V_DSRIP_REPORT_TR001_EPIC 
 */
