@@ -38,6 +38,9 @@ CREATE OR REPLACE VIEW v_fact_visit_metric_results AS
               AND r.result_value NOT LIKE '%rt foot%'
               AND r.result_value NOT LIKE '%unable%'
               AND r.result_value NOT LIKE 'Pt%agrees%to%work%hard%to%keep%Hgb%A1c%below%'
+              AND r.result_value NOT LIKE 'Determined%in%the%past%'
+              AND r.result_value NOT LIKE 'See%Note%'
+              AND r.result_value NOT LIKE 'Not%Fasting%'
               AND TRIM(r.result_value) <> 'n')),
       calc_result AS
        (SELECT
