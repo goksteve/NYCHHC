@@ -12,6 +12,7 @@ CREATE OR REPLACE VIEW v_fact_visit_metric_results AS
          r.visit_id,
          r.patient_key,
          r.patient_id,
+         result_dt,
          TRIM(r.result_value)  AS result_value,
          c.criterion_id,
          ROW_NUMBER() OVER(PARTITION BY r.network, r.visit_id, c.criterion_id ORDER BY result_dt DESC) rnum
@@ -55,7 +56,8 @@ CREATE OR REPLACE VIEW v_fact_visit_metric_results AS
          v.discharge_dt,
          v.patient_age_at_admission,
          q.criterion_id,
-          q.result_value,
+         q.result_dt,
+         q.result_value,
          CASE
           WHEN q.criterion_id IN (10, 23) THEN -- Glucose LDL
            REGEXP_SUBSTR(result_value, '^[0-9\.]+')
@@ -84,18 +86,24 @@ CREATE OR REPLACE VIEW v_fact_visit_metric_results AS
   admission_dt,
   discharge_dt,
   patient_age_at_admission,
+  a1c_final_result_date,
   a1c_final_orig_value,
   a1c_final_calc_value,
-  glucose_final_orig_value,
-  glucose_final_calc_value,
+  gluc_final_result_date,
+  gluc_final_orig_value,
+  gluc_final_calc_value,
+  ldl_final_result_date,
   ldl_final_orig_value,
   ldl_final_calc_value,
+  bp_final_result_date,
   bp_final_orig_value,
   SUBSTR(bp_final_calc_value, 1, INSTR(bp_final_calc_value, '/') - 1) AS bp_calc_systolic,
   SUBSTR(bp_final_calc_value, INSTR(bp_final_calc_value, '/') + 1, 3) AS bp_calc_diastolic
  FROM
   calc_result
   PIVOT
-   (MAX(result_value) AS final_orig_value, MAX(calc_value) AS final_calc_value
+   ( MAX(result_dt) AS final_result_date,
+     MAX(result_value) AS final_orig_value, 
+     MAX(calc_value) AS final_calc_value
    FOR criterion_id
-   IN (4 AS a1c, 23 AS glucose, 10 AS ldl, 13 AS bp))
+   IN (4 AS a1c, 23 AS gluc, 10 AS ldl, 13 AS bp))

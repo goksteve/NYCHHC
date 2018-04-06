@@ -12,15 +12,20 @@ CREATE TABLE fact_visit_metric_results
  admission_dt               DATE,
  discharge_dt               DATE,
  patient_age_at_admission   NUMBER(3),
- a1c_final_orig_value       VARCHAR2(1023 BYTE),
- a1c_final_calc_value       VARCHAR2(1023 BYTE),
- glucose_final_orig_value   VARCHAR2(1023 BYTE),
- glucose_final_calc_value   VARCHAR2(1023 BYTE),
- ldl_final_orig_value       VARCHAR2(1023 BYTE),
- ldl_final_calc_value       VARCHAR2(1023 BYTE),
- bp_final_orig_value        VARCHAR2(1023 BYTE),
- bp_calc_systolic           VARCHAR2(1023 BYTE),
- bp_calc_diastolic          VARCHAR2(1023 BYTE)
+ a1c_final_result_date      DATE NULL,
+ a1c_final_orig_value       VARCHAR2(1024 BYTE) NULL,
+ a1c_final_calc_value       VARCHAR2(1024 BYTE) NULL,
+ gluc_final_result_date     DATE NULL,
+ gluc_final_orig_value      VARCHAR2(1024 BYTE) NULL,
+ gluc_final_calc_value      VARCHAR2(1024 BYTE) NULL,
+ ldl_final_result_date      DATE NULL,
+ ldl_final_orig_value       VARCHAR2(1024 BYTE) NULL,
+ ldl_final_calc_value       VARCHAR2(1024 BYTE) NULL,
+ bp_final_result_date       DATE NULL,
+ bp_final_orig_value        VARCHAR2(1024 BYTE) NULL,
+ bp_calc_systolic           VARCHAR2(1024 BYTE) NULL,
+ bp_calc_diastolic          VARCHAR2(12 BYTE) NULL,
+ load_dt                    DATE DEFAULT SYSDATE
 )
 COMPRESS BASIC
 PARTITION BY LIST (network)
