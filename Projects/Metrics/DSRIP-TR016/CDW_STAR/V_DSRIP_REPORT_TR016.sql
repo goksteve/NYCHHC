@@ -1,6 +1,4 @@
-CREATE TABLE tst_gk_dsrip_report_tr016
-NOLOGGING
-COMPRESS BASIC
+CREATE OR REPLACE VIEW v_tst_gk_dsrip_report_tr016
 AS
 WITH
   -- 10-Apr-2018, GK: Converting into CDW Star schema
@@ -63,7 +61,7 @@ WITH
 --  919,956
   a1c_glucose_rslt AS
   (
-    SELECT --+ parallel(32)
+    SELECT -- parallel(32)
       network, facility_key, patient_id, visit_id, visit_number, visit_type_id, visit_type,
       admission_dt, discharge_dt, first_payer_key, test_type_id, event_id, result_dt, data_element_id, /*data_element_name,*/ result_value
     FROM
@@ -88,7 +86,7 @@ WITH
         ROW_NUMBER() OVER(PARTITION BY v.network, v.patient_id ORDER BY r.event_id DESC, r.data_element_id) rnum
         FROM report_dates dt
         JOIN fact_results r
-          ON r.result_dt >= dt.year_back_dt AND r.result_dt < dt.report_dt 
+          ON r.result_dt >= dt.year_back_dt AND r.result_dt < dt.report_dt AND r.network = SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
         JOIN meta_conditions mc
           ON mc.network = r.network AND mc.criterion_id IN (4, 23) -- A1C and Glucose Level results
         JOIN fact_visits v
@@ -130,7 +128,7 @@ WITH
     WHERE drug_type_id = 33 -- Diabetes Prescriptions
     GROUP BY patient_gid
   ),
---  select --+ parallel(32)
+--  select -- parallel(32)
 --  * from diabetes_prescriptions;  
   a1c_glucose_tests AS
   (
@@ -176,7 +174,7 @@ WITH
   )
 --  SELECT --+ parallel(32)
 --  * FROM pcp_info;
-SELECT --+ USE_HASH(f pd pr)
+SELECT --+ USE_HASH(f pd pr) parallel(32)
   dt.report_dt AS report_period_start_dt,
   amed.patient_gid,
   NVL(tst.network, amed.network) network,
@@ -238,4 +236,19 @@ AND
 
 
 
+/*
+[Error] Execution (1: 1): ORA-12801: error signaled in parallel query server P119
+ORA-01652: unable to extend temp segment by 128 in tablespace TEMP
+*/
 
+/*
+select SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK') from dual;
+select SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'CLIENT_IDENTIFIER') from dual;
+
+select SYS_CONTEXT('USERENV', 'CLIENT_IDENTIFIER') from dual;
+
+
+select count(1) from tst_gk_dsrip_report_tr016;
+--137,658
+
+*/
