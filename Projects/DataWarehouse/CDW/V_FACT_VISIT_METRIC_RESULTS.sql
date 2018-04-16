@@ -93,9 +93,11 @@ FROM
      HAVING MAX (bp_calc_systolic) BETWEEN 0 AND 311 AND MAX (bp_calc_diastolic) BETWEEN 0 AND 284
   )
 ),
-calc_result AS
-(
- SELECT --+ materialize 
+
+---------*************************************************
+PAT_MERTIC
+AS(
+SELECT /*+  materialize  parallel( 32) */
  v.network,
  v.visit_id,
  v.patient_key,
@@ -106,6 +108,45 @@ calc_result AS
  v.admission_dt,
  v.discharge_dt,
  v.patient_age_at_admission,
+ v.first_payer_key,
+ v.initial_visit_type_id,
+ v.final_visit_type_id,
+ p.asthma_ind,
+ p.bh_ind,
+ p.breast_cancer_ind,
+ p.diabetes_ind,
+ p.heart_failure_ind,
+ p.hypertansion_ind,
+ p.kidney_diseases_ind
+FROM
+  fact_visits v 
+  JOIN  v_fact_patient_metric_diag p ON p.patient_id = v.patient_id AND p.network = v.network 
+  where v.network =   SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
+)
+,
+calc_result AS
+(
+SELECT --+ materialize
+ v.network,
+ v.visit_id,
+ v.patient_key,
+ v.facility_key,
+ v.admission_dt_key,
+ v.discharge_dt_key,
+ v.patient_id,
+ v.admission_dt,
+ v.discharge_dt,
+ v.patient_age_at_admission,
+ v.first_payer_key,
+ v.initial_visit_type_id,
+ v.final_visit_type_id,
+ v.asthma_ind,
+ v.bh_ind,
+ v.breast_cancer_ind,
+ v.diabetes_ind,
+ v.heart_failure_ind,
+ v.hypertansion_ind,
+ v.kidney_diseases_ind,
  q.criterion_id,
  q.result_dt,
  q.result_value,
@@ -125,12 +166,12 @@ calc_result AS
  END
   AS calc_value
 FROM
-         fact_visits v JOIN rslt q ON q.visit_id = v.visit_id AND q.network = v.network AND q.rnum = 1
+         PAT_MERTIC v JOIN rslt q ON q.visit_id = v.visit_id AND q.network = v.network AND q.rnum = 1
 ),
 final_calc_tb
 AS
 (
- SELECT --+ materialize 
+  SELECT --+ materialize 
   network,
   visit_id,
   patient_key,
@@ -141,6 +182,16 @@ AS
   admission_dt,
   discharge_dt,
   patient_age_at_admission,
+  first_payer_key,
+  initial_visit_type_id,
+  final_visit_type_id,
+  asthma_ind,
+  bh_ind,
+  breast_cancer_ind,
+  diabetes_ind,
+  heart_failure_ind,
+  hypertansion_ind,
+  kidney_diseases_ind,
   a1c_final_result_dt,
   a1c_final_orig_value,
   a1c_final_calc_value,
@@ -173,6 +224,16 @@ SELECT --+  parallel (32)
   a.admission_dt,
   a.discharge_dt,
   a.patient_age_at_admission,
+  a.first_payer_key,
+  a.initial_visit_type_id,
+  a.final_visit_type_id,
+  a.asthma_ind,
+  a.bh_ind,
+  a.breast_cancer_ind,
+  a.diabetes_ind,
+  a.heart_failure_ind,
+  a.hypertansion_ind,
+  a.kidney_diseases_ind,
   a.a1c_final_result_dt,
   a.a1c_final_orig_value,
   a.a1c_final_calc_value,

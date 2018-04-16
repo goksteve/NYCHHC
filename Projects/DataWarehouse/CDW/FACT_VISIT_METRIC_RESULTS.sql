@@ -12,6 +12,16 @@ CREATE TABLE fact_visit_metric_results
  admission_dt               DATE,
  discharge_dt               DATE,
  patient_age_at_admission   NUMBER(3),
+ first_payer_key            NUMBER(12),
+ initial_visit_type_id      NUMBER(12),
+ final_visit_type_id        NUMBER(12),
+ asthma_ind                 NUMBER(2) NULL,
+ bh_ind                     NUMBER(2) NULL,
+ breast_cancer_ind          NUMBER(12) NULL,
+ diabetes_ind               NUMBER(2) NULL,
+ heart_failure_ind          NUMBER(2) NULL,
+ hypertansion_ind           NUMBER(2) NULL,
+ kidney_diseases_ind        NUMBER(2) NULL,
  a1c_final_result_dt        DATE NULL,
  a1c_final_orig_value       VARCHAR2(1024 BYTE) NULL,
  a1c_final_calc_value       VARCHAR2(1024 BYTE) NULL,
@@ -24,7 +34,7 @@ CREATE TABLE fact_visit_metric_results
  bp_final_result_dt         DATE NULL,
  bp_final_calc_value        VARCHAR2(255 BYTE) NULL,
  bp_final_calc_systolic     VARCHAR2(255 BYTE) NULL,
- bp_final_calc_diastolic   VARCHAR2(255 BYTE) NULL,
+ bp_final_calc_diastolic    VARCHAR2(255 BYTE) NULL,
  load_dt                    DATE DEFAULT SYSDATE
 )
 COMPRESS BASIC
