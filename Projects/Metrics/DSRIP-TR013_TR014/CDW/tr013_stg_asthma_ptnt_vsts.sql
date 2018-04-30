@@ -1,11 +1,8 @@
 set timing on
+TRUNCATE TABLE tr013_stg_asthma_ptnt_vsts;
 
-DROP TABLE tr013_stg_asthma_ptnt_vsts;
-
-CREATE TABLE tr013_stg_asthma_ptnt_vsts
-NOLOGGING
-COMPRESS BASIC
-AS
+INSERT --+ parallel(8) 
+INTO tr013_stg_asthma_ptnt_vsts
 WITH 
 --met criteria during both the measurement year and the year prior to the measurement year
   dt AS 
@@ -110,5 +107,3 @@ SELECT --+ parallel(4)
 FROM asthma_ptnt_lkp a
 where ptnt_vst_rnum=1;
 
-
-ALTER TABLE tr013_stg_asthma_ptnt_vsts ADD CONSTRAINT pk_stg_asthma_ptnt_visit PRIMARY KEY (network,patient_id,visit_id);

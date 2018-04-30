@@ -1,5 +1,7 @@
-CREATE OR REPLACE VIEW v_dsrip_report_tr016 AS
+CREATE OR REPLACE VIEW v_dsrip_report_tr016
+AS
 WITH
+  -- 10-Apr-2018, GK: Converting into CDW Star schema
   -- 07-Feb-2018, OK: included psychotic diagnoses
   -- 16-Jan-2018, OK: added USE_HASH hints into the main query
   -- 12-Dec-2017, OK: excluded QHN and SBN networks
@@ -14,7 +16,7 @@ WITH
   (
     SELECT --+ materialize
       pr.network,
-      pr.facility_id,
+      pr.facility_key,
       pr.patient_id,
       pr.mrn,
       NVL(TO_CHAR(mdm.eid), pr.network||'-'||pr.patient_id) AS patient_gid, 
@@ -24,7 +26,7 @@ WITH
       NVL(pr.rx_dc_dt, DATE '9999-12-31') AS stop_dt,
       ROW_NUMBER() OVER(PARTITION BY NVL(TO_CHAR(mdm.eid), pr.network||'-'||pr.patient_id), NVL(dnm.drug_type_id, dscr.drug_type_id) ORDER BY pr.order_dt DESC) rnum
     FROM report_dates rd
-    JOIN fact_prescriptions pr
+    JOIN cdw.fact_patient_prescriptions pr
       ON pr.order_dt <= rd.year_back_dt AND pr.network NOT IN ('QHN','SBN') -- exclude Networks that have switched to EPIC
     LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
       ON mdm.network = pr.network AND mdm.patientid = TO_CHAR(pr.patient_id) AND mdm.epic_flag = 'N'
@@ -36,15 +38,29 @@ WITH
   (
     SELECT --+ materialize
       NVL(TO_CHAR(mdm.eid), pd.network||'-'||pd.patient_id) patient_gid,
-      lkp.criterion_id diag_type_id, DECODE(pd.diag_coding_scheme, '5', 'ICD-9', 'ICD-10') coding_scheme,
-      pd.diag_code, pd.diag_description, pd.onset_date onset_dt, pd.stop_date stop_dt
-    FROM patient_diag_dimension pd
+      lkp.criterion_id diag_type_id, 
+      DECODE(pd.diag_coding_scheme, '5', 'ICD-9', 'ICD-10') coding_scheme,
+      pd.diag_code, 
+      pd.problem_comments diag_description, 
+      pd.onset_date onset_dt, 
+      pd.end_date stop_dt
+    FROM cdw.fact_patient_diagnoses pd
     JOIN meta_conditions lkp
-      ON lkp.qualifier = DECODE(pd.diag_coding_scheme, '5', 'ICD9', 'ICD10')
+      ON lkp.qualifier = DECODE(pd.diag_coding_scheme, 'ICD-9', 'ICD-9', 'ICD-10')
      AND lkp.value = pd.diag_code AND lkp.criterion_id IN (6, 31, 32) -- 6-DIABETES, 31-SCHIZOPHRENIA, 32-BIPOLAR
     LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
       ON mdm.network = pd.network AND mdm.patientid = TO_CHAR(pd.patient_id) AND mdm.epic_flag = 'N'
-    WHERE pd.network NOT IN ('QHN','SBN') AND pd.diag_coding_scheme IN (5, 10) AND pd.current_flag = '1' AND pd.stop_date IS NULL
+    WHERE pd.network NOT IN ('QHN','SBN') AND pd.diag_coding_scheme IN ('ICD-10', 'ICD-9') --AND pd.current_flag = '1' 
+    AND pd.end_date IS NULL
+  ),
+  rslt_meta_data AS
+  (
+    SELECT --+ materialize
+      dt.report_dt, dt.year_back_dt,mc.*
+    FROM report_dates dt
+    CROSS JOIN meta_conditions mc
+    WHERE mc.criterion_id IN (4, 23)   
+  
   ),
   diabetes_diagnoses AS
   (
@@ -72,88 +88,108 @@ WITH
   ),
   a1c_glucose_tests AS
   (
-    SELECT --+ materialize use_hash(mdm)
-      NVL(TO_CHAR(mdm.eid), a1c.network||'-'||a1c.patient_id) patient_gid,
-      a1c.network,
-      a1c.facility_id,
-      a1c.patient_id,
-      a1c.test_type_id,
-      a1c.visit_id,
-      a1c.visit_number,
-      a1c.visit_type_id,
-      a1c.visit_type,
-      a1c.admission_dt,
-      a1c.discharge_dt,
-      a1c.result_dt,
-      a1c.data_element_name,
-      a1c.result_value,
-      ROW_NUMBER() OVER(PARTITION BY NVL(TO_CHAR(mdm.eid), a1c.network||'-'||a1c.patient_id) ORDER BY a1c.result_dt DESC) rnum
-    FROM report_dates dt
-    JOIN dsrip_tr016_a1c_glucose_rslt a1c
-      ON a1c.result_dt >= dt.year_back_dt AND a1c.result_dt < dt.report_dt -- OK: this condition is not probably needed but it does not hurt to have it
+    SELECT --+ materialize
+      NVL(TO_CHAR(mdm.eid), a.network||'-'||a.patient_id) patient_gid, a.network, facility_key, patient_id, visit_id, visit_number, visit_type_id, visit_type,
+      admission_dt, discharge_dt, first_payer_key, test_type_id, event_id, result_dt, data_element_id, data_element_name, result_value,
+      ROW_NUMBER() OVER(PARTITION BY NVL(TO_CHAR(mdm.eid), a.network||'-'||a.patient_id) ORDER BY a.result_dt DESC) rnum
+    FROM
+    (
+      SELECT -- ordered use_hash(r v)
+        v.network,
+        v.facility_key,
+        v.patient_id,
+        v.visit_id,
+        v.visit_number,
+        v.final_visit_type_id visit_type_id,
+        vt.name visit_type,
+        v.admission_dt,
+        v.discharge_dt,
+        v.first_payer_key,
+        mc.criterion_id test_type_id,
+        mc.value_description data_element_name,
+        r.event_id,
+        r.result_dt,
+        r.data_element_id,
+        r.result_value,
+        ROW_NUMBER() OVER(PARTITION BY v.network, v.patient_id ORDER BY r.event_id DESC, r.data_element_id) evnt_rnum
+        FROM rslt_meta_data mc
+        JOIN cdw.fact_results r
+          ON r.network = mc.network AND r.data_element_id = mc.value -- A1C and Glucose Level results
+         AND r.result_dt >= mc.year_back_dt AND r.result_dt < mc.report_dt -- AND r.network = SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
+        JOIN cdw.fact_visits v
+          ON v.network = r.network AND v.visit_id = r.visit_id
+        LEFT JOIN cdw.ref_visit_types vt
+          ON vt.visit_type_id = v.final_visit_type_id    
+    ) a
     LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
-      ON mdm.network = a1c.network AND mdm.patientid = TO_CHAR(a1c.patient_id) AND mdm.epic_flag = 'N'
+      ON mdm.network = a.network AND mdm.patientid = TO_CHAR(a.patient_id) AND mdm.epic_flag = 'N'  
+    WHERE evnt_rnum = 1
   ),
   pcp_info AS
   (
     SELECT --+ materialize
-      NVL(TO_CHAR(mdm.eid), pcp.network||'-'||pcp.patient_id) patient_gid,
-      prim_care_provider, pcp_visit_facility, pcp_visit_number, pcp_visit_dt,
-      ROW_NUMBER() OVER(PARTITION BY NVL(TO_CHAR(mdm.eid), pcp.network||'-'||pcp.patient_id) ORDER BY pcp.pcp_visit_dt DESC NULLS LAST) rnum
-    FROM dsrip_tr016_pcp_info pcp
-    LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
-      ON mdm.network = pcp.network AND TO_NUMBER(mdm.patientid) = pcp.patient_id AND mdm.epic_flag = 'N'
+    p.network, 
+    NVL(TO_CHAR(mdm.eid), p.network||'-'||p.patient_id) patient_gid, 
+    p.pcp_provider_name prim_care_provider,
+    v.visit_id, f.facility_name pcp_visit_facility, v.visit_number pcp_visit_number, v.admission_dt pcp_visit_dt,
+    ROW_NUMBER() OVER(PARTITION BY p.network, p.patient_id ORDER BY v.admission_dt DESC) rnum 
+    FROM cdw.dim_patients p
+    JOIN cdw.fact_visits v ON v.network = p.network AND v.patient_id = p.patient_id AND p.current_flag = 1
+    JOIN cdw.dim_hc_departments d ON d.department_key = v.last_department_key AND d.service_type = 'PCP'
+    LEFT JOIN cdw.dim_hc_facilities f ON f.facility_key = v.facility_key
+    LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm 
+      ON mdm.network = p.network AND TO_NUMBER(mdm.patientid) = p.patient_id AND p.current_flag = 1 AND mdm.epic_flag = 'N'
   )
-SELECT --+ USE_HASH(f pd pm pr)
+SELECT --+ parallel(32) /*USE_HASH(f pd pr)*/ 
   dt.report_dt AS report_period_start_dt,
   amed.patient_gid,
   NVL(tst.network, amed.network) network,
-  NVL(tst.facility_id, amed.facility_id) facility_id,
+  f.facility_id,
   NVL(f.facility_name, 'Unknown') facility_name,
   NVL(tst.patient_id, amed.patient_id) patient_id, 
   pd.name AS patient_name,
   pd.medical_record_number,
   pd.birthdate,
   TRUNC(MONTHS_BETWEEN(dt.report_dt, pd.birthdate)/12) age,
-  pd.street_address,
-  pd.apt_suite,
-  pd.city,
-  pd.state,
-  pd.mailing_code zip_code,
   amed.medication,
-  CASE WHEN psych.coding_scheme IS NOT NULL THEN psych.coding_scheme||': '||psych.diag_code END bh_diag_code,
-  psych.diag_description bh_diagnosis,
-  pcp.prim_care_provider,
-  pcp.pcp_visit_dt AS last_pcp_visit_dt,
   tst.visit_id,
   tst.visit_number,
   tst.visit_type_id,
   tst.visit_type,
   tst.admission_dt,
   tst.discharge_dt,
-  pm.payer_group,
+  pr.payer_group,
   pr.payer_id,
-  pm.payer_name,
+  pr.payer_name,
   tst.test_type_id,
   tst.result_dt,
   tst.data_element_name,
   tst.result_value,
-  ROW_NUMBER() OVER(PARTITION BY amed.patient_gid, tst.network, tst.visit_id ORDER BY CASE WHEN pm.payer_group = 'Medicaid' THEN 1 ELSE 2 END, pr.payer_rank) rnum  
+  pd.street_address,
+  pd.apt_suite,
+  pd.city,
+  pd.state,
+  pd.mailing_code zip_code,  
+  pcp.prim_care_provider,
+  pcp.pcp_visit_dt AS last_pcp_visit_dt,  
+  CASE WHEN psych.coding_scheme IS NOT NULL THEN psych.coding_scheme||': '||psych.diag_code END bh_diag_code,
+  psych.diag_description bh_diagnosis,  
+  ROW_NUMBER() OVER(PARTITION BY amed.patient_gid, tst.network, tst.visit_id ORDER BY CASE WHEN pr.payer_group = 'Medicaid' THEN 1 ELSE 2 END) rnum  
 FROM prescriptions amed
 CROSS JOIN report_dates dt
-LEFT JOIN pcp_info pcp ON pcp.patient_gid = amed.patient_gid
+LEFT JOIN pcp_info pcp ON pcp.patient_gid = amed.patient_gid AND pcp.rnum = 1
 LEFT JOIN diabetes_diagnoses diab ON diab.patient_gid = amed.patient_gid 
 LEFT JOIN psychotic_diagnoses psych ON psych.patient_gid = amed.patient_gid AND psych.rnum = 1
 LEFT JOIN diabetes_prescriptions dmed ON dmed.patient_gid = amed.patient_gid
 LEFT JOIN a1c_glucose_tests tst ON tst.patient_gid = amed.patient_gid AND tst.rnum = 1
-LEFT JOIN patient_dimension pd
+LEFT JOIN cdw.dim_patients pd
   ON pd.network = NVL(tst.network, amed.network)
  AND pd.patient_id = NVL(tst.patient_id, amed.patient_id)
  AND pd.current_flag = 1 
-LEFT JOIN facility_dimension f
-  ON f.network = NVL(tst.network, amed.network) AND f.facility_id = amed.facility_id
-LEFT JOIN dsrip_tr016_payers pr ON pr.network = tst.network AND pr.visit_id = tst.visit_id
-LEFT JOIN pt008.payer_mapping pm ON pm.network = pr.network AND pm.payer_id = pr.payer_id
+LEFT JOIN cdw.dim_hc_facilities f --dim_hc_facilities
+  ON f.facility_key = amed.facility_key
+LEFT JOIN cdw.dim_payers pr
+  ON pr.payer_key = tst.first_payer_key
 WHERE amed.rnum = 1 AND amed.drug_type_id = 34 -- Antipsychotic Medications
 AND pd.birthdate > ADD_MONTHS(dt.report_dt, -12*65) -- not 65 yet
 AND pd.birthdate <= ADD_MONTHS(dt.report_dt, -12*18) -- 18 or older
