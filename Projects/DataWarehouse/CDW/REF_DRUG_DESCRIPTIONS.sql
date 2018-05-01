@@ -22,7 +22,9 @@ PARTITION BY LIST (drug_type_id)
   PARTITION type_44 VALUES (44),
   PARTITION type_45 VALUES (45),
   PARTITION type_46 VALUES (46),
+  PARTITION type_64 VALUES (64),
   PARTITION type_unknown VALUES (DEFAULT)
 );
 
 GRANT SELECT ON ref_drug_descriptions TO PUBLIC;
+
