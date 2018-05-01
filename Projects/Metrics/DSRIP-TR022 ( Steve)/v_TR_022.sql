@@ -1,11 +1,17 @@
 --CREATE OR REPLACE VIEW V_DSRIP_TR_022_DIAB_SCREEN_CDW AS
+
 --DIAGNOSES:DIAB MONITORING	                                 1	List of Diabetes diagnosis (monitoring)
---RESULTS:DIABETES A1C	                                     4	List of Procedures, Elements  for A1C tests
---MEDICATIONS:DIABETES             	                        33	List of Medications for treating Diabetes
 --DIAGNOSES:NEPHROPATHY TREATMENT	                          63	List of Nephropathy Treatment diagnoses
---MEDICATIONS:ACE INHIBITOR/ARB CONTROL BLOOD PRESSURE	    64	List of Ace Inhibitor/Arb Medications to Control Blood Pressure
 --DIAGNOSES:KIDNEY DISEASES	                                65	List of Kidney Diseases, End-Stage Renal Diseases and Kidney Transplant diagnoses
+--****************
+--RESULTS:DIABETES A1C	                                     4	List of Procedures, Elements  for A1C tests
 --RESULTS:NEPHROPATHY SCREEN_MONITOR	                      66	List of Nephropathy Screen Monitor tests
+-- results eye exam                                         68
+--********************
+--MEDICATIONS:DIABETES             	                        33	List of Medications for treating Diabetes
+--MEDICATIONS:ACE INHIBITOR/ARB CONTROL BLOOD PRESSURE	    64	List of Ace Inhibitor/Arb Medications to Control Blood Pressure
+
+
 ALTER SESSION enable PARALLEL DML;
 WITH
  report_dates AS
@@ -14,7 +20,7 @@ WITH
   -- ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -1)report_dt, 
   TRUNC(SYSDATE, 'MONTH') report_dt, 
   ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -24)     start_dt,
-  ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -12) res_start_date,
+  ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -12) rslt_start_date,
   ADD_MONTHS(TRUNC((TRUNC(SYSDATE, 'MONTH') - 1), 'YEAR'), 12) - 1 AS report_year
   FROM
   DUAL
@@ -26,12 +32,18 @@ AS
   select --+  materialize
   d.network, d.patient_id,
   criterion_id as crit_id,
-  value as met_val,
+  value as meta_value,
   include_exclude_ind as ind
   FROM   meta_conditions mc JOIN fact_patient_diagnoses d ON d.diag_code = mc.VALUE
   WHERE
   mc.criterion_id IN (1,63,65)  AND d.status_id IN (0, 6, 7,8)
  ),
+Visit_rslt
+AS
+(
+
+
+
 
 pat_denom
 AS
@@ -51,7 +63,7 @@ AS
   (
     SELECT --+  materialize 
     DISTINCT
-    v.network
+     v.network
     ,v.visit_id
     ,v.patient_id
     ,v.facility_key
@@ -65,8 +77,7 @@ AS
      fact_visits v 
     JOIN  pat_denom  pd on pd.patient_id = v.patient_id  and pd.network = v.network
     CROSS JOIN  report_dates d
-   
-    WHERE 
+       WHERE 
    v.admission_dt >= start_dt  AND v.admission_dt <  report_dt
 --v.admission_dt >= ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -24)   AND v.admission_dt <  TRUNC(SYSDATE, 'MONTH')
 )

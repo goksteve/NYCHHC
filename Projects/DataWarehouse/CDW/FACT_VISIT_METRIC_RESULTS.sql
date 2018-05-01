@@ -24,17 +24,17 @@ CREATE TABLE fact_visit_metric_results
  kidney_diseases_ind        NUMBER(2) NULL,
  a1c_final_result_dt        DATE NULL,
  a1c_final_orig_value       VARCHAR2(1024 BYTE) NULL,
- a1c_final_calc_value       VARCHAR2(1024 BYTE) NULL,
+ a1c_final_calc_value       NUMBER(6,2) NULL,
  gluc_final_result_dt       DATE NULL,
  gluc_final_orig_value      VARCHAR2(1024 BYTE) NULL,
- gluc_final_calc_value      VARCHAR2(1024 BYTE) NULL,
+ gluc_final_calc_value      NUMBER(6,2) NULL,
  ldl_final_result_dt        DATE NULL,
  ldl_final_orig_value       VARCHAR2(1024 BYTE) NULL,
- ldl_final_calc_value       VARCHAR2(255 BYTE) NULL,
+ ldl_final_calc_value       NUMBER(6,2) NULL,
  bp_final_result_dt         DATE NULL,
  bp_final_calc_value        VARCHAR2(255 BYTE) NULL,
- bp_final_calc_systolic     VARCHAR2(255 BYTE) NULL,
- bp_final_calc_diastolic    VARCHAR2(255 BYTE) NULL,
+ bp_final_calc_systolic     NUMBER(4) NULL,
+ bp_final_calc_diastolic    NUMBER(4) NULL,
  load_dt                    DATE DEFAULT SYSDATE
 )
 COMPRESS BASIC

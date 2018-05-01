@@ -83,9 +83,9 @@ SELECT
            a1c_final_calc_value,
            v.patient_id,
            v.facility_key,
-           first_payer_key AS payer_key,
-           final_visit_type_id AS visit_type_id,
-           financial_class_id AS plan_id,
+           v.first_payer_key AS payer_key,
+           v.final_visit_type_id AS visit_type_id,
+           v.financial_class_id AS plan_id,
            v.admission_dt,
            v.discharge_dt,
            ROW_NUMBER() OVER(PARTITION BY v.network, v.patient_id ORDER BY v.admission_dt DESC) res_count
