@@ -39,7 +39,6 @@ SELECT
     onset_date,
     icd_code,
     problem_comments,
-    a1c_final_orig_value,
     a1c_final_calc_value,
     dsrip_report,
     report_dt,
@@ -79,8 +78,7 @@ SELECT
           SELECT
            p.network,
            p.visit_id,
-           a1c_final_orig_value,
-           a1c_final_calc_value,
+            a1c_final_calc_value,
            v.patient_id,
            v.facility_key,
            v.first_payer_key AS payer_key,
@@ -95,7 +93,7 @@ SELECT
            JOIN fact_visits v
             ON v.visit_id = p.visit_id AND v.network = p.network
           WHERE
-            p.a1c_final_orig_value IS NOT NULL
+            p.a1c_final_calc_value IS NOT NULL
            AND  v.ADMISSION_dt BETWEEN res_start_date AND report_dt
          ),
 
@@ -175,7 +173,6 @@ SELECT
       dd.onset_date,
       dd.icd_code,
       dd.problem_comments,
-      r.a1c_final_orig_value,
       r.a1c_final_calc_value,
       'DSRIP_TR002_023' AS dsrip_report,
       pp.report_dt,
@@ -209,4 +206,4 @@ SELECT
                                    END
    WHERE
     visit_rnum = 1
-and 1=2);
+);

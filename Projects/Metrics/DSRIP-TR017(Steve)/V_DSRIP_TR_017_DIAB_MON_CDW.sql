@@ -107,21 +107,21 @@ a1c_ldl AS
    SELECT  --+ materialize  
     network, visit_id,
    patient_id, admission_dt,
-   test_type, orig_result_value,
+   test_type,
    calc_result_value, report_dt, report_year,
    ROW_NUMBER() OVER(PARTITION BY network, patient_id, test_type ORDER BY admission_dt DESC) cnt
   FROM
    (
      SELECT network, visit_id,
      patient_id, admission_dt, test_type,
-     orig_result_value, calc_result_value,
+     calc_result_value,
      report_dt, report_year
     FROM
      (
       SELECT --+ materialize
        r.network, visit_id,   r.patient_id,
-       admission_dt,a1c_final_orig_value,
-       a1c_final_calc_value,ldl_final_orig_value,
+       admission_dt,
+       a1c_final_calc_value,
        ldl_final_calc_value,d.report_dt,   d.report_year
       FROM
     report_dates d
@@ -129,14 +129,15 @@ a1c_ldl AS
       JOIN sel_pat_diag p ON  p.network =  r.network and p.patient_id  = r.patient_id
       WHERE
         admission_dt >= start_dt AND admission_dt < report_dt
-    AND( ldl_final_orig_value IS NOT NULL OR a1c_final_orig_value IS NOT NULL)
+    AND( ldl_final_calc_value IS NOT NULL OR a1c_final_calc_value IS NOT NULL)
      )
    UNPIVOT
-    ((orig_result_value, calc_result_value)
+    (calc_result_value
     FOR test_type
-    IN ((a1c_final_orig_value, a1c_final_calc_value) AS 'A1C',
-       (ldl_final_orig_value, ldl_final_calc_value) AS  'LDL'))
+    IN (a1c_final_calc_value AS 'A1C',
+       ldl_final_calc_value AS  'LDL')
    )
+)
 ),
 
  tmp_res
@@ -164,7 +165,6 @@ as
      lst.last_bh_provider_id,
      lst.last_bh_provider,
      r.test_type,
-     r.orig_result_value,
      r.calc_result_value,
      r.report_dt,
      r.report_year,
@@ -233,7 +233,6 @@ SELECT /*+ Parallel (32) */
  res.plan_id,
  res.plan_name,
  res.test_type,
- res.orig_result_value,
  res.calc_result_value,
  res.last_pcp_facility,
  res.last_pcp_visit_dt,

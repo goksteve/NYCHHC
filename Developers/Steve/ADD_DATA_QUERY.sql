@@ -19,4 +19,8 @@ EXCEPTION
   RAISE ;
 end;
 
-select  * from  DBG_LOG_DATA where action like '%steve%'
+select  * from  DBG_LOG_DATA where action like '%steve%';
+
+select a.*, DBMS_LOB.substr(comment_txt, 250) from DBG_LOG_DATA a
+where proc_id  = 344
+order by tstamp desc
