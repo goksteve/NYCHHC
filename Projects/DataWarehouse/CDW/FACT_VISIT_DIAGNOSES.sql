@@ -1,5 +1,5 @@
 exec dbm.drop_tables('FACT_VISIT_DIAGNOSES');
-
+  
 CREATE TABLE fact_visit_diagnoses
 (
   network             CHAR(3 BYTE) NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE fact_visit_diagnoses
   patient_id          NUMBER(12) NOT NULL,
   facility_key        NUMBER(12) NOT NULL,
   diagnosis_dt        DATE NOT NULL,
-  diagnosis_dt_key    NUMBER(14) NOT NULL,
+  diagnosis_dt_key    NUMBER(8) NOT NULL,
   is_primary_problem  CHAR(1 BYTE) NOT NULL,
   problem_comments    VARCHAR2(1024 BYTE),
   problem_status_id   NUMBER(12) NOT NULL,

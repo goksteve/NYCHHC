@@ -57,6 +57,3 @@ SELECT
 FROM dsrip_report_pqi90 rpt
 WHERE report_period_start_dt = NVL(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER'), (SELECT MAX(report_period_start_dt) FROM dsrip_report_pqi90)) 
 ORDER BY last_name, first_name, discharge_dt;
-
-
-

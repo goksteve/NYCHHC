@@ -1,5 +1,6 @@
 CREATE OR REPLACE VIEW v_fact_visit_diagnoses AS
 SELECT
+ -- 2-May-2018, GK: fixed diagnosis_dt_key to join with dim_date_time.date_num 
  -- 9-Mar-2018, SG: created
   ap.network,
   ap.visit_id,
@@ -10,7 +11,7 @@ SELECT
   pp.patient_id,
   vv.facility_key,
   ap.diagnosis_dt,
-  TO_NUMBER(TO_CHAR(ap.diagnosis_dt, 'YYYYMMDDHH24MISS')) diagnosis_dt_key, 
+  TO_NUMBER(TO_CHAR(ap.diagnosis_dt, 'YYYYMMDDHH')) diagnosis_dt_key, 
   ap.is_primary_problem,
   prob.problem_description AS problem_comments,
   prob.status_id AS problem_status_id,
