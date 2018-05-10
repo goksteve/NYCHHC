@@ -1,4 +1,4 @@
-CREATE TABLE tst_gk_bh1
+CREATE TABLE dsrip_tr043_bh_visits_rpt_2017
 COMPRESS BASIC
 NOLOGGING
 AS
@@ -21,10 +21,10 @@ WITH
           ON bh.department_key = v.last_department_key AND bh.service_type = 'BH' AND admission_dt BETWEEN DATE '2017-01-01' AND DATE '2017-12-31' --AND v.visit_id = 25755517 AND v.network = 'GP1'
         LEFT JOIN proc_event_archive pea 
           ON pea.network = v.network AND pea.visit_id = v.visit_id AND pea.emp_provider_id IS NOT NULL
-        JOIN dim_providers pr1
+        LEFT JOIN dim_providers pr1
           ON pr1.provider_id = pea.emp_provider_id AND pr1.network = pea.network
       )
-      UNPIVOT
+      UNPIVOT INCLUDE NULLS
       (
         vst_provider_key FOR provider_type IN (attending_provider_key AS 'ATTENDING', resident_provider_key AS 'RESIDENT', emp_provider_key AS 'EMP_PROVIDER_ID')
       )
@@ -36,7 +36,7 @@ WITH
         v.network, v.facility_key, v.patient_id, v.visit_id, v.visit_number, v.admission_dt, v.discharge_dt, v.department, 
 		MIN(pr.provider_name ||' - '|| pr.physician_service_name_1) KEEP (DENSE_RANK FIRST ORDER BY CASE WHEN UPPER(pr.physician_service_name_1) LIKE '%PSYCH%' THEN 1 WHEN pr.physician_service_name_1 IS NOT NULL THEN 2 ELSE 3 END) bh_provider_info
     FROM bh_vsts v
-    JOIN dim_providers pr
+    LEFT JOIN dim_providers pr
       ON pr.provider_key = v.vst_provider_key 
     GROUP BY v.network, v.facility_key, v.patient_id, v.visit_id, v.visit_number, v.admission_dt, v.discharge_dt, v.department
   )
@@ -49,7 +49,7 @@ SELECT --+ parallel(32) ordered()
   p.birthdate AS dob,
   v.visit_id,
   v.visit_number,
-  p.medical_record_number mrn,
+  nvl(p.medical_record_number, mdm.mrn) mrn,
   concat_v2_set_gk
   (
     CURSOR
@@ -81,5 +81,7 @@ SELECT --+ parallel(32) ordered()
   v.discharge_dt
 FROM bh_visit_info v
 JOIN dim_patients p ON p.patient_id = v.patient_id AND p.network = v.network AND p.current_flag = 1
-JOIN dim_hc_facilities f ON f.facility_key = v.facility_key;
---LEFT JOIN bh_provider b ON b.visit_id = v.visit_id AND b.network = v.network;  
+JOIN dim_hc_facilities f ON f.facility_key = v.facility_key
+LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
+  ON mdm.network = v.network AND TO_NUMBER(mdm.patientid) = v.patient_id AND mdm.epic_flag = 'N' AND f.facility_name = v.facility_name;
+
