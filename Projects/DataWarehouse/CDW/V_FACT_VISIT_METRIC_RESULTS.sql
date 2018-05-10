@@ -2,7 +2,8 @@ CREATE OR REPLACE VIEW v_fact_visit_metric_results AS
 -- 2018-April-10 SG OK GK OK --
 -- 2018-April-18 SG UPDATED BY SG 
 -- 2018-April-25 SG UPDATED BY SG 
- WITH crit_metric AS
+-- 2018-MAY-2 SG UPDATED added some ind BY SG 
+  WITH crit_metric AS
    (
     SELECT --+ materialize 
     network, criterion_id, VALUE,
@@ -15,12 +16,11 @@ CREATE OR REPLACE VIEW v_fact_visit_metric_results AS
     END
     END  test_type
     FROM meta_conditions
-    WHERE criterion_id IN (4,10,23,13)
-   ), -- A1C, LDL, Glucose,  BP,
+    WHERE criterion_id IN (4,10,23,13,66,68)   ), -- A1C, LDL, Glucose,  BP, Neph, eye eaxm
 
-  rslt AS
+  rslt AS  --- A1C, LDL, Glucose,  BP only
   (
-    SELECT --+ materialize
+     SELECT --+ materialize
       r.network,
       r.visit_id,
       r.patient_key,
@@ -34,6 +34,7 @@ CREATE OR REPLACE VIEW v_fact_visit_metric_results AS
       AND r.event_status_id IN (6, 11)   AND r.network =  SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
       WHERE
       TRIM(r.result_value) IS NOT NULL
+      AND c.criterion_id IN (4,10,23,13)
       AND REGEXP_REPLACE
       (
         TRIM(r.result_value),
@@ -46,9 +47,23 @@ CREATE OR REPLACE VIEW v_fact_visit_metric_results AS
       AND NOT REGEXP_LIKE(TRIM(LOWER(r.result_value)),
       '(record)|(patient)|(unable)|(none)|(na)|(arm)|(foot)|(agrees)|(determined)|(note)|(unknown)|(abnormal)|(scanned)|(see)|(proteinuria)|(^m9)|(^m6)|(^m3)|(^m5)|(^m4)|(^m2)|(^s3)|(^s4)|(psyer)|(^kcb)|(^kat)|(^kva)')
        AND NOT REGEXP_LIKE(TRIM(LOWER(r.result_value)), '(^3n)|(^x\[p)|(^kct)|(over)|(a1c)|(^n9)|(other)|(invalid)')
-  
-),
-
+    UNION ALL
+      SELECT --+ materialize
+      r.network,
+      r.visit_id,
+      r.patient_key,
+      r.patient_id,
+      result_dt,
+      result_value,
+      c.criterion_id,
+      ROW_NUMBER() OVER(PARTITION BY r.network, r.visit_id, c.criterion_id ORDER BY result_dt DESC) rnum
+      FROM    crit_metric c
+      JOIN fact_results r  ON r.data_element_id = c.VALUE AND r.network = c.network
+      AND r.event_status_id IN (6, 11)   AND r.network =  SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
+      WHERE
+      TRIM(r.result_value) IS NOT NULL
+      AND c.criterion_id  IN (66,68)
+   ),
  bp_rslt AS
    (
     SELECT--+ materialize 
@@ -66,7 +81,9 @@ CREATE OR REPLACE VIEW v_fact_visit_metric_results AS
     END  AS bp_calc_diastolic
     FROM crit_metric lkp
     JOIN fact_results r ON r.data_element_id = lkp.value 
-    AND r.network = lkp.network  AND lkp.criterion_id = 13 AND r.network =  SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
+    AND r.network = lkp.network  AND lkp.criterion_id = 13 
+    AND r.event_status_id IN (6, 11)
+    AND r.network =  SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
    ),
 bp_final_tb
 AS
@@ -94,7 +111,6 @@ FROM
      HAVING MAX (bp_calc_systolic) BETWEEN 0 AND 311 AND MAX (bp_calc_diastolic) BETWEEN 0 AND 284
   )
 ),
-
 calc_result AS
 (
 SELECT --+ materialize
@@ -125,40 +141,41 @@ SELECT --+ materialize
       WHEN q.criterion_id IN (10,23) THEN -- Glucose / LDL  <= 1000
         TO_NUMBER
         (
-       REGEXP_REPLACE(
-      REGEXP_REPLACE (
-      REGEXP_REPLACE(
-      REGEXP_REPLACE(
-      SUBSTR(
-      TRIM(
-      REGEXP_REPLACE(REGEXP_REPLACE(TRIM(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(q.result_value), 
-        '(([[:digit:]]{1,2})-([[:alpha:]]{3,9})-([[:digit:]]{2,4}))|(([[:digit:]]{1,2}) ([[:alpha:]]{3,9}) ([[:digit:]]{2,4}))|(([[:digit:]]{1,2})\/([[:digit:]]{1,2})\/([[:digit:]]{2,4}))|(([[:alpha:]]{2,9}) ([[:digit:]]{1,2}),([[:digit:]]{2,4}))|(([[:digit:]]{1,2})([[:alpha:]]{3,9})([[:digit:]]{2,4}))|([[:digit:]]{4,10})'),
-             '([-?!.\=/+,?!><$*#^@%)(&]+$)|(^[-?!.0\=/+,?!><$*#@%)(0&]+)|([[:alpha:]-)(#?!$%])')),
-           '^[-?!.0\=/+,?!><$*#@%]'),
+          REGEXP_REPLACE(
+          REGEXP_REPLACE (
+          REGEXP_REPLACE(
+          REGEXP_REPLACE(
+          SUBSTR(
+          TRIM(
+          REGEXP_REPLACE(REGEXP_REPLACE(TRIM(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(q.result_value), 
+          '(([[:digit:]]{1,2})-([[:alpha:]]{3,9})-([[:digit:]]{2,4}))|(([[:digit:]]{1,2}) ([[:alpha:]]{3,9}) ([[:digit:]]{2,4}))|(([[:digit:]]{1,2})\/([[:digit:]]{1,2})\/([[:digit:]]{2,4}))|(([[:alpha:]]{2,9}) ([[:digit:]]{1,2}),([[:digit:]]{2,4}))|(([[:digit:]]{1,2})([[:alpha:]]{3,9})([[:digit:]]{2,4}))|([[:digit:]]{4,10})'),
+          '([-?!.\=/+,?!><$*#^@%)(&]+$)|(^[-?!.0\=/+,?!><$*#@%)(0&]+)|([[:alpha:]-)(#?!$%])')),
+          '^[-?!.0\=/+,?!><$*#@%]'),
           '([:*&%$;=>/`])|(\.+$)')
-      ), 1, 4)
-      , '[^[:digit:].,]'), ',','.'), '\.+$'), '(\d)(\.)(\.)(\d)', '\1.\4')
-    
-          )
-            WHEN q.criterion_id = 4 THEN --  A1C < 50
+          ), 1, 4)
+          , '[^[:digit:].,]'), ',','.'), '\.+$'), '(\d)(\.)(\.)(\d)', '\1.\4')
+        )
+     WHEN q.criterion_id = 4 THEN --  A1C < 50
       TO_NUMBER
-     (
-     REGEXP_REPLACE(
-     REGEXP_REPLACE(
-     REGEXP_REPLACE(
-     REGEXP_REPLACE(
-     SUBSTR(
-     TRIM(
-     REGEXP_REPLACE(REGEXP_REPLACE(TRIM(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(q.result_value), 
+      (
+        REGEXP_REPLACE(
+        REGEXP_REPLACE(
+        REGEXP_REPLACE(
+        REGEXP_REPLACE(
+        SUBSTR(
+        TRIM(
+        REGEXP_REPLACE(REGEXP_REPLACE(TRIM(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(q.result_value), 
         '(([[:digit:]]{1,2})-([[:alpha:]]{3,9})-([[:digit:]]{2,4}))|(([[:digit:]]{1,2}) ([[:alpha:]]{3,9}) ([[:digit:]]{2,4}))|(([[:digit:]]{1,2})\/([[:digit:]]{1,2})\/([[:digit:]]{2,4}))|(([[:alpha:]]{2,9}) ([[:digit:]]{1,2}),([[:digit:]]{2,4}))|(([[:digit:]]{1,2})([[:alpha:]]{3,9})([[:digit:]]{2,4}))|([[:digit:]]{4,10})'),
-             '([-?!.\=/+,?!><$*#^@%)(&]+$)|(^[-?!.0\=/+,?!><$*#@%)(0&]+)|([[:alpha:]-)(#?!$%])')),
-           '^[-?!.0\=/+,?!><$*#@%]'),
-          '([:*&%$;=>/`])|(\.+$)')
-      ), 1, 4)
-      , '[^[:digit:].,]'), ',','.'), '\.+$'), '(\d)(\.)(\.)(\d)', '\1.\4')
-     )
+        '([-?!.\=/+,?!><$*#^@%)(&]+$)|(^[-?!.0\=/+,?!><$*#@%)(0&]+)|([[:alpha:]-)(#?!$%])')),
+        '^[-?!.0\=/+,?!><$*#@%]'),
+        '([:*&%$;=>/`])|(\.+$)')
+        ), 1, 4)
+        , '[^[:digit:].,]'), ',','.'), '\.+$'), '(\d)(\.)(\.)(\d)', '\1.\4')
+      )
     WHEN q.criterion_id = 13 THEN --BP
-        TO_NUMBER('0')
+        0
+    WHEN q.criterion_id IN (66,68) THEN -- NEPH,eye EXAM
+        1
  END  AS calc_value
   FROM
   fact_visits v 
@@ -191,6 +208,12 @@ AS
   heart_failure_ind,
   hypertansion_ind,
   kidney_diseases_ind,
+  neph_final_result_dt,
+  neph_final_orig_value,
+  neph_final_calc_value,
+  retinal_final_result_dt,
+  retinal_final_orig_value,
+  retinal_final_calc_value ,
   a1c_final_result_dt,
   a1c_final_orig_value,
   a1c_final_calc_value,
@@ -210,9 +233,10 @@ AS
      MAX(result_value) AS final_orig_value, 
      MAX(calc_value) AS final_calc_value
    FOR criterion_id
-   IN (4 AS a1c, 23 AS gluc, 10 AS ldl, 13 AS bp))
+   IN (4 AS a1c, 23 AS gluc, 10 AS ldl, 13 AS bp, 66 as neph, 68 as retinal ))
 )
-SELECT --+  parallel (32)
+
+SELECT --+  PARALLEL (48)
  a.network,
  a.visit_id,
  a.patient_key,
@@ -226,22 +250,21 @@ SELECT --+  parallel (32)
  a.first_payer_key,
  a.initial_visit_type_id,
  a.final_visit_type_id,
- NVL(a.asthma_ind, 0) asthma_ind,
- NVL(a.bh_ind, 0) bh_ind,
- NVL(a.breast_cancer_ind, 0) breast_cancer_ind,
- NVL(a.diabetes_ind, 0) diabetes_ind,
- NVL(a.heart_failure_ind, 0) heart_failure_ind,
+ NVL(a.asthma_ind,0) asthma_ind,
+ NVL(a.bh_ind,0) bh_ind,
+ NVL(a.breast_cancer_ind,0) breast_cancer_ind,
+ NVL(a.diabetes_ind,0) diabetes_ind,
+ NVL(a.heart_failure_ind,0) heart_failure_ind,
  NVL(a.hypertansion_ind, 0) hypertansion_ind,
- NVL(a.kidney_diseases_ind, 0) kidney_diseases_ind,
-  a.a1c_final_result_dt,
-  a.a1c_final_orig_value,
-  a.a1c_final_calc_value,
-  a.gluc_final_result_dt,
-  a.gluc_final_orig_value,
-  a.gluc_final_calc_value,
-  a.ldl_final_result_dt,
-  a.ldl_final_orig_value,
-  a.ldl_final_calc_value ,
+ NVL(a.kidney_diseases_ind,0) kidney_diseases_ind,
+ NVL( a.neph_final_calc_value,0) as nephropathy_screen_ind,
+ NVL( a.retinal_final_calc_value,0) as retinal_dil_eye_exam_ind,
+ a.a1c_final_result_dt,
+ CASE WHEN a.a1c_final_calc_value > 50 THEN 0 ELSE a.a1c_final_calc_value END AS  a1c_final_calc_value,
+ a.gluc_final_result_dt,
+ CASE WHEN a.gluc_final_calc_value > 999 THEN  0 ELSE a.gluc_final_calc_value END AS gluc_final_calc_value  ,
+ a.ldl_final_result_dt,
+ CASE WHEN  a.ldl_final_calc_value  > 999 THEN 0 ELSE  a.ldl_final_calc_value END  AS ldl_final_calc_value,
  NVL(b.bp_final_result_dt,  a.bp_final_result_dt) AS bp_final_result_dt,
  NVL(b.bp_final_calc_value, a.bp_final_calc_value) AS bp_final_calc_value,
  b.bp_final_calc_systolic,
@@ -260,4 +283,6 @@ WHERE
  OR a.a1c_final_orig_value IS NOT NULL
  OR a.gluc_final_orig_value IS NOT NULL
  OR a.ldl_final_orig_value IS NOT NULL
- OR NVL(b.bp_final_calc_value, a.bp_final_calc_value) IS NOT NULL
+ OR a.neph_final_orig_value IS NOT NULL
+OR a.retinal_final_orig_value IS NOT NULL
+OR NVL(b.bp_final_calc_value, a.bp_final_calc_value) IS NOT NULL

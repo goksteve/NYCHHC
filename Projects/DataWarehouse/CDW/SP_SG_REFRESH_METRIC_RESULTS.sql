@@ -30,7 +30,7 @@ BEGIN
   xl.end_action(SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK'));
 
   etl.add_data(
-   p_operation => 'INSERT /*+ APPEND PARALLEL(32) */',
+   p_operation => 'INSERT /*+ APPEND PARALLEL(48) */',
    p_tgt => 'FACT_VISIT_METRIC_RESULTS',
    p_src => 'V_FACT_VISIT_METRIC_RESULTS',
    p_commit_at => -1);

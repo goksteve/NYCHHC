@@ -86,13 +86,12 @@ res_ldl AS
    r.patient_id,
    ldl_final_result_dt AS ldl_test_dt,
    ldl_final_result_dt AS ldl_result_dt,
-   ldl_final_orig_value AS orig_result_value,
    ldl_final_calc_value AS calc_result_value,
    ROW_NUMBER() OVER(PARTITION BY network, patient_id ORDER BY admission_dt DESC) cnt
 FROM
  report_dates d CROSS JOIN fact_visit_metric_results r
 WHERE
- admission_dt >= start_dt AND admission_dt < report_dt AND ldl_final_orig_value IS NOT NULL
+ admission_dt >= start_dt AND admission_dt < report_dt AND ldl_final_calc_value IS NOT NULL
     
 ),
 res_ldl_diag
@@ -116,7 +115,6 @@ SELECT --+ materialize
  p.latest_problem_comments,
  l.ldl_test_dt,
  l.ldl_result_dt,
- l.orig_result_value,
  l.calc_result_value,
  p.report_dt,
  p.report_year
@@ -175,7 +173,6 @@ res.latest_diag_codes AS ICD_CODE,
 res.latest_problem_comments,
 res.ldl_test_dt,
 res.ldl_result_dt,
-res.orig_result_value,
 res.calc_result_value,
 'DSRIP_TR015_CARDIO_MONITORING' as dsrip_report,
 res.report_dt,
