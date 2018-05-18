@@ -1,7 +1,10 @@
+rename dsrip_tr043_bh_visits_rpt_2017 to bkp_dsrip_tr43_bh_vsts_rpt2017;
+
 CREATE TABLE dsrip_tr043_bh_visits_rpt_2017
 COMPRESS BASIC
 NOLOGGING
 AS
+  -- GK, 09-May-2018 taken 10hrs to create table when joined with DCONV metroplus(2 million records), have to investigate why it took too long
 WITH 
   bh_vsts AS
   (
@@ -9,7 +12,7 @@ WITH
       DISTINCT network, facility_key, patient_id, visit_id, visit_number, admission_dt, discharge_dt, department, vst_provider_key
     FROM 
     (
-      SELECT --+ parallel(32)
+      SELECT -- parallel(32)
         *
       FROM 
       (
@@ -41,15 +44,17 @@ WITH
     GROUP BY v.network, v.facility_key, v.patient_id, v.visit_id, v.visit_number, v.admission_dt, v.discharge_dt, v.department
   )
 
-SELECT --+ parallel(32) ordered()
+SELECT --+ parallel(32)
   v.network,
---  trunc(sysdate, 'MONTH') report_period_dt,
   p.patient_id,
+  mplus.memberid,
   p.name AS patient_name,
   p.birthdate AS dob,
+  p.sex,
   v.visit_id,
   v.visit_number,
-  nvl(p.medical_record_number, mdm.mrn) mrn,
+--  nvl(p.medical_record_number, mdm.mrn) mrn,
+  nvl(mdm.mrn, p.medical_record_number) mrn,
   concat_v2_set_gk
   (
     CURSOR
@@ -58,7 +63,6 @@ SELECT --+ parallel(32) ordered()
         DISTINCT ap.icd_code||': '||ap.problem_comments
         FROM fact_visit_diagnoses ap
       WHERE ap.network = v.network AND ap.visit_id = v.visit_id AND ap.coding_scheme = 'ICD-10'
---      ORDER BY 1
     ),
     CHR(10)||'-------------------------------'||CHR(10)
   ) diagnoses, 
@@ -83,5 +87,13 @@ FROM bh_visit_info v
 JOIN dim_patients p ON p.patient_id = v.patient_id AND p.network = v.network AND p.current_flag = 1
 JOIN dim_hc_facilities f ON f.facility_key = v.facility_key
 LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
-  ON mdm.network = v.network AND TO_NUMBER(mdm.patientid) = v.patient_id AND mdm.epic_flag = 'N' AND f.facility_name = v.facility_name;
-
+  ON mdm.network = v.network AND TO_NUMBER(mdm.patientid) = v.patient_id AND mdm.epic_flag = 'N' AND f.facility_name = mdm.facility_name
+LEFT JOIN dconv.metroplus_assigned_mrn mplus
+  ON mplus.mrn = mdm.mrn;
+  
+GRANT SELECT ON dsrip_tr043_bh_visits_rpt_2017 TO PUBLIC;
+  select * from dconv.metroplus_assigned_mrn;
+  
+  select count(1) FROM dsrip_tr043_bh_visits_rpt_2017; --224,015
+  select count(1) from bkp_dsrip_tr43_bh_vsts_rpt2017; --224,015
+  select count(1) from dconv.metroplus_assigned_mrn

@@ -43,7 +43,6 @@ WITH
 
 SELECT --+ parallel(32) ordered()
   v.network,
---  trunc(sysdate, 'MONTH') report_period_dt,
   p.patient_id,
   p.name AS patient_name,
   p.birthdate AS dob,
@@ -58,7 +57,6 @@ SELECT --+ parallel(32) ordered()
         DISTINCT ap.icd_code||': '||ap.problem_comments
         FROM fact_visit_diagnoses ap
       WHERE ap.network = v.network AND ap.visit_id = v.visit_id AND ap.coding_scheme = 'ICD-10'
---      ORDER BY 1
     ),
     CHR(10)||'-------------------------------'||CHR(10)
   ) diagnoses, 
@@ -84,4 +82,3 @@ JOIN dim_patients p ON p.patient_id = v.patient_id AND p.network = v.network AND
 JOIN dim_hc_facilities f ON f.facility_key = v.facility_key
 LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
   ON mdm.network = v.network AND TO_NUMBER(mdm.patientid) = v.patient_id AND mdm.epic_flag = 'N' AND f.facility_name = v.facility_name;
-

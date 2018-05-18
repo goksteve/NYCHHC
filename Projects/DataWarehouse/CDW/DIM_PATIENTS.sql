@@ -4,7 +4,7 @@ CREATE TABLE dim_patients
   NETWORK                    CHAR(3 BYTE) NOT NULL,
   PATIENT_ID                 NUMBER(12) NOT NULL,
   ARCHIVE_NUMBER             NUMBER(12) NOT NULL,
-  NAME                       VARCHAR2(100 BYTE),
+  NAME                       VARCHAR2(150 BYTE),
   PCP_PROVIDER_ID            NUMBER(12),
   PCP_PROVIDER_NAME          VARCHAR2(60 BYTE),
   TITLE_ID                   NUMBER(12),

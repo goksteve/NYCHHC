@@ -11,7 +11,7 @@ SELECT
   pp.patient_id,
   vv.facility_key,
   ap.diagnosis_dt,
-  TO_NUMBER(TO_CHAR(ap.diagnosis_dt, 'YYYYMMDDHH')) diagnosis_dt_key, 
+  TO_NUMBER(TO_CHAR(ap.diagnosis_dt, 'YYYYMMDD')) diagnosis_dt_key, 
   ap.is_primary_problem,
   prob.problem_description AS problem_comments,
   prob.status_id AS problem_status_id,
