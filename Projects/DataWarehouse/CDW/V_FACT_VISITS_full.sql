@@ -5,6 +5,7 @@ WITH
   visit_info AS
   (
     SELECT --+ ordered use_hash(vs vl) materialize
+      n.network_key || v.visit_id  AS visit_key,
       v.network, 
       v.visit_id, 
       v.visit_number, 
@@ -31,13 +32,15 @@ WITH
       ) last_loc_id,
       ROW_NUMBER() OVER(PARTITION BY v.network, v.visit_id ORDER BY vl.visit_segment_number, vl.location_id) loc_rnum,
       v.cid
-    FROM visit v
-    LEFT JOIN visit_segment vs
-      ON vs.network = v.network AND vs.visit_id = v.visit_id AND vs.visit_segment_number = 1
-    LEFT JOIN visit_segment_visit_location vl
-      ON vl.network = v.network AND vl.visit_id = v.visit_id
+      FROM
+      DIM_HC_NETWORKS n
+     JOIN   visit v on v.network = n.network
+     LEFT JOIN visit_segment vs       ON vs.network = v.network AND vs.visit_id = v.visit_id AND vs.visit_segment_number = 1
+     LEFT JOIN visit_segment_visit_location vl  ON vl.network = v.network AND vl.visit_id = v.visit_id
+     
   )
 SELECT --+ ordered use_hash(p f d1 d2 pr1 pr2 pr3 pr4 vsp dp vsn)
+  vi.visit_key,
   vi.network,
   vi.visit_id,
   p.patient_key,

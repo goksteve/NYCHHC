@@ -5,6 +5,7 @@ WITH
   visit_info AS
   (
     SELECT --+ ordered use_nl(v vs vl) materialize
+      n.network_key || v.visit_id  AS visit_key,
       v.network, 
       v.visit_id, 
       v.visit_number, 
@@ -33,6 +34,7 @@ WITH
     FROM log_incremental_data_load delta
     JOIN visit v
       ON v.network = delta.network AND v.cid > delta.max_cid
+     JOIN DIM_HC_NETWORKS n on v.network = n.network
     LEFT JOIN visit_segment vs
       ON vs.network = v.network AND vs.visit_id = v.visit_id AND vs.visit_segment_number = 1
     LEFT JOIN visit_segment_visit_location vl

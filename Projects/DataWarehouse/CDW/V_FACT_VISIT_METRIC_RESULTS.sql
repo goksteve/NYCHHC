@@ -3,6 +3,7 @@ CREATE OR REPLACE VIEW v_fact_visit_metric_results AS
 -- 2018-April-18 SG UPDATED BY SG 
 -- 2018-April-25 SG UPDATED BY SG 
 -- 2018-MAY-2 SG UPDATED added some ind BY SG 
+-- 2018-MAY-16 add pregnancy ind SG
   WITH crit_metric AS
    (
     SELECT --+ materialize 
@@ -134,8 +135,10 @@ SELECT --+ materialize
  p.heart_failure_ind,
  p.hypertansion_ind,
  p.kidney_diseases_ind,
+ pregnancy_ind,
+ pregnancy_onset_dt,
  q.criterion_id,
- TRUNC(q.result_dt) as result_dt,
+ TRUNC(q.result_dt) AS result_dt,
  q.result_value,
   CASE
       WHEN q.criterion_id IN (10,23) THEN -- Glucose / LDL  <= 1000
@@ -179,7 +182,7 @@ SELECT --+ materialize
  END  AS calc_value
   FROM
   fact_visits v 
-  LEFT JOIN  v_fact_patient_metric_diag p ON p.patient_id = v.patient_id AND p.network = v.network  
+  LEFT JOIN  fact_patient_metric_diag p ON p.patient_id = v.patient_id AND p.network = v.network  
   LEFT  JOIN rslt q ON q.visit_id = v.visit_id AND q.network = v.network AND q.rnum = 1
   WHERE  v.network =   SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
  AND Admission_dt >= DATE '2014-01-01'
@@ -187,47 +190,49 @@ SELECT --+ materialize
 final_calc_tb
 AS
 (
-  SELECT --+ materialize 
-  network,
-  visit_id,
-  patient_key,
-  facility_key,
-  admission_dt_key,
-  discharge_dt_key,
-  patient_id,
-  admission_dt,
-  discharge_dt,
-  patient_age_at_admission,
-  first_payer_key,
-  initial_visit_type_id,
-  final_visit_type_id,
-  asthma_ind,
-  bh_ind,
-  breast_cancer_ind,
-  diabetes_ind,
-  heart_failure_ind,
-  hypertansion_ind,
-  kidney_diseases_ind,
-  neph_final_result_dt,
-  neph_final_orig_value,
-  neph_final_calc_value,
-  retinal_final_result_dt,
-  retinal_final_orig_value,
-  retinal_final_calc_value ,
-  a1c_final_result_dt,
-  a1c_final_orig_value,
-  a1c_final_calc_value,
-  gluc_final_result_dt,
-  gluc_final_orig_value,
-  gluc_final_calc_value,
-  ldl_final_result_dt,
-  ldl_final_orig_value,
-  ldl_final_calc_value,
-  bp_final_result_dt,
-  bp_final_orig_value,
-  bp_final_calc_value
- FROM
-  calc_result
+  SELECT --+ materialize
+ network,
+ visit_id,
+ patient_key,
+ facility_key,
+ admission_dt_key,
+ discharge_dt_key,
+ patient_id,
+ admission_dt,
+ discharge_dt,
+ patient_age_at_admission,
+ first_payer_key,
+ initial_visit_type_id,
+ final_visit_type_id,
+ asthma_ind,
+ bh_ind,
+ breast_cancer_ind,
+ diabetes_ind,
+ heart_failure_ind,
+ hypertansion_ind,
+ kidney_diseases_ind,
+ pregnancy_ind,
+ pregnancy_onset_dt,
+ neph_final_result_dt,
+ neph_final_orig_value,
+ neph_final_calc_value,
+ retinal_final_result_dt,
+ retinal_final_orig_value,
+ retinal_final_calc_value,
+ a1c_final_result_dt,
+ a1c_final_orig_value,
+ a1c_final_calc_value,
+ gluc_final_result_dt,
+ gluc_final_orig_value,
+ gluc_final_calc_value,
+ ldl_final_result_dt,
+ ldl_final_orig_value,
+ ldl_final_calc_value,
+ bp_final_result_dt,
+ bp_final_orig_value,
+ bp_final_calc_value
+FROM
+ calc_result
   PIVOT
    ( MAX(result_dt) AS final_result_dt,
      MAX(result_value) AS final_orig_value, 
@@ -257,6 +262,8 @@ SELECT --+  PARALLEL (48)
  NVL(a.heart_failure_ind,0) heart_failure_ind,
  NVL(a.hypertansion_ind, 0) hypertansion_ind,
  NVL(a.kidney_diseases_ind,0) kidney_diseases_ind,
+ NVL( pregnancy_ind,0) AS pregnancy_ind,
+ pregnancy_onset_dt,
  NVL( a.neph_final_calc_value,0) as nephropathy_screen_ind,
  NVL( a.retinal_final_calc_value,0) as retinal_dil_eye_exam_ind,
  a.a1c_final_result_dt,

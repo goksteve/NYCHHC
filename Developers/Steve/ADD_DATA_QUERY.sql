@@ -1,5 +1,5 @@
 ALTER SESSION ENABLE parallel DML;
-
+--*****************************************
 begin
   xl.open_log(' steve FACT_PATIENT_PRESCRIPTIONS',' steve V_FACT_PATIENT_PRESCRIPTIONS', TRUE);
   
@@ -18,9 +18,30 @@ EXCEPTION
   xl.close_log(SQLERRM, TRUE );
   RAISE ;
 end;
+--**********************************************
+--*******FACT_VISITS *****************************
+EXECUTE dwm.refresh_data('where etl_step_num = 2000');
+
+--**********************************************
+select * from CNF_DW_REFRESH
+where target_table  = 'FACT_RESULTS';
+--**********************************************
+EXECUTE dwm.refresh_data('where etl_step_num >= 3110 and etl_step_num <= 3160');
+
+
+--**********************************************
+select * from LOG_INCREMENTAL_DATA_LOAD;
+--**********************************************
 
 select  * from  DBG_LOG_DATA where action like '%steve%';
+--**************************************************************
+select a.*, DBMS_LOB.substr(comment_txt, 250) from DBG_LOG_DATA a
+where
+tstamp > date '2018-05-11'
+and proc_id   > 368
+order by tstamp desc;
+--************************************************************
 
 select a.*, DBMS_LOB.substr(comment_txt, 250) from DBG_LOG_DATA a
-where proc_id  = 344
+where action like '%FACT_VISIT_DIAGNOSES%'
 order by tstamp desc

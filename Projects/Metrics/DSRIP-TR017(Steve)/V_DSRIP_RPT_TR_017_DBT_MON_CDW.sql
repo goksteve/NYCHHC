@@ -15,12 +15,12 @@ SELECT
          birthdate,
          age,
          pcp,
-         last_pcp_visit_date,
+         last_pcp_visit_dt,
          visit_type,
          admission_dt AS latest_admission_dt,
          discharge_dt,
          last_bh_facility,
-         last_bh_visit_date,
+         last_bh_visit_dt,
          last_bh_provider,
          medicaid_ind,
          payer_group,
@@ -51,12 +51,12 @@ SELECT
   p.birthdate,
   p.age,
   p.pcp,
-  p.last_pcp_visit_date,
+  p.last_pcp_visit_dt,
   p.visit_type,
   p.latest_admission_dt,
   p.discharge_dt,
   p.last_bh_facility,
-  p.last_bh_visit_date,
+  p.last_bh_visit_dt,
   p.last_bh_provider,
   p.medicaid_ind,
   p.payer_group,
@@ -66,9 +66,7 @@ SELECT
   p.comb_ind,
   p.a1c_ind,
   p.ldl_ind,
-  a1c_orig_value,
   a1c_calc_value,
-  ldl_orig_value,
   ldl_calc_value
  FROM
   tmp p
@@ -80,7 +78,6 @@ SELECT
           SELECT
            network,
            patient_id,
-           orig_result_value,
            calc_result_value,
            test_type
           FROM
@@ -89,7 +86,7 @@ SELECT
            report_dt = (SELECT MAX(report_dt) FROM dsrip_tr_017_diab_mon_cdw)
          )
          PIVOT
-          (MAX(orig_result_value) AS orig_value, MAX(calc_result_value) AS calc_value
+          (MAX(calc_result_value) AS calc_value
           FOR test_type
           IN ('A1C' AS a1c, 'LDL' AS ldl))
        ) r

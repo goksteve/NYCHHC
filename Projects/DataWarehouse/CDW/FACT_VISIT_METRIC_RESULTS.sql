@@ -22,6 +22,8 @@ CREATE TABLE fact_visit_metric_results
  heart_failure_ind          NUMBER(2) NULL,
  hypertansion_ind           NUMBER(2) NULL,
  kidney_diseases_ind        NUMBER(2) NULL,
+ pregnancy_ind              NUMBER(2) NULL,
+ pregnancy_onset_dt         DATE,
  retinal_dil_eye_exam_ind   NUMBER(2) NULL,
  nephropathy_screen_ind     NUMBER(2) NULL,
  a1c_final_result_dt        DATE NULL,

@@ -10,6 +10,7 @@ CREATE TABLE fact_results
  item_number                     NUMBER(3) NOT NULL,
  result_dt                       DATE NOT NULL,
  result_dtnum                    NUMBER(8) AS(TO_NUMBER(TO_CHAR(result_dt, 'YYYYMMDD'))),
+ visit_key                       NUMBER(12) not null,
  patient_key                     NUMBER(12) NOT NULL,
  patient_id                      NUMBER(12) NOT NULL,
  proc_facility_key               NUMBER(12) NOT NULL,

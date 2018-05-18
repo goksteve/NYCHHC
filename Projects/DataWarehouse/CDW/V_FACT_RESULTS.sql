@@ -4,6 +4,7 @@ SELECT
  -- 09-Mar-2018, OK: added column PATIENT_ID
  -- 09-Mar-2018, OK: added column PATIENT_ID
  -- 07-Mar-2018, GK: modified
+ -- 18-MAY-2018 SG : modified
   ld.network,
   r.visit_id,
   r.event_id,
@@ -11,6 +12,7 @@ SELECT
   r.multi_field_occurrence_number,
   r.item_number,
   e.date_time AS result_dt,
+  v.visit_key,
   v.patient_key,
   v.patient_id,
   NVL(pef.facility_key, p.facility_key) AS proc_facility_key,

@@ -100,8 +100,35 @@ AS(
    FOR service_type
     IN ('PCP' AS last_pcp, 'BH' AS last_bh))
   ),
-
-
+pat_visits
+AS
+(
+select --+ materialize
+v.network,
+v.patient_id,
+v.visit_id,
+v.visit_number,
+v.final_visit_type_id ,
+v.admission_dt,
+v.discharge_dt,
+v.facility_key,
+v.financial_class_id,
+v.attending_provider_key,
+v.first_payer_key ,
+v.visit_status_id,
+d.report_dt,   
+d.report_year,
+row_number() over (partition by v.network, v.patient_id order by v.admission_dt DESC) v_cnt
+FROM  report_dates d
+CROSS JOIN fact_visits v
+JOIN dim_patients pp on pp.network = v.network and pp.patient_id  = v.patient_id and current_flag = 1
+JOIN sel_pat_diag p ON  p.network =  v.network and p.patient_id  = v.patient_id
+ WHERE
+ v.admission_dt >= start_dt AND v.admission_dt < report_dt
+ AND FLOOR((d.report_year - pp.birthdate) / 365) BETWEEN 18 AND 64 
+    AND v.visit_status_id NOT IN (8,9,10,11)
+    AND v.final_visit_type_id NOT IN (8,5,7,-1)
+),
 a1c_ldl AS
 (
    SELECT  --+ materialize  
@@ -124,7 +151,7 @@ a1c_ldl AS
        a1c_final_calc_value,
        ldl_final_calc_value,d.report_dt,   d.report_year
       FROM
-    report_dates d
+      report_dates d
       CROSS JOIN fact_visit_metric_results r
       JOIN sel_pat_diag p ON  p.network =  r.network and p.patient_id  = r.patient_id
       WHERE
@@ -164,22 +191,20 @@ as
      lst.last_bh_visit_dt,
      lst.last_bh_provider_id,
      lst.last_bh_provider,
-     r.test_type,
+     NVL(r.test_type,'NONE') as test_type,
      r.calc_result_value,
-     r.report_dt,
-     r.report_year,
+     v.report_dt,
+     v.report_year,
      TRIM(SYSDATE) load_dt,
-     COUNT(DISTINCT r.test_type) OVER (PARTITION BY  r.network , r.patient_id) pat_rslt_cnt
-     FROM  fact_visits v
-     JOIN a1c_ldl r   ON r.network = v.network AND r.visit_id = v.visit_id
-     LEFT JOIN tmp_pcp_bh lst ON  r.network = lst.network AND r.patient_id = lst.patient_id 
+     COUNT(DISTINCT NVL(r.test_type,'NONE')) OVER (PARTITION BY r.NETWORK , r.patient_id) pat_rslt_cnt
+     FROM  pat_visits v
+     LEFT JOIN (SELECT * FROM  a1c_ldl  where cnt  = 1)r    ON r.NETWORK = v.NETWORK AND r.patient_id = v.patient_id
+     LEFT JOIN tmp_pcp_bh lst ON  v.NETWORK = lst.NETWORK AND v.patient_id = lst.patient_id
      LEFT JOIN dim_hc_facilities f   ON f.facility_key = v.facility_key
-     LEFT JOIN ref_financial_class fc   ON fc.network = v.network AND fc.financial_class_id = v.financial_class_id
-     LEFT JOIN dim_providers p ON p.provider_key = v.attending_provider_key
-    WHERE
-       v.visit_status_id NOT IN (8,9,10,11)
-     AND v.final_visit_type_id NOT IN (8,5,7,-1)
-    and r.cnt  = 1
+     LEFT JOIN ref_financial_class fc   ON fc.NETWORK = v.NETWORK AND fc.financial_class_id = v.financial_class_id
+     LEFT JOIN dim_providers P ON p.provider_key = v.attending_provider_key
+    WHERE v_cnt = 1
+   
   )
     
 
@@ -189,8 +214,9 @@ SELECT /*+ Parallel (32) */
  res.network,
  TO_NUMBER(TO_CHAR(res.admission_dt, 'YYYYMMDD')) AS admission_dt_key,
  CASE WHEN res.pat_rslt_cnt > 1 THEN 1 END AS comb_ind,
- CASE WHEN pat_rslt_cnt < 2 AND test_type = 'A1C' THEN 1 END AS a1c_ind,
- CASE WHEN pat_rslt_cnt < 2 AND test_type = 'LDL' THEN 1 END AS ldl_ind,
+ CASE WHEN pat_rslt_cnt < 2 AND test_type = 'A1C'   THEN 1 END AS a1c_ind,
+ CASE WHEN pat_rslt_cnt < 2 AND test_type = 'LDL'   THEN 1 END AS ldl_ind,
+ --CASE WHEN pat_rslt_cnt < 2 AND test_type = 'NONE'   THEN 1 END AS NO_ind,
  res.visit_facility_id AS facility_id,
  res.visit_facility_name AS facility_name,
  res.patient_id,
@@ -246,7 +272,7 @@ SELECT /*+ Parallel (32) */
  res.report_dt,
  res.load_dt
 FROM tmp_res res
-JOIN dim_patients pp on pp.network = res.network and pp.patient_id  = res.patient_id and current_flag = 1
+ JOIN dim_patients pp on pp.network = res.network and pp.patient_id  = res.patient_id and current_flag = 1
  AND FLOOR((res.report_year - pp.birthdate) / 365) BETWEEN 18 AND 64
 LEFT JOIN dim_payers pm on pm.payer_key  = res.payer_key
 LEFT JOIN ref_visit_types vt ON vt.visit_type_id  = res.visit_type_id

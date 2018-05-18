@@ -1,5 +1,4 @@
-ALTER TABLE dsrip_tr_017_diab_mon_cdw
- DROP PRIMARY KEY CASCADE;
+ALTER TABLE dsrip_tr_017_diab_mon_cdw  DROP PRIMARY KEY CASCADE;
 
 DROP TABLE dsrip_tr_017_diab_mon_cdw CASCADE CONSTRAINTS;
 
@@ -40,19 +39,18 @@ CREATE TABLE dsrip_tr_017_diab_mon_cdw
  plan_id                NUMBER(12) NULL,
  plan_name              VARCHAR2(255 BYTE) NULL,
  test_type              VARCHAR2(12 BYTE) NULL,
- orig_result_value      VARCHAR2(1023 BYTE) NULL,
  calc_result_value      VARCHAR2(1023 BYTE) NULL,
  last_pcp_facility      VARCHAR2(255 BYTE) NULL,
- last_pcp_visit_date    DATE NULL,
+ last_pcp_visit_dt    DATE NULL,
  last_pcp_provider_id   NUMBER(12) NULL,
  last_pcp_provider      VARCHAR2(255 BYTE) NULL,
  last_bh_facility       VARCHAR2(255 BYTE) NULL,
- last_bh_visit_date     DATE NULL,
+ last_bh_visit_dt     DATE NULL,
  last_bh_provider_id    NUMBER(12) NULL,
  last_bh_provider       VARCHAR2(255 BYTE) NULL,
  dsrip_report           VARCHAR2(255 BYTE) NULL,
- report_dt        DATE NULL,
- load_dt             DATE DEFAULT SYSDATE NULL
+ report_dt              DATE NULL,
+ load_dt                DATE DEFAULT SYSDATE NULL
 )
 COMPRESS BASIC
 PARTITION BY LIST (network)
