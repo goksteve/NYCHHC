@@ -66,6 +66,10 @@ ALTER TABLE fact_results
        network)
       USING INDEX pk_fact_results;
 
+CREATE INDEX ui_fact_results_key ON CDW.FACT_RESULTS(VISIT_KEY) PARALLEL 32;
+alter INDEX ui_fact_results_key NOPARALLEL;
+/
+
 CREATE OR REPLACE TRIGGER tr_insert_fact_results
  FOR INSERT OR UPDATE
  ON fact_results

@@ -4,7 +4,7 @@ CREATE TABLE ref_hc_specialties
 (
   code         NUMBER(4) CONSTRAINT pk_ref_hc_specialties PRIMARY KEY,
   description  VARCHAR2(256 BYTE),
-  service_type VARCHAR2(3 BYTE)
+  service_type VARCHAR2(12 BYTE)
 );
 
 GRANT SELECT ON ref_hc_specialties TO PUBLIC;

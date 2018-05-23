@@ -4,6 +4,7 @@ SELECT
  -- 9-Mar-2018, SG: created
   ap.network,
   ap.visit_id,
+  vv.visit_key,
   ap.problem_number AS problem_nbr,
   pid.code AS icd_code,
   DECODE(pid.coding_scheme_id, '5', 'ICD-9', 'ICD-10') coding_scheme,

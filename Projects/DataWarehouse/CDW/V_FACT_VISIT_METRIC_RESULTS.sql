@@ -117,6 +117,7 @@ calc_result AS
 SELECT --+ materialize
  v.network,
  v.visit_id,
+ v.visit_key,
  v.patient_key,
  v.facility_key,
  v.admission_dt_key,

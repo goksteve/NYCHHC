@@ -56,13 +56,10 @@ ALTER TABLE err_fact_visits  ADD entry_ts TIMESTAMP DEFAULT SYSTIMESTAMP NOT NUL
 CREATE UNIQUE INDEX ui_fact_visits  ON fact_visits(visit_id, network) LOCAL PARALLEL 32;
 ALTER INDEX ui_fact_visits NOPARALLEL;
 
-
-
 --CREATE UNIQUE INDEX pk_fact_visits ON fact_visits(visit_id, network) LOCAL PARALLEL 32;
 
 CREATE UNIQUE INDEX pk_fact_visits   ON fact_visits(visit_key)  PARALLEL 32;
 ALTER INDEX pk_fact_visits  NOPARALLEL;
-
 
 --ALTER TABLE fact_visits ADD CONSTRAINT pk_fact_visits PRIMARY KEY(visit_id, network) USING INDEX pk_fact_visits;
 
@@ -76,6 +73,11 @@ CREATE INDEX idx_fact_visit_adm_dtkey
 
 ALTER INDEX idx_fact_visit_adm_dtkey
  NOPARALLEL;
+
+
+CREATE INDEX idx_fact_visit_admission  ON fact_visits(admission_dt)  LOCAL  parallel 32;
+
+ALTER INDEX idx_fact_visit_admission  NOPARALLEL;
 
 CREATE OR REPLACE TRIGGER tr_insert_fact_visits
  FOR INSERT OR UPDATE

@@ -4,6 +4,7 @@ CREATE TABLE fact_visit_metric_results
 (
  network                    CHAR(3 BYTE),
  visit_id                   NUMBER(12) NOT NULL,
+ visit_key                  NUMBER(12) NOT NULL,
  patient_key                NUMBER(12) NOT NULL,
  facility_key               NUMBER(12),
  admission_dt_key           NUMBER(8),
