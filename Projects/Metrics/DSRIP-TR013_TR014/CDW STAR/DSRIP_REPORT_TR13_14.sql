@@ -1,8 +1,8 @@
-exec dbm.drop_tables('dsrip_report_tr13_14');
+exec dbm.drop_tables('dsrip_report_tr013_14');
 
-CREATE TABLE dsrip_report_tr13_14
+CREATE TABLE dsrip_report_tr013_14
 (
-  REPORT_RUN_DT                  DATE,
+  REPORT_PERIOD_START_DT         DATE,
   BEGIN_DT                       DATE,
   END_DT                         DATE,
   NETWORK                        CHAR(3 BYTE) NOT NULL,
@@ -42,8 +42,8 @@ CREATE TABLE dsrip_report_tr13_14
   PROPORTION_DAYS_COVERED        VARCHAR2(5 BYTE),
   numeraor_flag_75_med_ratio     CHAR(1 BYTE),
   numeraor_flag_50_med_ratio     CHAR(1 BYTE),
-  CONSTRAINT pk_dsrip_report_tr13_14 PRIMARY KEY(report_run_dt, network, patient_id, visit_id) USING INDEX COMPRESS
+  CONSTRAINT pk_dsrip_report_tr013_14 PRIMARY KEY(report_period_start_dt, network, patient_id, visit_id) USING INDEX COMPRESS
 )
 COMPRESS BASIC;
 
-GRANT SELECT ON dsrip_report_tr13_14 TO PUBLIC;
+GRANT SELECT ON dsrip_report_tr013_14 TO PUBLIC;

@@ -1,5 +1,6 @@
 CREATE OR REPLACE VIEW v_dsrip_report_tr001_qmed_n AS
 WITH
+ -- 16-Apr-2018, GK:Fixed No records output issue caused by missiong hyphen '-' in ICD9, ICD10 strings
  -- 02-Apr-2018, SS:Fixed MRN issue caused by mdm.dc_flag 
  -- 07-Mar-2018, OK: created
   dt AS
@@ -50,7 +51,7 @@ WITH
         ON cmv.network = ap.network AND cmv.patient_id = ap.patient_id
        AND cmv.problem_number = ap.problem_number AND cmv.coding_scheme_id IN (5, 10)
       JOIN meta_conditions mc
-        ON mc.qualifier = DECODE(cmv.coding_scheme_id, 5, 'ICD9', 'ICD10')
+        ON mc.qualifier = DECODE(cmv.coding_scheme_id, 5, 'ICD-9', 'ICD-10')
        AND mc.value = cmv.code AND mc.criterion_id = 9 -- DIAGNOSES:MENTAL HEALTH
       JOIN cdw.ref_visit_types vt
         ON vt.visit_type_id = vst.visit_type_id
@@ -102,7 +103,7 @@ WITH
         ON pea.network = vst.network AND pea.visit_id = vst.visit_id AND pea.emp_provider_id IS NOT NULL
     )
   )
-SELECT
+SELECT 
   report_period_start_dt,
   network,
   SUBSTR(patient_name, 1, name_comma-1) last_name,

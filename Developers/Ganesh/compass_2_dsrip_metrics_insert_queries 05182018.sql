@@ -1,13 +1,14 @@
-SELECT distinct box_header FROM compass_metrics WHERE created_by = 'kollurug';
+-- ** Title:	Compass 2.0 DSRIP Tiles SQL  Queries**--
+-- ** Description:	SQL Queries for 5 DSRIP Reports TR019 Prevention Quality Indicator 90 (PQI 90), TR016 Diabetes Screening, TR017 Diabetes Monitoring, TR001 30 and 7 Day follow-up post psychiatric hospitalization
+-- **               and TR002_023 Comprehensive Diabetes Care.   
+-- ** Tags:			
+-- ** Updates:		Initial Create-05/14/2018
 
-SELECT * FROM compass_metrics WHERE created_by = 'kollurug' and month_number != 5;
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+--drop view vw_pqi7
 CREATE OR REPLACE VIEW /*vw_pqi7*/ vw_dsrip_pqi90_7_compass
 AS
   -- 18-May-2018, GK: Added extra date condition to result only the latest month data
   -- 16-May-2018, GK: TR019 Prevention Quality Indicator 90 (PQI 90) Hypertension discharges
-  
 WITH dsrip_pqi90_78
 AS
 (
@@ -21,14 +22,14 @@ AS
   WHERE report_cd = 'PQI90-78' 
 )
 SELECT 
-  'Prevention Quality Indicator - 7 (HTN)' box_header,
-  'Inpatient_Discharges' unique_tag,
+  'PQI - 7(Hypertension)' box_header,
+  'INPATIENT_DISCHARGES' unique_tag,
 ----------------------------
-  'Number of Inpatient Discharges' AS text_1,
+  'Total IP Discharges' AS text_1,
   Total_IP_discharges AS sub_text_1,
   prev_Total_IP_discharges AS prev_sub_text_1,
   ROUND ( (Total_IP_discharges - prev_Total_IP_discharges) / Total_IP_discharges * 100, 1) || '%' AS value1,
-  'Prev month and current month variance for Number of Inpatient Discharges' AS value_desc_1,
+  'Prev month and current month variance for Total IP Discharges' AS value_desc_1,
   CASE
     WHEN ROUND ( (Total_IP_discharges - prev_Total_IP_discharges) / Total_IP_discharges * 100, 0) > 0
     THEN 'GOOD'
@@ -112,13 +113,14 @@ AND EXTRACT(MONTH FROM dt) =
 
 INSERT INTO compass_metrics SELECT * FROM vw_dsrip_pqi90_7_compass;
 COMMIT;
---delete from compass_metrics WHERE unique_tag = 'Inpatient_Discharges';
-SELECT * FROM compass_metrics WHERE unique_tag = 'Inpatient_Discharges';
+--delete from compass_metrics WHERE unique_tag = 'INPATIENT_DISCHARGES';
+SELECT * FROM compass_metrics WHERE unique_tag = 'INPATIENT_DISCHARGES';
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-CREATE OR REPLACE VIEW vw_dsrip_tr016_AntipyschRx
+-- drop view vw_dsrip_tr016_AntipyschRx
+CREATE OR REPLACE VIEW /*vw_dsrip_tr016_AntipyschRx*/ vw_dsrip_tr016_compass
 AS
+  -- 18-May-2018, GK: Added extra date condition to result only the latest month data
   -- 15-May-2018, GK: TR016 Diabetes Screening for People with Schizophrenia or Bipolar Disease who are Using Antipsychotic Medication  
 WITH dsrip_tr016
 AS
@@ -132,7 +134,7 @@ AS
   WHERE report_cd = 'DSRIP-TR016' and a.facility_name != 'Health and Hospitals Corporation' and a.facility_name !='Unknown' 
 )
 SELECT 
-  'BH - Diabetic Screening' box_header,
+  'BH - Diabetes Screening' box_header,
   'DSRIP_DIAB_ANTIPSYCH_MED' unique_tag,
 ----------------------------
   'Patients on Anti-psychotic medications' AS text_1,
@@ -212,17 +214,24 @@ FROM
   AND pat_diagnosed_with_diab <> 0
 )
 WHERE rn =1 
-AND EXTRACT (MONTH FROM dt) = EXTRACT(MONTH FROM SYSDATE);
+AND EXTRACT (MONTH FROM dt) = 
+(
+  SELECT  
+    EXTRACT (MONTH FROM MAX(period_start_dt)) 
+  FROM pt005.dsrip_report_results a
+  WHERE report_cd = 'DSRIP-TR016' and a.facility_name != 'Health and Hospitals Corporation' and a.facility_name !='Unknown' 
+);
 
-INSERT INTO compass_metrics SELECT * FROM vw_dsrip_tr016_AntipyschRx;
+INSERT INTO compass_metrics SELECT * FROM vw_dsrip_tr016_compass;
 COMMIT;
 --delete from compass_metrics WHERE unique_tag = 'DSRIP_DIAB_ANTIPSYCH_MED';
 SELECT * FROM compass_metrics WHERE unique_tag = 'DSRIP_DIAB_ANTIPSYCH_MED';
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-CREATE OR REPLACE VIEW vw_dsrip_diab_schizo
+--drop view vw_dsrip_diab_schizo;
+CREATE OR REPLACE VIEW /*vw_dsrip_diab_schizo*/ vw_dsrip_tr017_compass
 AS
+  -- 18-May-2018, GK: Added extra date condition to result only the latest month data
   -- 14-May-2018, GK: TR017 Diabetes Monitoring for People with Diabetes and Schizophrenia
 WITH dsrip_diab_schizo
 AS 
@@ -233,8 +242,6 @@ AS
     "# Patients" AS Pats_with_Diab_Schizophrenia,
     "# Patient with Both Results" pats_with_both_results
   FROM pt005.v_tr017_diab_mon_sum_cdw_all
-  where to_date(TO_CHAR ("Report Month", 'MON-YYYY'), 'MON-YYYY')  >= date '2018-04-01' 
---  ORDER BY TO_CHAR ("Report Month", 'MON-YYYY') DESC
 )
 SELECT 
   'BH - Diabetes Monitoring' box_header,
@@ -289,7 +296,6 @@ SELECT
 --  'kollurug' create_by
   sys_context('USERENV', 'OS_USER') create_by,
   'http://eimtest.nychhc.org/ibmcognos/cgi-bin/cognos.cgi?b_action=cognosViewer||chr(38)||ui.action=run||chr(38)||ui.object=%2fcontent%2ffolder%5b%40name%3d%27Reports%27%5d%2ffolder%5b%40name%3d%27DSRIP%20Metrics%27%5d%2ffolder%5b%40name%3d%27DSRIP%20Metrics%27%5d%2freport%5b%40name%3d%27Diabetes%20Monitoring%27%5d||chr(38)||ui.name=Diabetes%20Monitoring||chr(38)||run.outputFormat=||chr(38)||run.prompt=true||chr(38)||ui.backURL=%2fibmcognos%2fcgi-bin%2fcognos.cgi%3fb_action%3dxts.run%26m%3dportal%2fcc.xts%26m_folder%3di452592FA64524A048A981D6DD3BABBD4' cognos_dashboard_url
-
 ----------------------------------------------
 FROM 
 (
@@ -318,17 +324,24 @@ FROM
   AND Pats_with_Diab_Schizophrenia <> 0
   AND pats_with_both_results <> 0
 )
-WHERE rn = 1 and EXTRACT (MONTH FROM dt) = extract(month from sysdate);
+WHERE rn = 1 
+AND EXTRACT(MONTH FROM dt) =
+(
+  SELECT  
+    EXTRACT (MONTH FROM MAX("Report Month")) 
+  FROM pt005.v_tr017_diab_mon_sum_cdw_all
+);
 
-INSERT INTO compass_metrics SELECT * FROM vw_dsrip_diab_schizo;
+INSERT INTO compass_metrics SELECT * FROM vw_dsrip_tr017_compass;
 COMMIT;
 --delete from compass_metrics WHERE unique_tag = 'DSRIP_DIAB_SCHRIZOPHRENIA';
 SELECT * FROM compass_metrics WHERE unique_tag = 'DSRIP_DIAB_SCHRIZOPHRENIA';
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-CREATE OR REPLACE VIEW vw_dsrip_bh_followup_20180511
+--drop view vw_dsrip_bh_followup_20180511;
+CREATE OR REPLACE VIEW /*vw_dsrip_bh_followup_20180511*/ vw_dsrip_tr001_compass
 AS
+  -- 18-May-2018, GK: Added extra date condition to result only the latest month data
   -- 15-May-2018, GK: TR001 30 and 7 Day follow-up post psychiatric hospitalization
 WITH bh_vsts
 AS 
@@ -343,7 +356,7 @@ AS
 )
 SELECT 
   'BH - Followup Hospitalization Visits' box_header,
-  'BH_Followup_Visits' unique_tag,
+  'BH_FOLLOWUP_VISITS' unique_tag,
 ----------------------------
   'Total BH discharges' AS text_1,
   Num_BH_Hosp_Pats AS sub_text_1,
@@ -431,19 +444,26 @@ FROM
   AND NumFollowup_Vsts_In7days <> 0
   AND NumFollowup_Vsts_In30days <> 0
 )
-WHERE rn = 1;
+WHERE rn = 1
+AND EXTRACT(MONTH FROM dt) = 
+(
+  SELECT  
+    EXTRACT (MONTH FROM MAX(TO_DATE(Reporting_Month,'Mon-YYYY')))
+  FROM pt005.v_tr001_summary_cdw_all
+);
 
-INSERT INTO compass_metrics SELECT * FROM vw_dsrip_bh_followup_20180511;
+INSERT INTO compass_metrics SELECT * FROM vw_dsrip_tr001_compass;
 COMMIT;
---delete from compass_metrics WHERE unique_tag = 'BH_Followup_Visits';
-SELECT * FROM compass_metrics WHERE unique_tag = 'BH_Followup_Visits';
+--delete from compass_metrics WHERE unique_tag = 'BH_FOLLOWUP_VISITS';
+SELECT * FROM compass_metrics WHERE unique_tag = 'BH_FOLLOWUP_VISITS';
   
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ 
-
-CREATE OR REPLACE VIEW vw_dsrip_diab_ctrl_20180511
+--drop view vw_dsrip_diab_ctrl_20180511;
+CREATE OR REPLACE VIEW /*vw_dsrip_diab_ctrl_20180511*/ vw_dsrip_tr002_023_compass
 AS
+  -- 18-May-2018, GK: Added extra date condition to result only the latest month data
   -- 16-May-2018, GK: renamed the titles 
-  -- 11-May-2018, GK: Comprehensive Diabetes Care: Hemoglobin A1c (HbA1c) 
+  -- 11-May-2018, GK: TR002_023 Comprehensive Diabetes Care: Hemoglobin A1c (HbA1c) 
 WITH dsrip_diab_ctrl
 AS 
 (  
@@ -454,7 +474,6 @@ AS
     "# A1c < 8" AS numpatcnt_hba1c_less8,
     "# A1c >= 9 or NULL" AS totaldiabpatpoorcntrl
   FROM pt005.v_tr002_tr023_summary_cdw_all
-  ORDER BY TO_DATE ("Reporting Month", 'MON-YYYY') DESC
 )
 SELECT 
   'CDC - HbA1c Control' box_header,
@@ -471,11 +490,11 @@ SELECT
     ELSE 'BAD'
   END performance_indicator_1,
 -----------------------------------------------
-  'Total diabetic population(last 24 monts)' AS text_2,
+  'Total diabetic population (last 24 months)' AS text_2,
   totaldiabetespat AS sub_text_2,
   prev_totaldiabetespat AS prev_sub_text_2,
   ROUND ( (totaldiabetespat - prev_totaldiabetespat) / totaldiabetespat * 100, 1) || '%' AS value2,
-  'Prev month and current month variance for Number of Diabetes Patients' AS value_desc_2,
+  'Prev month and current month variance for Total diabetic population (last 24 months)' AS value_desc_2,
   CASE
     WHEN ROUND ( (totaldiabetespat - prev_totaldiabetespat) / totaldiabetespat * 100, 0) > 0
     THEN 'BAD'
@@ -483,11 +502,11 @@ SELECT
   END performance_indicator_2,
 ----------------------------------------------
 -------------------------------------------------
-  'Patients in poor control (>9% or no test)' AS text_3,
+  'Patients in poor control (>9% or no test/result)' AS text_3,
   totaldiabpatpoorcntrl AS sub_text_3,
   prev_totaldiabpatpoorcntrl AS prev_sub_text_3,
   ROUND ( (totaldiabpatpoorcntrl - prev_totaldiabpatpoorcntrl) / totaldiabpatpoorcntrl * 100, 1) || '%' AS value3,
-  'Prev month and current month variance for Number of patients in poor control (HbA1c >=9 or no test values)' AS value_desc_3,
+  'Prev month and current month variance for Patients in poor control (>9% or no test/result)' AS value_desc_3,
   CASE
     WHEN ROUND ( (totaldiabpatpoorcntrl - prev_totaldiabpatpoorcntrl) / totaldiabpatpoorcntrl * 100, 1) > 0
     THEN 'BAD'
@@ -547,9 +566,18 @@ FROM
   AND totaldiabpatpoorcntrl <> 0
 )
 WHERE rn = 1
-AND EXTRACT (MONTH FROM dt) = EXTRACT(MONTH FROM SYSDATE);
+AND EXTRACT (MONTH FROM dt) = 
+(
+  SELECT  
+    EXTRACT( MONTH FROM MAX(TO_DATE("Reporting Month",'Mon-YYYY'))) 
+  FROM pt005.v_tr002_tr023_summary_cdw_all
+);
 
-INSERT INTO compass_metrics SELECT * FROM vw_dsrip_diab_ctrl_20180511;
+INSERT INTO compass_metrics SELECT * FROM vw_dsrip_tr002_023_compass;
 COMMIT;
 --delete from compass_metrics WHERE unique_tag = 'DIABETES_CONTROL';
 SELECT * FROM compass_metrics WHERE unique_tag = 'DIABETES_CONTROL';
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- verification SQL
+--SELECT distinct box_header FROM compass_metrics WHERE created_by = 'kollurug';
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
