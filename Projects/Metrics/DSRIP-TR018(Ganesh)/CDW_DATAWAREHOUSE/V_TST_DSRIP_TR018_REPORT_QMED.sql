@@ -23,7 +23,7 @@ WITH
       fpd.diag_code htn_dx_code,
       ROW_NUMBER() OVER (PARTITION BY fpd.patient_id ORDER BY fpd.onset_date DESC) htn_ptnt_rnum   
     FROM dt
-    JOIN fact_patient_diagnoses fpd on  fpd.onset_date >= dt.msrmnt_yr_start_dt AND fpd.network = 'CBN'
+    JOIN fact_patient_diagnoses fpd on  fpd.onset_date >= dt.msrmnt_yr_start_dt --AND fpd.network = 'CBN'
      AND fpd.onset_date <  
           CASE
              WHEN report_period_start_dt <  ADD_MONTHS(msrmnt_yr_start_dt, 6)
@@ -37,7 +37,7 @@ WITH
         SELECT 
           distinct fpd1.patient_id,fpd1.network
         FROM dt
-        JOIN fact_patient_diagnoses fpd1 on  fpd1.onset_date >= dt.msrmnt_yr_start_dt AND fpd1.network = 'CBN'
+        JOIN fact_patient_diagnoses fpd1 on  fpd1.onset_date >= dt.msrmnt_yr_start_dt --AND fpd1.network = 'CBN'
         AND fpd1.onset_date <  
           CASE
              WHEN report_period_start_dt <  ADD_MONTHS(msrmnt_yr_start_dt, 6)
@@ -74,7 +74,7 @@ WITH
       ON v.admission_dt >= dt.begin_dt
      AND v.admission_dt < dt.end_dt
      AND v.final_visit_type_id IN (3,4)
-     AND v.network = 'CBN' 
+    -- AND v.network = 'CBN' 
     JOIN htn_ptnt_lkp lkp
       ON lkp.patient_id=v.patient_id AND lkp.network=v.network
      AND lkp.htn_ptnt_rnum=1
@@ -98,7 +98,7 @@ WITH
     JOIN fact_results r
       ON r.result_dt >= dt.begin_dt
      AND r.result_dt < dt.end_dt
-     AND r.network = 'CBN'
+--     AND r.network = 'CBN'
     JOIN htn_metadata_rslts_lkp lkp 
       ON lkp.value = r.data_element_id 
      AND lkp.network = r.network 
@@ -267,7 +267,7 @@ SELECT --+ parallel(32)
   report_period_start_dt
 FROM Denominator d
 JOIN dim_patients p
-  ON p.patient_id = d.patient_id AND p.network = d.network AND p.current_flag=1 AND p.date_of_death IS NULL AND p.network = 'CBN'
+  ON p.patient_id = d.patient_id AND p.network = d.network AND p.current_flag=1 AND p.date_of_death IS NULL-- AND p.network = 'CBN'
 LEFT JOIN 
 (
   SELECT 
@@ -278,14 +278,14 @@ LEFT JOIN
       fpd.network,fpd.patient_id,fpd.onset_date,fpd.diag_code
     FROM fact_patient_diagnoses fpd  
     JOIN pt005.meta_conditions mc
-      ON mc.value=fpd.diag_code AND mc.criterion_id=37 AND include_exclude_ind='I' AND fpd.network = 'CBN'
+      ON mc.value=fpd.diag_code AND mc.criterion_id=37 AND include_exclude_ind='I' --AND fpd.network = 'CBN'
     WHERE 
     NOT EXISTS
     (
       SELECT 
         distinct fpd1.patient_id,fpd1.network
       FROM fact_patient_diagnoses fpd1  
-      JOIN pt005.meta_conditions mc ON mc.value=fpd1.diag_code AND mc.criterion_id=37 AND include_exclude_ind='E'  AND fpd1.network = 'CBN' 
+      JOIN pt005.meta_conditions mc ON mc.value=fpd1.diag_code AND mc.criterion_id=37 AND include_exclude_ind='E'  --AND fpd1.network = 'CBN' 
       WHERE fpd1.patient_id=fpd.patient_id AND fpd1.network=fpd.network    
     )       
     
@@ -297,7 +297,7 @@ LEFT JOIN
     JOIN ref_drug_descriptions b
       ON a.drug_description = b.drug_description
       AND b.drug_type_id = 33
-      AND a.network = 'CBN'
+      --AND a.network = 'CBN'
   )g
   GROUP BY g.network,g.patient_id 
 )diab_prob_pat
@@ -308,7 +308,7 @@ ON d.facility_key = f.facility_key
 JOIN ref_visit_types vt
 ON vt.visit_type_id=d.visit_type_id
 LEFT JOIN dim_payers dp
-ON dp.payer_key=d.payer_id AND dp.network = 'CBN'
+ON dp.payer_key=d.payer_id --AND dp.network = 'CBN'
 LEFT JOIN DIM_HC_DEPARTMENTS dept
 ON dept.department_key=d.first_department_key
 WHERE

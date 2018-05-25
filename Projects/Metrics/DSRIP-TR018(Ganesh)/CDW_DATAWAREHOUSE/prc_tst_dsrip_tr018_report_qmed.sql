@@ -6,9 +6,9 @@ BEGIN
 
     EXECUTE IMMEDIATE 'ALTER SESSION ENABLE PARALLEL DDL';
     EXECUTE IMMEDIATE 'ALTER SESSION ENABLE PARALLEL DML';
-   FOR i IN 1 .. 5
+   FOR i IN 1 .. 11
  LOOP
-      d_report_mon := ADD_MONTHS (DATE '2018-01-01', i);
+      d_report_mon := ADD_MONTHS (DATE '2017-01-01', i);
       DBMS_SESSION.set_identifier (d_report_mon);
 
       xl.begin_action('Deleting old data (if any) for '||d_report_mon);
