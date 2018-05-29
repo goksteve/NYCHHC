@@ -1,3 +1,6 @@
+DROP TABLE dim_patients CASCADE CONSTRAINTS;
+
+
 CREATE TABLE dim_patients
 (
   PATIENT_KEY                NUMBER(12) NOT NULL,
