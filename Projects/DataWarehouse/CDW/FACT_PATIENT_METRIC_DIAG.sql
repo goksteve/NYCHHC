@@ -4,14 +4,15 @@ CREATE TABLE fact_patient_metric_diag
 (
  network               CHAR(3 BYTE) NOT NULL,
  patient_id            NUMBER(12) NOT NULL,
- asthma_ind            NUMBER NULL,
- bh_ind                NUMBER NULL,
- breast_cancer_ind     NUMBER NULL,
- diabetes_ind          NUMBER NULL,
- heart_failure_ind     NUMBER NULL,
- hypertansion_ind      NUMBER NULL,
- kidney_diseases_ind   NUMBER NULL,
- pregnancy_ind NUMBER NULL,
+ asthma_ind            NUMBER(3) NULL,
+ bh_ind                NUMBER(3) NULL,
+ breast_cancer_ind     NUMBER(3) NULL,
+ diabetes_ind          NUMBER(3) NULL,
+ heart_failure_ind     NUMBER(3) NULL,
+ hypertansion_ind      NUMBER(3) NULL,
+ kidney_diseases_ind   NUMBER(3) NULL,
+ smoker_ind            NUMBER(3) NULL,
+ pregnancy_ind         NUMBER(3) NULL,
  pregnancy_onset_dt    DATE NULL
 )
 COMPRESS BASIC
