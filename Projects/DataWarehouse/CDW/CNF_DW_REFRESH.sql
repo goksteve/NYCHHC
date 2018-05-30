@@ -132,5 +132,9 @@ INSERT INTO cnf_dw_refresh VALUES(3160, 'INSERT /*+ PARALLEL(32) APPEND */', 'FA
 --INSERT INTO cnf_dw_refresh VALUES(3250, 'MERGE /*+ PARALLEL(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network IN (''GP2'',''SBN'')', NULL, NULL);
 --INSERT INTO cnf_dw_refresh VALUES(3260, 'MERGE /*+ PARALLEL(32)*/', 'FACT_RESULTS', 'V_FACT_RESULTS', NULL, 'WHERE network IN (''CBN'',''NBN'')', NULL, NULL);
 
-COMMIT;
+--4000 series for EPIC daily data refresh
+INSERT INTO cnf_dw_refresh VALUES(4000, 'REPLACE /*+ APPEND PARALLEL(32) */', 'fact_daily_visits_stats_epic', 'v_fact_daily_visits_stats_epic', NULL, NULL, NULL, NULL);
 
+--5000 series for QCPR daily data refresh
+--INSERT INTO cnf_dw_refresh VALUES(5000, 'REPLACE /*+ INDEX(t) */', 'fact_daily_visits_stats_qmed', 'v_fact_daily_visits_stats_qmed', NULL, NULL, NULL, NULL);
+COMMIT;

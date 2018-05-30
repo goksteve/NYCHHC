@@ -30,8 +30,8 @@ from
 )
 order by proc_id desc;
 
-select * from dbg_log_data
-where proc_id IN (291)
+select a.*, DBMS_LOB.substr(a.comment_txt, 250)  from dbg_log_data a
+where proc_id IN (410)
 --and action like 'Adding data to%'
 --and comment_txt not like 'Operation%'
 order by tstamp desc;

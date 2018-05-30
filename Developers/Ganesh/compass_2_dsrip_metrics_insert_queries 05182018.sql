@@ -3,7 +3,7 @@
 -- **               and TR002_023 Comprehensive Diabetes Care.   
 -- ** Tags:			
 -- ** Updates:		Initial Create-05/14/2018
-
+-- **             Changes in SQL, to 
 --drop view vw_pqi7
 CREATE OR REPLACE VIEW /*vw_pqi7*/ vw_dsrip_pqi90_7_compass
 AS
@@ -25,8 +25,9 @@ SELECT
   'PQI - 7(Hypertension)' box_header,
   'INPATIENT_DISCHARGES' unique_tag,
 ----------------------------
-  'Total IP Discharges' AS text_1,
+  'Total number of inpatients discharged' AS text_1,
   Total_IP_discharges AS sub_text_1,
+  NULL AS sub_text_description_1,
   prev_Total_IP_discharges AS prev_sub_text_1,
   ROUND ( (Total_IP_discharges - prev_Total_IP_discharges) / Total_IP_discharges * 100, 1) || '%' AS value1,
   'Prev month and current month variance for Total IP Discharges' AS value_desc_1,
@@ -36,11 +37,12 @@ SELECT
     ELSE 'BAD'
   END performance_indicator_1,
 ----------------------------------------------
-  'Patients discharged with HTN dx' AS text_2,
+  'Total number of patients discharged with a diagnosis of hypertension.' AS text_2,
   Htn_disch_diag AS sub_text_2,
+  NULL AS sub_text_description_2,
   prev_Htn_disch_diag AS prev_sub_text_2,
   ROUND ( (Htn_disch_diag - prev_Htn_disch_diag) / Htn_disch_diag * 100, 1) || '%' AS value2,
-  'Prev month and current month variance for Total Number of patients who had Diabetes tests' AS value_desc_2,
+  'Prev month and current month variance for Total number of patients discharged with a diagnosis of hypertension.' AS value_desc_2,
   CASE
     WHEN ROUND ( (Htn_disch_diag - prev_Htn_disch_diag) / Htn_disch_diag * 100, 1) > 0
     THEN 'GOOD'
@@ -49,6 +51,7 @@ SELECT
 -----------------------------------------------
   NULL AS text_3,
   NULL AS sub_text_3,
+  NULL AS sub_text_description_3,
   NULL AS prev_sub_text_3,
   NULL AS value3,
   NULL AS value_desc_3,
@@ -56,6 +59,7 @@ SELECT
 -----------------------------------------------
   NULL AS text_4,
   NULL AS sub_text_4,
+  NULL AS sub_text_description_4,
   NULL AS prev_sub_text_4,
   NULL AS value4,
   NULL AS value_desc_4,
@@ -111,10 +115,10 @@ AND EXTRACT(MONTH FROM dt) =
   WHERE report_cd = 'PQI90-78'
 ) ;
 
-INSERT INTO compass_metrics SELECT * FROM vw_dsrip_pqi90_7_compass;
+INSERT INTO compass_metrics_beta SELECT * FROM vw_dsrip_pqi90_7_compass;
 COMMIT;
---delete from compass_metrics WHERE unique_tag = 'INPATIENT_DISCHARGES';
-SELECT * FROM compass_metrics WHERE unique_tag = 'INPATIENT_DISCHARGES';
+--delete from compass_metrics_beta WHERE unique_tag = 'INPATIENT_DISCHARGES';
+SELECT * FROM compass_metrics_beta WHERE unique_tag = 'INPATIENT_DISCHARGES';
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- drop view vw_dsrip_tr016_AntipyschRx
@@ -137,8 +141,9 @@ SELECT
   'BH - Diabetes Screening' box_header,
   'DSRIP_DIAB_ANTIPSYCH_MED' unique_tag,
 ----------------------------
-  'Patients on Anti-psychotic medications' AS text_1,
+  'Total number of patients in the age group 18 to 64 years, on Anti-Psychotic medications.' AS text_1,
   Pat18_64_Wth_AntipyschRx AS sub_text_1,
+  NULL AS sub_text_description_1,
   prev_Pat18_64_Wth_AntipyschRx AS prev_sub_text_1,
   ROUND ( (Pat18_64_Wth_AntipyschRx - prev_Pat18_64_Wth_AntipyschRx) / Pat18_64_Wth_AntipyschRx * 100, 1) || '%' AS value1,
   'Prev month and current month variance for Total no. of Patients on Anti-Psych med' AS value_desc_1,
@@ -148,11 +153,12 @@ SELECT
     ELSE 'BAD'
   END performance_indicator_1,
 ----------------------------------------------
-  'No. of patients screened' AS text_2,
+  'Number of people who had a glucose or HbA1c test' AS text_2,
   pat_diagnosed_with_diab AS sub_text_2,
+  NULL AS sub_text_description_2,
   prev_pat_diagnosed_with_diab AS prev_sub_text_2,
   ROUND ( (pat_diagnosed_with_diab - prev_pat_diagnosed_with_diab) / pat_diagnosed_with_diab * 100, 1) || '%' AS value2,
-  'Prev month and current month variance for Total Number of patients who had Diabetes tests' AS value_desc_2,
+  'Prev month and current month variance for Total Number of people who had a glucose or HbA1c test' AS value_desc_2,
   CASE
     WHEN ROUND ( (pat_diagnosed_with_diab - prev_pat_diagnosed_with_diab) / pat_diagnosed_with_diab * 100, 1) > 0
     THEN 'GOOD'
@@ -161,6 +167,7 @@ SELECT
 -----------------------------------------------
   NULL AS text_3,
   NULL AS sub_text_3,
+  NULL AS sub_text_description_3,
   NULL AS prev_sub_text_3,
   NULL AS value3,
   NULL AS value_desc_3,
@@ -168,6 +175,7 @@ SELECT
 -----------------------------------------------
   NULL AS text_4,
   NULL AS sub_text_4,
+  NULL AS sub_text_description_4,
   NULL AS prev_sub_text_4,
   NULL AS value4,
   NULL AS value_desc_4,
@@ -222,10 +230,10 @@ AND EXTRACT (MONTH FROM dt) =
   WHERE report_cd = 'DSRIP-TR016' and a.facility_name != 'Health and Hospitals Corporation' and a.facility_name !='Unknown' 
 );
 
-INSERT INTO compass_metrics SELECT * FROM vw_dsrip_tr016_compass;
+INSERT INTO compass_metrics_beta SELECT * FROM vw_dsrip_tr016_compass;
 COMMIT;
---delete from compass_metrics WHERE unique_tag = 'DSRIP_DIAB_ANTIPSYCH_MED';
-SELECT * FROM compass_metrics WHERE unique_tag = 'DSRIP_DIAB_ANTIPSYCH_MED';
+--delete from compass_metrics_beta WHERE unique_tag = 'DSRIP_DIAB_ANTIPSYCH_MED';
+SELECT * FROM compass_metrics_beta WHERE unique_tag = 'DSRIP_DIAB_ANTIPSYCH_MED';
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --drop view vw_dsrip_diab_schizo;
@@ -247,8 +255,9 @@ SELECT
   'BH - Diabetes Monitoring' box_header,
   'DSRIP_DIAB_SCHRIZOPHRENIA' unique_tag,
 ----------------------------
-  'Total no. Diabetes patients' AS text_1,
+  'Total number of people, ages 18 to 64 years with Schizophrenia and Diabetes, based on diagnosis' AS text_1,
   Pats_with_Diab_Schizophrenia AS sub_text_1,
+  NULL AS sub_text_description_1,
   prev_Pats_with_Diab_Schiz AS prev_sub_text_1,
   ROUND ( (Pats_with_Diab_Schizophrenia - prev_Pats_with_Diab_Schiz) / Pats_with_Diab_Schizophrenia * 100, 1) || '%' AS value1,
   'Prev month and current month variance for Total no. of Patients with Diabetes and Schizophrenia' AS value_desc_1,
@@ -258,11 +267,12 @@ SELECT
     ELSE 'BAD'
   END performance_indicator_1,
 ----------------------------------------------
-  'Number of Diabetes Patients with Both LDL and A1C Results' AS text_2,
+  'Number of people who had both an LDL-C test and an HbA1c test during the measurement year' AS text_2,
   pats_with_both_results AS sub_text_2,
+  NULL AS sub_text_description_2,
   prev_pats_with_both_results AS prev_sub_text_2,
   ROUND ( (pats_with_both_results - prev_pats_with_both_results) / pats_with_both_results * 100, 1) || '%' AS value2,
-  'Prev month and current month variance for Total Number of Followup Visits within 7 Days' AS value_desc_2,
+  'Prev month and current month variance for Total Number of people who had both an LDL-C test and an HbA1c test during the measurement year' AS value_desc_2,
   CASE
     WHEN ROUND ( (pats_with_both_results - prev_pats_with_both_results) / pats_with_both_results * 100, 1) > 0
     THEN 'GOOD'
@@ -271,6 +281,7 @@ SELECT
 -----------------------------------------------
   NULL AS text_3,
   NULL AS sub_text_3,
+  NULL AS sub_text_description_3,
   NULL AS prev_sub_text_3,
   NULL AS value3,
   NULL AS value_desc_3,
@@ -278,6 +289,7 @@ SELECT
 -----------------------------------------------
   NULL AS text_4,
   NULL AS sub_text_4,
+  NULL AS sub_text_description_4,
   NULL AS prev_sub_text_4,
   NULL AS value4,
   NULL AS value_desc_4,
@@ -332,10 +344,10 @@ AND EXTRACT(MONTH FROM dt) =
   FROM pt005.v_tr017_diab_mon_sum_cdw_all
 );
 
-INSERT INTO compass_metrics SELECT * FROM vw_dsrip_tr017_compass;
+INSERT INTO compass_metrics_beta SELECT * FROM vw_dsrip_tr017_compass;
 COMMIT;
---delete from compass_metrics WHERE unique_tag = 'DSRIP_DIAB_SCHRIZOPHRENIA';
-SELECT * FROM compass_metrics WHERE unique_tag = 'DSRIP_DIAB_SCHRIZOPHRENIA';
+--delete from compass_metrics_beta WHERE unique_tag = 'DSRIP_DIAB_SCHRIZOPHRENIA';
+SELECT * FROM compass_metrics_beta WHERE unique_tag = 'DSRIP_DIAB_SCHRIZOPHRENIA';
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --drop view vw_dsrip_bh_followup_20180511;
@@ -358,8 +370,9 @@ SELECT
   'BH - Followup Hospitalization Visits' box_header,
   'BH_FOLLOWUP_VISITS' unique_tag,
 ----------------------------
-  'Total BH discharges' AS text_1,
+  'Total number of patients discharged from a BH Hospitalization' AS text_1,
   Num_BH_Hosp_Pats AS sub_text_1,
+  NULL AS sub_text_description_1,
   prev_Num_BH_Hosp_Pats AS prev_sub_text_1,
   ROUND ( (Num_BH_Hosp_Pats - prev_Num_BH_Hosp_Pats) / Num_BH_Hosp_Pats * 100, 1) || '%' AS value1,
   'Prev month and current month variance for Number of BH Hospitalizations' AS value_desc_1,
@@ -369,22 +382,24 @@ SELECT
     ELSE 'BAD'
   END performance_indicator_1,
 ----------------------------------------------
-  'Total follow-up visists in 7 days' AS text_2,
+  'Total number of patients who had a follow-up visit with a BH practitioner after 7 days of discharge from a BH hospitalization' AS text_2,
   NumFollowup_Vsts_In7days AS sub_text_2,
+  NULL AS sub_text_description_2,
   prev_NumFollowup_Vsts_In7days AS prev_sub_text_2,
   ROUND ( (NumFollowup_Vsts_In7days - prev_NumFollowup_Vsts_In7days) / NumFollowup_Vsts_In7days * 100, 1) || '%' AS value2,
-  'Prev month and current month variance for Total Number of Followup Visits made within 7 Days' AS value_desc_2,
+  'Prev month and current month variance for Total number of patients who had a follow-up visit with a BH practitioner after 7 days of discharge from a BH hospitalization' AS value_desc_2,
   CASE
     WHEN ROUND ( (NumFollowup_Vsts_In7days - prev_NumFollowup_Vsts_In7days) / NumFollowup_Vsts_In7days * 100, 1) > 0
     THEN 'GOOD'
     ELSE 'BAD'
   END performance_indicator_2,
 -----------------------------------------------
-  'Total follow-up visists in 30 days' AS text_3,
+  'Total number of patients who had a follow-up visit with a BH practitioner after 30 days of discharge from a BH hospitalization' AS text_3,
   NumFollowup_Vsts_In30days AS sub_text_3,
+  NULL AS sub_text_description_3,
   prev_NumFollowup_Vsts_In30days AS prev_sub_text_3,
   ROUND ( (NumFollowup_Vsts_In30days - prev_NumFollowup_Vsts_In30days) / NumFollowup_Vsts_In30days * 100, 1) || '%' AS value3,
-  'Prev month and current month variance for Followup Visits made within 30 Days' AS value_desc_3,
+  'Prev month and current month variance for Total number of patients who had a follow-up visit with a BH practitioner after 30 days of discharge from a BH hospitalization' AS value_desc_3,
   CASE
     WHEN ROUND ( (NumFollowup_Vsts_In30days - prev_NumFollowup_Vsts_In30days) / NumFollowup_Vsts_In30days * 100, 1) > 0
     THEN 'GOOD'
@@ -393,6 +408,7 @@ SELECT
 -----------------------------------------------
   NULL AS text_4,
   NULL AS sub_text_4,
+  NULL AS sub_text_description_4,
   NULL AS prev_sub_text_4,
   NULL AS value4,
   NULL AS value_desc_4,
@@ -452,10 +468,10 @@ AND EXTRACT(MONTH FROM dt) =
   FROM pt005.v_tr001_summary_cdw_all
 );
 
-INSERT INTO compass_metrics SELECT * FROM vw_dsrip_tr001_compass;
+INSERT INTO compass_metrics_beta SELECT * FROM vw_dsrip_tr001_compass;
 COMMIT;
---delete from compass_metrics WHERE unique_tag = 'BH_FOLLOWUP_VISITS';
-SELECT * FROM compass_metrics WHERE unique_tag = 'BH_FOLLOWUP_VISITS';
+--delete from compass_metrics_beta WHERE unique_tag = 'BH_FOLLOWUP_VISITS';
+SELECT * FROM compass_metrics_beta WHERE unique_tag = 'BH_FOLLOWUP_VISITS';
   
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ 
 --drop view vw_dsrip_diab_ctrl_20180511;
@@ -479,8 +495,9 @@ SELECT
   'CDC - HbA1c Control' box_header,
   'DIABETES_CONTROL' unique_tag,
 ----------------------------
-  'Patients in control (<8%)' AS text_1,
+  'Number of patients whose HbA1c result from the last 12 months was less than 8%.' AS text_1,
   numpatcnt_hba1c_less8 AS sub_text_1,
+  NULL AS sub_text_description_1,
   prev_numpatcnt_hba1c_less8 AS prev_sub_text_1,
   ROUND ( (numpatcnt_hba1c_less8 - prev_numpatcnt_hba1c_less8) / numpatcnt_hba1c_less8 * 100, 1) || '%' AS value1,
   'Prev month and current month variance for Number of patients in-control(HbA1c <8)' AS value_desc_1,
@@ -490,11 +507,12 @@ SELECT
     ELSE 'BAD'
   END performance_indicator_1,
 -----------------------------------------------
-  'Total diabetic population (last 24 months)' AS text_2,
+  'Total number of patients diagnosed with diabetes who had at least one visit in the last 24 months.' AS text_2,
   totaldiabetespat AS sub_text_2,
+  NULL AS sub_text_description_2,
   prev_totaldiabetespat AS prev_sub_text_2,
   ROUND ( (totaldiabetespat - prev_totaldiabetespat) / totaldiabetespat * 100, 1) || '%' AS value2,
-  'Prev month and current month variance for Total diabetic population (last 24 months)' AS value_desc_2,
+  'Prev month and current month variance for Total number of patients diagnosed with diabetes who had at least one visit in the last 24 months.' AS value_desc_2,
   CASE
     WHEN ROUND ( (totaldiabetespat - prev_totaldiabetespat) / totaldiabetespat * 100, 0) > 0
     THEN 'BAD'
@@ -502,11 +520,12 @@ SELECT
   END performance_indicator_2,
 ----------------------------------------------
 -------------------------------------------------
-  'Patients in poor control (>9% or no test/result)' AS text_3,
+  'Number of patients whose HbA1c result from the last 12 months was greater than 9% or did not have a test done or the result was null.' AS text_3,
   totaldiabpatpoorcntrl AS sub_text_3,
+  NULL AS sub_text_description_3,
   prev_totaldiabpatpoorcntrl AS prev_sub_text_3,
   ROUND ( (totaldiabpatpoorcntrl - prev_totaldiabpatpoorcntrl) / totaldiabpatpoorcntrl * 100, 1) || '%' AS value3,
-  'Prev month and current month variance for Patients in poor control (>9% or no test/result)' AS value_desc_3,
+  'Prev month and current month variance for Number of patients whose HbA1c result from the last 12 months was greater than 9% or did not have a test done or the result was null.' AS value_desc_3,
   CASE
     WHEN ROUND ( (totaldiabpatpoorcntrl - prev_totaldiabpatpoorcntrl) / totaldiabpatpoorcntrl * 100, 1) > 0
     THEN 'BAD'
@@ -515,6 +534,7 @@ SELECT
 -----------------------------------------------
   NULL AS text_4,
   NULL AS sub_text_4,
+  NULL AS sub_text_description_4,
   NULL AS prev_sub_text_4,
   NULL AS value4,
   NULL AS value_desc_4,
@@ -573,11 +593,11 @@ AND EXTRACT (MONTH FROM dt) =
   FROM pt005.v_tr002_tr023_summary_cdw_all
 );
 
-INSERT INTO compass_metrics SELECT * FROM vw_dsrip_tr002_023_compass;
+INSERT INTO compass_metrics_beta SELECT * FROM vw_dsrip_tr002_023_compass;
 COMMIT;
---delete from compass_metrics WHERE unique_tag = 'DIABETES_CONTROL';
-SELECT * FROM compass_metrics WHERE unique_tag = 'DIABETES_CONTROL';
+--delete from compass_metrics_beta WHERE unique_tag = 'DIABETES_CONTROL';
+SELECT * FROM compass_metrics_beta WHERE unique_tag = 'DIABETES_CONTROL';
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- verification SQL
---SELECT distinct box_header FROM compass_metrics WHERE created_by = 'kollurug';
+--SELECT distinct box_header FROM compass_metrics_beta WHERE created_by = 'kollurug';
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
