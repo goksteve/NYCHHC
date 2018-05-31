@@ -5,11 +5,12 @@ WITH
   (
     SELECT --+ materialize  
       v.*
-    FROM fact_visits v
-    JOIN dim_hc_departments bh
+    FROM cdw.fact_visits v
+    JOIN cdw.dim_hc_departments bh
       ON bh.department_key = v.last_department_key 
      AND bh.service_type='BH' 
-     AND admission_dt BETWEEN ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -1)  AND (TRUNC(SYSDATE, 'MONTH') - 1)
+--     AND admission_dt >= ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -1)  AND admission_dt < (TRUNC(SYSDATE, 'MONTH'))
+     AND admission_dt >= TRUNC(ADD_MONTHS(SYS_CONTEXT ('USERENV', 'CLIENT_IDENTIFIER'), -1), 'MONTH') AND admission_dt < SYS_CONTEXT ('USERENV', 'CLIENT_IDENTIFIER') 
   ),
   providers AS
   (
@@ -26,7 +27,7 @@ WITH
      SELECT 
        distinct v.network, v.visit_id, pea.emp_provider_id AS provider_id
      FROM bh_vsts v
-     JOIN proc_event_archive pea
+     JOIN cdw.proc_event_archive pea
       ON v.visit_id = pea.visit_id AND v.network = pea.network AND pea.emp_provider_id IS NOT NULL --11,740
   ),
   bh_provider AS
@@ -40,7 +41,8 @@ WITH
   )
 --  select * from bh_provider;
 SELECT --+ parallel(32)
-  trunc(sysdate, 'MONTH') report_period_dt,
+--  trunc(sysdate, 'MONTH') report_period_dt,
+  SYS_CONTEXT ('USERENV', 'CLIENT_IDENTIFIER') AS report_period_dt,
   v.network,
   p.name AS patient_name,
   p.birthdate AS dob,
@@ -65,8 +67,8 @@ SELECT --+ parallel(32)
   v.admission_dt,
   v.discharge_dt
 FROM bh_vsts v
-JOIN dim_patients p ON p.patient_id = v.patient_id AND p.network = v.network AND p.current_flag = 1
-JOIN dim_hc_facilities f ON f.facility_key = v.facility_key
+JOIN cdw.dim_patients p ON p.patient_id = v.patient_id AND p.network = v.network AND p.current_flag = 1
+JOIN cdw.dim_hc_facilities f ON f.facility_key = v.facility_key
 LEFT JOIN bh_provider b ON b.visit_id = v.visit_id AND b.network = v.network
 LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
   ON mdm.network = v.network AND TO_NUMBER(mdm.patientid) = v.patient_id AND mdm.epic_flag = 'N' AND f.facility_name = mdm.facility_name; 
