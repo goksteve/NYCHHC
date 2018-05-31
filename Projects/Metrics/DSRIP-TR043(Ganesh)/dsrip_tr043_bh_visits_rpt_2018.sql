@@ -10,11 +10,11 @@ AS
 WITH 
   bh_vsts AS
   (
-    SELECT 
+    SELECT --+ materialize
       DISTINCT network, facility_key, patient_id, visit_id, visit_number, admission_dt, discharge_dt, department, vst_provider_key
     FROM 
     (
-      SELECT -- parallel(32)
+      SELECT 
         *
       FROM 
       (
@@ -37,7 +37,7 @@ WITH
   ),
   bh_visit_info AS
   (  
-    SELECT --+ ordered use_nl(pd)
+    SELECT --+ materialize -- ordered use_nl(pd) 
         v.network, v.facility_key, v.patient_id, v.visit_id, v.visit_number, v.admission_dt, v.discharge_dt, v.department, 
 		MIN(pr.provider_name ||' - '|| pr.physician_service_name_1) KEEP (DENSE_RANK FIRST ORDER BY CASE WHEN UPPER(pr.physician_service_name_1) LIKE '%PSYCH%' THEN 1 WHEN pr.physician_service_name_1 IS NOT NULL THEN 2 ELSE 3 END) bh_provider_info
     FROM bh_vsts v
@@ -94,4 +94,3 @@ LEFT JOIN dconv.metroplus_assigned_mrn mplus
   ON mplus.mrn = mdm.mrn;
   
 GRANT SELECT ON dsrip_tr043_bh_visits_rpt_2017 TO PUBLIC;
-  select * from dconv.metroplus_assigned_mrn;
