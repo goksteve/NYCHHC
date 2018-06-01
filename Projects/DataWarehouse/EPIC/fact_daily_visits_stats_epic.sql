@@ -1,4 +1,4 @@
-DROP TABLE FACT_DAILY_VISITS_STATS_EPIC;
+DROP TABLE fact_daily_visits_stats_epic;
 
 CREATE TABLE fact_daily_visits_stats_epic
 (
@@ -28,6 +28,7 @@ CREATE TABLE fact_daily_visits_stats_epic
  heart_failure_ind          NUMBER(3),
  hypertension_ind           NUMBER(3),
  kidney_diseases_ind        NUMBER(3),
+ smoker_ind                 NUMBER(3),
  pregnancy_ind              NUMBER(3),
  pregnancy_onset_dt         DATE,
  nephropathy_screen_ind     NUMBER(3),

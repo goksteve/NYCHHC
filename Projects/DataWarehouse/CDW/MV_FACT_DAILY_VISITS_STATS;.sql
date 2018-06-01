@@ -7,10 +7,17 @@ CREATE MATERIALIZED VIEW mv_fact_daily_visits_stats
   COMPLETE
   START WITH TRUNC(SYSDATE) + 23 / 24
   NEXT (TRUNC(SYSDATE) + 1) + 23 / 24 AS
-
-
-
-WITH crit_metric AS
+  WITH
+  get_dates
+   AS
+    (
+      select 
+      -- TO_NUMBER(TO_CHAR(TRUNC(ADD_MONTHS(SYSDATE, -1), 'MONTH'), 'yyyymmdd') || '000000') AS starting_cid,
+      TO_NUMBER(TO_CHAR(SYSDATE - 10 , 'yyyymmdd') || '000000') AS starting_cid,
+      TRUNC(SYSDATE ) AS start_dt
+      from dual
+    ),
+ crit_metric AS
    (
     SELECT --+ materialize 
     network, criterion_id, VALUE,
@@ -23,9 +30,10 @@ WITH crit_metric AS
     END
     END  test_type
     FROM meta_conditions
-    WHERE criterion_id IN (4,10,23,13,66,68)   ), -- A1C, LDL, Glucose,  BP, Neph, eye eaxm
-
-  rslt AS  --- A1C, LDL, Glucose,  BP only
+    -- 4-A1C, 10-LDL, 23-Glucose,  13-(incl-15,29)-BP, 66-Neph, 68-eye exam, HOLD 8-HYPERTENSION
+    WHERE criterion_id IN (4,10,13,23,66,68) 
+   ), 
+  rslt AS  --- A1C, LDL, Glucose,   BP (BP only for space)
   (
      SELECT --+ materialize 
       r.network,
@@ -33,9 +41,11 @@ WITH crit_metric AS
       TRIM(r.value) AS result_value,
       c.criterion_id,
       ROW_NUMBER() OVER(PARTITION BY r.network, r.visit_id, c.criterion_id ORDER BY event_id DESC) rnum
-      FROM    crit_metric c
+      FROM 
+     get_dates d
+    CROSS JOIN crit_metric c
       JOIN result r  ON r.data_element_id = c.VALUE AND r.network = c.network
-       AND  CID > to_number(to_char(sysdate -11,'yyyymmdd')||'000000')
+       AND  CID >=  d.starting_cid
     --   AND r.event_status_id IN (6, 11)  --  AND r.network =  SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
       WHERE
       TRIM(r.value) IS NOT NULL
@@ -53,14 +63,17 @@ WITH crit_metric AS
       '(record)|(patient)|(unable)|(none)|(na)|(arm)|(foot)|(agrees)|(determined)|(note)|(unknown)|(abnormal)|(scanned)|(see)|(proteinuria)|(^m9)|(^m6)|(^m3)|(^m5)|(^m4)|(^m2)|(^s3)|(^s4)|(psyer)|(^kcb)|(^kat)|(^kva)')
        AND NOT REGEXP_LIKE(TRIM(LOWER(r.value)), '(^3n)|(^x\[p)|(^kct)|(over)|(a1c)|(^n9)|(other)|(invalid)')
     UNION ALL
+   -- 66-Neph, 68-eye exam,  HOLD-8-HYPERTENSION --- JUST FOR INDICATORS
       SELECT --+ materialize 
       r.network,
       r.visit_id,
       TRIM(r.value) AS result_value,
       c.criterion_id,
       ROW_NUMBER() OVER(PARTITION BY r.network, r.visit_id, c.criterion_id ORDER BY event_id DESC) rnum
-      FROM    crit_metric c
-      JOIN result r  ON r.data_element_id = c.VALUE AND r.network = c.network and CID >  to_number(to_char(sysdate -11,'yyyymmdd')||'000000')
+      FROM 
+      get_dates d
+      CROSS JOIN    crit_metric c
+      JOIN result r  ON r.data_element_id = c.VALUE AND r.network = c.network and r.CID > =  d.starting_cid
     --  AND r.event_status_id IN (6, 11)  -- AND r.network =  SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
       WHERE
       TRIM(r.value) IS NOT NULL
@@ -81,11 +94,13 @@ WITH crit_metric AS
     WHEN lkp.test_type = 'C' THEN TO_NUMBER(REGEXP_SUBSTR (r.VALUE,'^[^0-9]*([0-9]{2,})/([0-9]{2,})',1,1,'x',2))
     WHEN lkp.test_type = 'D' THEN TO_NUMBER(REGEXP_SUBSTR (r.value,'^[^0-9]*([0-9]{2,})',1,1,'',1))
     END  AS bp_calc_diastolic
-    FROM crit_metric lkp
+    FROM 
+    get_dates d
+    CROSS JOIN crit_metric lkp
     JOIN result r ON r.data_element_id = lkp.value 
     AND r.network = lkp.network  AND lkp.criterion_id = 13 
    -- AND r.event_status_id IN (6, 11)
-    AND CID > to_number(to_char(sysdate -11,'yyyymmdd')||'000000')
+    AND r.CID >  d.starting_cid
    ),
 bp_final_tb
 AS
@@ -277,7 +292,7 @@ FROM
  final_calc_tb a
 LEFT JOIN bp_final_tb b ON b.network = a.network AND b.visit_id = a.visit_id AND b.rnum_per_visit = 1)
 
-SELECT --+PARALLEL (48)
+SELECT --+ PARALLEL (48)
  a.network,
  a.visit_id,
  p.patient_key,
@@ -313,7 +328,7 @@ SELECT --+PARALLEL (48)
  bp_final_calc_value,
  bp_final_calc_systolic,
  bp_final_calc_diastolic,
- 'QCPR' AS source,
+ 'QCPR' AS source ,
  trunc(sysdate) as load_dt
 FROM
  qcpr_tmp a
@@ -322,50 +337,52 @@ WHERE
  admission_dt < TRUNC(SYSDATE)
 UNION
 SELECT
- network,
- visit_id,
- patient_key,
- TO_NUMBER(TO_CHAR(admission_dt, 'yyyymmdd')) AS admission_dt_key,
- NULL visit_number,
- -- facility_key,
- facility_name,
- NULL visit_type_id,
- visit_type,
- NULL medicaid_ind,
- patient_id,
- mrn,
- patient_name,
- sex,
- TRUNC(CAST(birth_date AS DATE)) birth_date,
- age,
- TRUNC(CAST(admission_dt AS DATE)) admission_dt,
- TRUNC(CAST(discharge_dt AS DATE)) discharge_dt,
- asthma_ind,
- bh_ind,
- breast_cancer_ind,
- diabetes_ind,
- heart_failure_ind,
- hypertension_ind,
- kidney_diseases_ind,
- NULL AS smoker_ind,
- pregnancy_ind,
- TRUNC(pregnancy_onset_dt),
- nephropathy_screen_ind,
- retinal_eye_exam_ind  AS  retinal_dil_eye_exam_ind,
- NULL a1c_final_calc_value,
- NULL gluc_final_calc_value,
- NULL ldl_final_calc_value,
- NULL bp_final_calc_value,
- NULL bp_final_calc_systolic,
- NULL bp_final_calc_diastolic,
- 'EPIC' AS source,
- trunc(sysdate) as load_dt
+ DISTINCT network,
+          visit_id,
+          patient_key,
+          TO_NUMBER(TO_CHAR(admission_dt, 'yyyymmdd')) AS admission_dt_key,
+          NULL visit_number,
+          -- facility_key,
+          facility_name,
+          NULL visit_type_id,
+          visit_type,
+          NULL medicaid_ind,
+          patient_id,
+          mrn,
+          patient_name,
+          sex,
+          birthdate,
+          patient_age_at_admission,
+          admission_dt,
+          discharge_dt,
+          asthma_ind,
+          bh_ind,
+          breast_cancer_ind,
+          diabetes_ind,
+          heart_failure_ind,
+          hypertension_ind,
+          kidney_diseases_ind,
+          smoker_ind,
+          pregnancy_ind,
+          TRUNC(pregnancy_onset_dt),
+          nephropathy_screen_ind,
+          retinal_eye_exam_ind AS retinal_dil_eye_exam_ind,
+          a1c_value,
+          NULL gluc_final_calc_value,
+          ldl_calc_value,
+          bp_orig_value,
+          bp_systolic,
+          bp_diastolic,
+          'EPIC' AS source,
+           trunc(sysdate) as load_dt
 FROM
- epic_fact_daily_visits_stats;
+ fact_daily_visits_stats_epic;
+
+
 
 
 CREATE INDEX idx_mv_fact_daily_visits_stats
  ON mv_fact_daily_visits_stats(network, visit_id, source)
  LOGGING;
 
-GRANT SELECT ON mv_fact_daily_visits_stats TO PUBLIC
+  GRANT SELECT ON mv_fact_daily_visits_stats TO PUBLIC

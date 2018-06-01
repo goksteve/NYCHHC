@@ -20,7 +20,7 @@ EXCEPTION
 end;
 --**********************************************
 --*******FACT_VISITS *****************************
-EXECUTE dwm.refresh_data('where etl_step_num = 2000');
+EXECUTE dwm.refresh_data('where etl_step_num = 4000');
 
 --**********************************************
 select * from CNF_DW_REFRESH
@@ -37,8 +37,8 @@ select  * from  DBG_LOG_DATA where action like '%steve%';
 --**************************************************************
 select a.*, DBMS_LOB.substr(comment_txt, 250) from DBG_LOG_DATA a
 where
-tstamp > date '2018-05-11'
-and proc_id   > 368
+tstamp > date '2018-05-31'
+and proc_id   > 450
 order by tstamp desc;
 --************************************************************
 
