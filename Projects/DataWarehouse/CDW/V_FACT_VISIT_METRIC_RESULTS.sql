@@ -134,7 +134,7 @@ SELECT --+ materialize
  p.breast_cancer_ind,
  p.diabetes_ind,
  p.heart_failure_ind,
- p.hypertansion_ind,
+ p.hypertension_ind,
  p.kidney_diseases_ind,
  pregnancy_ind,
  pregnancy_onset_dt,
@@ -210,7 +210,7 @@ AS
  breast_cancer_ind,
  diabetes_ind,
  heart_failure_ind,
- hypertansion_ind,
+ hypertension_ind,
  kidney_diseases_ind,
  pregnancy_ind,
  pregnancy_onset_dt,
@@ -261,7 +261,7 @@ SELECT --+  PARALLEL (48)
  NVL(a.breast_cancer_ind,0) breast_cancer_ind,
  NVL(a.diabetes_ind,0) diabetes_ind,
  NVL(a.heart_failure_ind,0) heart_failure_ind,
- NVL(a.hypertansion_ind, 0) hypertansion_ind,
+ NVL(a.hypertension_ind, 0) hypertansion_ind,
  NVL(a.kidney_diseases_ind,0) kidney_diseases_ind,
  NVL( pregnancy_ind,0) AS pregnancy_ind,
  pregnancy_onset_dt,
@@ -286,7 +286,7 @@ WHERE
  OR NVL(a.breast_cancer_ind, 0) <> 0
  OR NVL(a.diabetes_ind, 0) <> 0
  OR NVL(a.heart_failure_ind, 0) <> 0
- OR NVL(a.hypertansion_ind, 0) <> 0
+ OR NVL(a.hypertension_ind, 0) <> 0
  OR NVL(a.kidney_diseases_ind, 0) <> 0
  OR a.a1c_final_orig_value IS NOT NULL
  OR a.gluc_final_orig_value IS NOT NULL

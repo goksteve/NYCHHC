@@ -1,19 +1,23 @@
+ALTER SESSION ENABLE PARALLEL DDL;
+ALTER SESSION ENABLE PARALLEL DML;
+
 DROP MATERIALIZED VIEW mv_fact_daily_visits_stats;
 --Created 20-May -2018 by SG
 --SELECT * FROM user_JOBS
 CREATE MATERIALIZED VIEW mv_fact_daily_visits_stats
  BUILD IMMEDIATE
- REFRESH
-  COMPLETE
+REFRESH   COMPLETE
   START WITH TRUNC(SYSDATE) + 23 / 24
-  NEXT (TRUNC(SYSDATE) + 1) + 23 / 24 AS
+  NEXT (TRUNC(SYSDATE) + 1) + 23 / 24 
+AS
   WITH
   get_dates
    AS
     (
       select 
-      -- TO_NUMBER(TO_CHAR(TRUNC(ADD_MONTHS(SYSDATE, -1), 'MONTH'), 'yyyymmdd') || '000000') AS starting_cid,
-      TO_NUMBER(TO_CHAR(SYSDATE - 10 , 'yyyymmdd') || '000000') AS starting_cid,
+       TO_NUMBER(TO_CHAR(TRUNC(ADD_MONTHS(SYSDATE, -1), 'MONTH'), 'yyyymmdd') || '000000') AS starting_cid,
+     -- TO_NUMBER(TO_CHAR(SYSDATE - 10 , 'yyyymmdd') || '000000') AS starting_cid,
+       TRUNC( ADD_MONTHS(SYSDATE, - 12), 'MONTH')   epic_start_dt,
       TRUNC(SYSDATE ) AS start_dt
       from dual
     ),
@@ -137,6 +141,7 @@ calc_result AS
   v.visit_type_id,
   v.visit_type,
   v.medicaid_ind,
+  v.medicare_ind,
   v.patient_id,
   v.mrn,
   v.pat_lname,
@@ -199,7 +204,7 @@ calc_result AS
         1
     END  AS calc_value
     FROM
-    FACT_DAILY_VISITS_STATS v 
+    STG_METRICS_DAILY_VISITS v 
     LEFT JOIN  fact_patient_metric_diag p ON p.patient_id = v.patient_id AND p.network = v.network  
     LEFT  JOIN rslt q ON q.visit_id = v.visit_id AND q.network = v.network AND q.rnum = 1
  ),
@@ -215,6 +220,7 @@ AS
   visit_type_id,
   visit_type,
   medicaid_ind,
+  medicare_ind,
   patient_id,
   mrn,
   pat_lname,
@@ -261,6 +267,7 @@ facility,
 visit_type_id,
 visit_type,
 medicaid_ind,
+medicare_ind,
 patient_id,
 mrn,
 pat_lname,
@@ -302,6 +309,7 @@ SELECT --+ PARALLEL (48)
  a.visit_type_id,
  a.visit_type,
  a.medicaid_ind,
+ a.medicare_ind,
  CAST(a.patient_id AS VARCHAR2(256)) patient_id,
  a.mrn,
  a.pat_lname || ', ' || a.pat_fname AS patient_name,
@@ -347,6 +355,7 @@ SELECT
           NULL visit_type_id,
           visit_type,
           NULL medicaid_ind,
+          NULL as medicare_ind,
           patient_id,
           mrn,
           patient_name,
@@ -376,13 +385,16 @@ SELECT
           'EPIC' AS source,
            trunc(sysdate) as load_dt
 FROM
- fact_daily_visits_stats_epic;
+get_dates cross JOIN
+ STG_METRICS_DAILY_VISITS_EPIC
+where   admission_dt >= epic_start_dt and admission_dt < sysdate;
 
+CREATE UNIQUE INDEX idx_mv_fact_daily_visits_stats
+ ON mv_fact_daily_visits_stats(network, facility, visit_id, source)
+ PARALLEL 32;
 
+ALTER INDEX idx_mv_fact_daily_visits_stats
+ NOPARALLEL;
 
-
-CREATE INDEX idx_mv_fact_daily_visits_stats
- ON mv_fact_daily_visits_stats(network, visit_id, source)
- LOGGING;
-
-  GRANT SELECT ON mv_fact_daily_visits_stats TO PUBLIC
+GRANT SELECT ON mv_fact_daily_visits_stats TO PUBLIC;
+/
