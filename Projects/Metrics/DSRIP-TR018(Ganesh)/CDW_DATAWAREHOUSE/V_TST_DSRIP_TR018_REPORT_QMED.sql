@@ -4,10 +4,6 @@ WITH
   dt AS 
   (
     SELECT --+ materialize
---      TRUNC(SYSDATE, 'MONTH') AS report_period_start_dt,
---      TRUNC(SYSDATE, 'YEAR') AS msrmnt_yr_start_dt,
---      ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -24) begin_dt,
---      TRUNC (ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -1), 'MONTH') end_dt
       TRUNC ( TO_DATE (SYS_CONTEXT ('USERENV', 'CLIENT_IDENTIFIER')), 'MONTH')    AS report_period_start_dt,
       TRUNC(TRUNC ( TO_DATE (SYS_CONTEXT ('USERENV', 'CLIENT_IDENTIFIER')), 'MONTH')  , 'YEAR') AS msrmnt_yr_start_dt,
       ADD_MONTHS(TRUNC ( TO_DATE (SYS_CONTEXT ('USERENV', 'CLIENT_IDENTIFIER')), 'MONTH')  , -24) AS begin_dt,
