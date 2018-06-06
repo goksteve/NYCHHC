@@ -1,0 +1,494 @@
+/*FACT_YEARLY_VISITS_STATS_EPIC*/
+
+ SELECT NETWORK,
+          FACILITY_KEY,
+          FACILITY_NAME,
+          VISIT_ID,
+          ADMISSION_DT,
+          DISCHARGE_DT,
+          VISIT_TYPE,
+          PATIENT_KEY,
+          PATIENT_ID,
+          PATIENT_NAME,
+          MRN,
+          BIRTH_DATE,
+          SEX,
+          AGE,
+          CODING_SCHEME,
+          DIAGNOSIS_NAME,
+          ICD_CODE,
+          IS_PRIMARY_PROBLEM,
+          ASTHMA_IND,
+          BH_IND,
+          BREAST_CANCER_IND,
+          DIABETES_IND,
+          HEART_FAILURE_IND,
+          HYPERTANSION_IND,
+          KIDNEY_DISEASES_IND,
+          PREGNANCY_IND,
+          PREGNANCY_ONSET_DT,
+          NEPHROPATHY_SCREEN_IND,
+          RETINAL_EYE_EXAM_IND,
+          LDL_ORDER_TIME,
+       LDL_RESULT_TIME,
+       LDL_CALC_VALUE,
+       BP_DIASTOLIC,
+       BP_SYSTOLIC,
+       ORIG_VALUE,
+       BP_RESULT_TIME,
+       A1C_VALUE,
+       A1c_RESULT_DT
+     FROM (WITH META_DIAG
+                AS (SELECT --+ materialize
+                           DISTINCT CND.VALUE AS VALUE,
+                                    CASE
+                                       WHEN CR.CRITERION_ID IN (1,
+                                                                6,
+                                                                37,
+                                                                50,
+                                                                51,
+                                                                52,
+                                                                58,
+                                                                60,
+                                                                66,
+                                                                68)
+                                       THEN
+                                          'diabetes'
+                                       WHEN CR.CRITERION_ID IN (21,
+                                                                48,
+                                                                49,
+                                                                53,
+                                                                57,
+                                                                59)
+                                       THEN
+                                          'asthma'
+                                       WHEN CR.CRITERION_ID IN (7,
+                                                                9,
+                                                                31,
+                                                                32)
+                                       THEN
+                                          'bh'
+                                       WHEN CR.CRITERION_ID IN (17, 18)
+                                       THEN
+                                          'breast_cancer'
+                                       WHEN CR.CRITERION_ID IN (27)
+                                       THEN
+                                          'cervical_cancer'
+                                       WHEN CR.CRITERION_ID IN (30,
+                                                                39,
+                                                                70,
+                                                                71)
+                                       THEN
+                                          'heart_failure'
+                                       WHEN CR.CRITERION_ID IN (3, 36, 38)
+                                       THEN
+                                          'hypertansion'
+                                       WHEN CR.CRITERION_ID IN (63, 65)
+                                       THEN
+                                          'kidney_diseases'
+                                       WHEN CR.CRITERION_ID IN (73)
+                                       THEN
+                                          'pregnancy'
+                                       WHEN CR.CRITERION_ID IN (66)
+                                       THEN
+                                          'nephropathy_screen'
+                                       WHEN CR.CRITERION_ID IN (68)
+                                       THEN
+                                          'retinal_dil_eye_exam'
+                                    END
+                                       AS DIAG_TYPE_IND,
+                                    CR.CRITERION_ID DIAG_TYPE_ID,
+                                    CR.CRITERION_CD,
+                                    INCLUDE_EXCLUDE_IND
+                      FROM PT005.META_CRITERIA CR
+                           JOIN PT005.META_CONDITIONS CND
+                              ON CND.CRITERION_ID = CR.CRITERION_ID
+                     WHERE CR.CRITERION_ID IN (1,
+                                               3,
+                                               6,
+                                               7,
+                                               9,
+                                               11,
+                                               17,
+                                               18,
+                                               21,
+                                               27,
+                                               30,
+                                               31,
+                                               32,
+                                               36,
+                                               37,
+                                               38,
+                                               39,
+                                               48,
+                                               49,
+                                               50,
+                                               51,
+                                               52,
+                                               53,
+                                               57,
+                                               58,
+                                               59,
+                                               60,
+                                               63,
+                                               65,
+                                               70,
+                                               71,
+                                               73) --and INCLUDE_EXCLUDE_IND  = 'I'
+                                                  ),
+                DIAG_PAT
+                AS (SELECT /*+ PARALLEL (32) */
+                           V.NETWORK,
+                           V.VISIT_ID,
+                           V.FACILITY_ID,
+                           F.FACILITY_NAME,
+                           F.FACILITY_KEY,
+                           V.ADMISSION_DATE_TIME AS ADMISSION_DT,
+                           V.DISCHARGE_DATE_TIME AS DISCHARGE_DT,
+                           V.VISIT_TYPE_ID,
+                           (CASE
+                               WHEN VISIT_TYPE_ID = 1
+                               THEN
+                                  'Inpatient'
+                               WHEN VISIT_TYPE_ID = 2
+                               THEN
+                                  'Emergency'
+                               WHEN VISIT_TYPE_ID = 3
+                               THEN
+                                  'Outpatient'
+                               WHEN VISIT_TYPE_ID = 4
+                               THEN
+                                  'Clinic'
+                               WHEN VISIT_TYPE_ID = 6
+                               THEN
+                                  'Ambulatory Surgery'
+                               WHEN VISIT_TYPE_ID NOT IN ('1',
+                                                          '2',
+                                                          '3',
+                                                          '4',
+                                                          '5',
+                                                          '6')
+                               THEN
+                                  'Other Hospital Encounters'
+                            END)
+                              AS VISIT_TYPE,
+                           VISIT_STATUS_ID,
+                           'Z' || V.PATIENT_ID AS PATIENT_ID,
+                           99999999 PATIENT_KEY,
+                           P.NAME AS PATIENT_NAME,
+                           P.MEDICAL_RECORD_NUMBER AS MRN,
+                           P.SEX,
+                           P.BIRTHDATE,
+                           round (
+                                      MONTHS_BETWEEN (SYSDATE, 
+                                         P.BIRTHDATE)
+                                    / 12, 1)
+                              AS AGE,
+                           'ICD-10' AS CODING_SCHEME,
+                           PDX.DX_ID,
+                           PDX.PRIMARY_DX_YN AS IS_PRIMARY_PROBLEM,
+                           CASE
+                              WHEN PDX.PRIMARY_DX_YN = 'Y' THEN 1
+                              ELSE 0
+                           END
+                              AS PROBLEM_STATUS_ID,
+                           PDX.COMMENTS AS PROBLEM_COMMENTS,
+                           EDG.CURRENT_ICD10_LIST AS ICD_CODE,
+                           EDG.DX_NAME AS DIAGNOSIS_NAME,
+                           PDX.LINE AS PROBLEM_NBR,
+                           TO_NUMBER (TO_CHAR (pdx.CONTACT_DATE, 'YYYYMMDD'))
+                              AS DIAGNOSIS_DT_KEY,
+                           PDX.CONTACT_DATE AS ONSET_DATE,
+                           'Y' EPIC_FLAG
+                      FROM ptFINAL.S_VISIT V
+                           JOIN CDW.DIM_HC_FACILITIES F
+                              ON     V.NETWORK = F.NETWORK
+                                 AND V.FACILITY_ID = F.FACILITY_ID
+                           LEFT JOIN PTFINAL.S_PATIENT P
+                              ON     V.NETWORK = P.NETWORK
+                                 AND V.PATIENT_ID = P.PATIENT_ID
+                                 AND V.ePIC_FLAG = P.ePIC_FLAG
+                           LEFT JOIN EPIC_CLARITY.PAT_ENC_DX PDX
+                              ON V.VISIT_ID = PDX.PAT_ENC_CSN_ID
+                           LEFT OUTER JOIN EPIC_CLARITY.CLARITY_EDG EDG
+                              ON PDX.DX_ID = EDG.DX_ID
+                     WHERE     V.EPIC_FLAG = 'Y'
+                           AND V.ADMISSION_DATE_TIME <= LAST_DAY(ADD_MONTHS(SYSDATE,-1))),/*LAST DAY of PREVIOUS month*/
+                PAT_INC_EXC
+                AS (SELECT DIAG_TYPE_IND,
+                           INCLUDE_EXCLUDE_IND,
+                           D.NETWORK,
+                           D.PATIENT_ID,
+                           D.VISIT_ID
+                      FROM DIAG_PAT D
+                           LEFT JOIN META_DIAG M ON D.ICD_CODE = M.VALUE
+                     WHERE     M.INCLUDE_EXCLUDE_IND = 'I'
+                           AND (D.NETWORK, D.PATIENT_ID) NOT IN
+                                  (SELECT D1.NETWORK, D1.PATIENT_ID
+                                     FROM DIAG_PAT D1
+                                          LEFT JOIN META_DIAG M1
+                                             ON D1.ICD_CODE = M1.VALUE
+                                    WHERE M1.INCLUDE_EXCLUDE_IND = 'E')),
+                   LDL
+     AS (SELECT 
+     /*+ PARALLEL (32) */
+     L.PATIENT_ID,
+                L.VISIT_ID,
+                L.LDL_ORDER_TIME,
+                L.LDL_RESULT_TIME,
+                L.LDL_CALC_VALUE
+           FROM (SELECT ORDER_PROC.PAT_ID AS patient_id,
+                        ORDER_PROC.PAT_ENC_CSN_ID AS VISIT_ID,
+                        ORDER_PROC.ORDER_TIME AS LDL_ORDER_TIME,
+                        ORDER_PROC.RESULT_TIME AS LDL_RESULT_TIME,
+                        RES.ORD_VALUE AS LDL_CALC_VALUE,
+                        ROW_NUMBER ()
+                        OVER (
+                           PARTITION BY ORDER_PROC.PAT_ID,
+                                        ORDER_PROC.PAT_ENC_CSN_ID
+                           ORDER BY ORDER_PROC.RESULT_TIME DESC)
+                           AS RN
+                   FROM EPIC_CLARITY.ORDER_PROC
+                        LEFT OUTER JOIN EPIC_CLARITY.ORDER_RESULTS RES
+                           ON ORDER_PROC.ORDER_PROC_ID = RES.ORDER_PROC_ID
+                        LEFT JOIN EPIC_CLARITY.X_HHC_V_PATIENTS_V PatientData
+                           ON     PatientData.PAT_ID = ORDER_PROC.PAT_ID
+                              AND ORDER_PROC.PAT_ENC_CSN_ID =
+                                     PatientData.PAT_ENC_CSN_ID
+                  WHERE     RES.COMPONENT_ID = 766   -- Cholesterol lrr is 766
+                        AND ORDER_PROC.ORDER_STATUS_C = 5
+                        AND ORDER_PROC.RESULT_TIME >= '01-APR-2016') L
+          WHERE L.RN = 1),
+     BP_FINAL
+     AS (SELECT /*+ PARALLEL (32) */
+                PE.PAT_ENC_CSN_ID AS VISIT_ID,
+                PE.PAT_ID AS PATIENT_ID,
+                BP.BP_DIASTOLIC,
+                BP.BP_SYSTOLIC,
+                BP.MEAS_VALUE AS ORIG_VALUE,
+                COALESCE (BP.RECORDED_TIME, PE.CONTACT_DATE)
+                   AS BP_RESULT_TIME
+           FROM EPIC_CLARITY.PAT_ENC PE
+                LEFT OUTER JOIN
+                (SELECT /*+ PARALLEL (32) */
+                        CASE
+                           WHEN INSTR (measmax1.MEAS_VALUE, '/') > 0
+                           THEN
+                              SUBSTR (measmax1.MEAS_VALUE,
+                                      INSTR (measmax1.MEAS_VALUE, '/') + 1)
+                        END
+                           AS BP_DIASTOLIC,
+                        SUBSTR (measmax1.MEAS_VALUE,
+                                1,
+                                INSTR (measmax1.MEAS_VALUE, '/') - 1)
+                           AS BP_SYSTOLIC,
+                        measmax1.*
+                   FROM (SELECT /*+ PARALLEL (32) */
+                               measflow.INPATIENT_DATA_ID,
+                                measflow.FLO_MEAS_ID,
+                                measflow.RECORDED_TIME,
+                                measflow.MEAS_VALUE
+                           FROM (SELECT /*+ PARALLEL (32) */
+                                       rec.INPATIENT_DATA_ID,
+                                        meas.FLO_MEAS_ID,
+                                        meas.RECORDED_TIME,
+                                        meas.MEAS_VALUE
+                                   FROM EPIC_CLARITY.IP_FLWSHT_REC rec
+                                        INNER JOIN
+                                        EPIC_CLARITY.IP_FLWSHT_MEAS meas
+                                           ON rec.FSD_ID = meas.FSD_ID
+                                  WHERE meas.RECORDED_TIME >= '01-APR-2016')
+                                measflow
+                          WHERE measflow.RECORDED_TIME =
+                                   (SELECT MAX (maxflow.RECORDED_TIME)
+                                      FROM (SELECT /*+ PARALLEL (32) */
+                                                  rec.INPATIENT_DATA_ID,
+                                                   meas.FLO_MEAS_ID,
+                                                   meas.RECORDED_TIME,
+                                                   meas.MEAS_VALUE
+                                              FROM EPIC_CLARITY.IP_FLWSHT_REC
+                                                   rec
+                                                   INNER JOIN
+                                                   EPIC_CLARITY.IP_FLWSHT_MEAS
+                                                   meas
+                                                      ON rec.FSD_ID =
+                                                            meas.FSD_ID
+                                             WHERE meas.RECORDED_TIME >=
+                                                      '01-APR-2016') maxflow
+                                     WHERE     measflow.INPATIENT_DATA_ID =
+                                                  maxflow.INPATIENT_DATA_ID
+                                           AND measflow.FLO_MEAS_ID =
+                                                  maxflow.FLO_MEAS_ID))
+                        measmax1
+                  WHERE NOT REGEXP_LIKE (measmax1.MEAS_VALUE, '[^0-9, /]+'))
+                BP
+                   ON     PE.INPATIENT_DATA_ID = BP.INPATIENT_DATA_ID
+                      AND BP.FLO_MEAS_ID = '5'
+          WHERE     (PE.CONTACT_DATE >= '01-APR-2016')
+                AND BP.BP_DIASTOLIC IS NOT NULL
+                AND BP.BP_SYSTOLIC IS NOT NULL),
+                
+                A1c as
+                (SELECT /*+ PARALLEL (32) */
+       ORDER_PROC_ID,
+       PATIENT_ID,
+       VISIT_ID,
+       A1C_VALUE,
+       A1c_RESULT_DT
+  FROM (  SELECT /*+ PARALLEL (32) */
+                 OP.ORDER_PROC_ID,
+                 OP.PAT_ID AS PATIENT_ID,
+                 OP.PAT_ENC_CSN_ID AS VISIT_ID,
+                 a.ORD_NUM_VALUE AS A1C_VALUE,
+                 a.RESULT_TIME AS A1c_RESULT_DT,
+                 ROW_NUMBER ()
+                 OVER (PARTITION BY OP.PAT_ID, OP.PAT_ENC_CSN_ID
+                       ORDER BY a.RESULT_TIME DESC)
+                    AS Rn1
+            FROM EPIC_CLARITY.ORDER_PROC OP
+                 INNER JOIN
+                 (SELECT ore.ORDER_PROC_ID,
+                         ore.COMPONENT_ID,
+                         ore.PAT_ENC_CSN_ID,
+                         ore.ORD_VALUE,
+                         ore.ORD_NUM_VALUE,
+                         ore.RESULT_TIME,
+                         ROW_NUMBER ()
+                         OVER (PARTITION BY ore.PAT_ENC_CSN_ID
+                               ORDER BY ore.RESULT_TIME DESC)
+                            rn
+                    FROM EPIC_CLARITY.ORDER_RESULTS ORE
+                   WHERE ORE.COMPONENT_ID IN (1195, 304155802401)) a
+                    ON OP.ORDER_PROC_ID = a.ORDER_PROC_ID AND a.rn = 1
+                 LEFT JOIN EPIC_CLARITY.ORDER_STATUS ORDER_STATUS_Recent
+                    ON OP.ORDER_PROC_ID = ORDER_STATUS_Recent.ORDER_ID
+                 LEFT JOIN
+                 (SELECT MAX (ORDER_STATUS_sub.ORD_DATE_REAL) AS ORDER_ID
+                    FROM EPIC_CLARITY.ORDER_STATUS ORDER_STATUS_sub) OS_SUB
+                    ON OS_SUB.ORDER_ID = ORDER_STATUS_Recent.ORDER_ID
+           WHERE     OP.RESULT_TIME >= '01-APR-2016'
+                 -- FILTER: Contact (Order) Status -  --
+                 -- 1=Ordered (Sent) ,2=Resulted ,3=Cancelled
+                 AND ORDER_STATUS_Recent.CONTACT_TYPE_C IN (1, 2)
+                 -- FILTER: Lab Status -  --
+                 -- 1=In process, 2=Preliminary result, 3=Final result, 4=Edited, 5=Edited Result-FINAL
+                 AND ORDER_STATUS_Recent.LAB_STATUS_C IN (3, 5)    -- ORD: 115
+                 -- ** FILTER: Components 'HGB A1C' , 'HEMOGLOBIN A1C POC' ** --
+                 --AND ORE.COMPONENT_ID IN (1195,304155802401)
+                 -- FILTER: Only return Child orders, OR if any Lab status is not NULL --
+                 AND (   (CASE
+                             WHEN     OP.FUTURE_OR_STAND IS NULL
+                                  AND OP.INSTANTIATED_TIME IS NOT NULL
+                             THEN
+                                1
+                             ELSE
+                                0
+                          END) = 1
+                      --OR ORDER_STATUS_Recent.LAB_STATUS_C IS NOT NULL -- ORD:115 (#64719)
+                      OR (OP.LAB_STATUS_C IS NOT NULL) --(#64832) -- Note: Same as above if "ORDER_STATUS_Recent.CONTACT_TYPE_C IN (1,2)" 1=Ordered (Sent) ,2=Resulted
+                                                      ) --and op.pat_id in ('Z1964741','Z4393340','Z4362006')
+        ORDER BY 3) A1c_val
+ WHERE a1c_val.rn1 = 1)                      
+                                    
+                                    
+                                    
+           SELECT /*+ PARALLEL (32) */
+                  DISTINCT NETWORK,
+                           FACILITY_KEY,
+                           FACILITY_NAME,
+                           VISIT_ID,
+                           ADMISSION_DT,
+                           DISCHARGE_DT,
+                           VISIT_TYPE,
+                           PATIENT_KEY,
+                           PATIENT_ID,
+                           PATIENT_NAME,
+                           MRN,
+                           BIRTH_DATE,
+                           SEX,
+                           AGE,
+                           CODING_SCHEME,
+                           DIAGNOSIS_NAME,
+                           ICD_CODE,
+                           IS_PRIMARY_PROBLEM,
+                           ASTHMA_IND,
+                           BH_IND,
+                           BREAST_CANCER_IND,
+                           DIABETES_IND,
+                           HEART_FAILURE_IND,
+                           HYPERTANSION_IND,
+                           KIDNEY_DISEASES_IND,
+                           PREGNANCY_IND,
+                           PREGNANCY_ONSET_DT,
+                           NEPHROPATHY_SCREEN_IND,
+                           RETINAL_EYE_EXAM_IND,
+                           LDL_ORDER_TIME,
+       LDL_RESULT_TIME,
+       LDL_CALC_VALUE,
+       BP_DIASTOLIC,
+       BP_SYSTOLIC,
+       ORIG_VALUE,
+       BP_RESULT_TIME,
+       A1C_VALUE,
+       A1c_RESULT_DT
+             FROM (SELECT D.NETWORK,
+                          D.FACILITY_KEY,
+                          D.FACILITY_NAME,
+                          D.VISIT_ID,
+                          D.ADMISSION_DT,
+                          D.DISCHARGE_DT,
+                          D.VISIT_TYPE,
+                          D.PATIENT_KEY,
+                          D.PATIENT_ID,
+                          D.PATIENT_NAME,
+                          D.MRN,
+                          D.BIRTHDATE AS BIRTH_DATE,
+                          D.SEX,
+                          D.AGE,
+                          D.CODING_SCHEME,
+                          D.ONSET_DATE,
+                          D.DIAGNOSIS_DT_KEY,
+                          D.ICD_CODE,
+                          D.DIAGNOSIS_NAME,
+                          D.IS_PRIMARY_PROBLEM,
+                          PAT_INC.DIAG_TYPE_IND,
+                          LDL.LDL_CALC_VALUE,
+               LDL.LDL_ORDER_TIME,
+               BP1.BP_DIASTOLIC,
+               BP1.BP_SYSTOLIC,
+               BP1.ORIG_VALUE,
+               BP1.BP_RESULT_TIME,
+               LDL.LDL_RESULT_TIME,
+               A1c.A1C_VALUE,
+       A1c.A1c_RESULT_DT
+                     FROM DIAG_PAT D
+                          LEFT JOIN PAT_INC_EXC PAT_INC
+                             ON     D.NETWORK = PAT_INC.NETWORK
+                                AND D.PATIENT_ID = PAT_INC.PATIENT_ID
+                           LEFT JOIN LDL LDL
+                  ON     D.patient_id = LDL.patient_id
+                     AND D.VISIT_ID = LDL.VISIT_ID
+               LEFT JOIN BP_FINAL BP1
+                  ON     D.patient_id = BP1.patient_id
+                     AND D.VISIT_ID = BP1.VISIT_ID
+                LEFT JOIN A1c A1c
+                  ON     D.patient_id = A1c.patient_id
+                     AND D.VISIT_ID = A1c.VISIT_ID     
+                                
+                    WHERE     1=1
+                          AND D.NETWORK IS NOT NULL)
+                  PIVOT
+                     (COUNT (DIAG_TYPE_IND)
+                     AS IND, MAX (ONSET_DATE)
+                     AS ONSET_DT
+                     FOR DIAG_TYPE_IND
+                     IN ('asthma' AS ASTHMA,
+                        'bh' AS BH,
+                        'breast_cancer' AS BREAST_CANCER,
+                        'diabetes' AS DIABETES,
+                        'heart_failure' AS HEART_FAILURE,
+                        'hypertansion' AS HYPERTANSION,
+                        'kidney_diseases' AS KIDNEY_DISEASES,
+                        'pregnancy' AS PREGNANCY,
+                        'nephropathy_screen' AS NEPHROPATHY_SCREEN,
+                        'retinal_dil_eye_exam' AS RETINAL_EYE_EXAM)));
