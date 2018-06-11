@@ -12,6 +12,7 @@ END;
 CREATE TABLE FACT_VISIT_METRICS
 (
  network                    VARCHAR2(4 BYTE),
+ visit_key                   NUMBER(12),
  visit_id                   NUMBER(12),
  patient_key                NUMBER(12),
  admission_dt_key           NUMBER(8),
@@ -25,6 +26,7 @@ CREATE TABLE FACT_VISIT_METRICS
  mrn                        VARCHAR2(512 BYTE),
  patient_name               VARCHAR2(302 BYTE),
  sex                        VARCHAR2(8 BYTE),
+ race                       VARCHAR2 (100 Byte),
  birthdate                  DATE,
  patient_age_at_admission   NUMBER(3),
  admission_dt               DATE,

@@ -259,7 +259,7 @@ AS
 						-99 archive_source_id,
 						1 AS current_flag,
 						DATE '1900-01-01' AS effective_from,
-						DATE '1900-01-01' AS effective_to
+						DATE '9999-12-31' AS effective_to
 				 FROM patient p
 						LEFT JOIN marital_status ms ON p.marital_status_id = ms.marital_status_id AND p.network = ms.network
 						LEFT JOIN race mr ON p.race_id = mr.race_id AND p.network = mr.network
@@ -356,68 +356,216 @@ AS
 						LEFT JOIN employer mem ON p.employer_id = mem.employer_id AND p.network = mem.network
 						LEFT JOIN emp_provider mep ON p.emp_provider_id = mep.emp_provider_id AND p.network = mep.network
             WHERE  p.row_num = 1)
-)
-
+),
+pat_calc_arch
+AS
+(
  SELECT
-  
-  network,
---SEQ_DIM_PATIENTS.NEXTVAL AS patient_key,
-  patient_id,
+ pc.network,
+ pc.patient_id,
 CASE
-   WHEN archive_number IS NULL THEN
+   WHEN archive_number = -99 THEN
     NVL(LAG(archive_number) OVER(PARTITION BY network, patient_id ORDER BY archive_number NULLS LAST),0) + 1
    ELSE
     archive_number
   END
    archive_number,
-  name,
-  pcp_provider_id,
-  pcp_provider_name,
-  title_id,
-  medical_record_number,
-  sex,
-  birthdate,
-  date_of_death,
-  apt_suite,
-  street_address,
-  city,
-  state,
-  country,
-  mailing_code,
-  marital_status_id,
-  marital_status_desc,
-  race_id,
-  race_desc,
-  religion_id,
-  religion_desc,
-  free_text_religion,
-  free_text_occupation,
-  free_text_employer,
-  mother_patient_id,
-  collapsed_into_patient_id,
-  social_security_number,
-  lifecare_visit_id,
-  confidential_flag,
-  home_phone,
-  day_phone,
-  smoker_flag,
-  current_location,
-  sec_lang_name,
-  addr_string,
-  block_code,
-  last_edit_time,
-  county,
-  sub_building_name,
-  building_name,
-  building_nbr,
-  head_of_house_patient_id,
-  current_flag,
+  pc.name,
+  pc.pcp_provider_id,
+  pc.pcp_provider_name,
+  pc.title_id,
+  pc.medical_record_number,
+  pc.sex,
+  pc.birthdate,
+  pc.date_of_death,
+  pc.apt_suite,
+  pc.street_address,
+  pc.city,
+  pc.state,
+  pc.country,
+  pc.mailing_code,
+  pc.marital_status_id,
+  pc.marital_status_desc,
+  pc.race_id,
+  pc.race_desc,
+  pc.religion_id,
+  pc.religion_desc,
+  pc.free_text_religion,
+  pc.free_text_occupation,
+  pc.free_text_employer,
+  pc.mother_patient_id,
+  pc.collapsed_into_patient_id,
+  pc.social_security_number,
+  pc.lifecare_visit_id,
+  pc.confidential_flag,
+  pc.home_phone,
+  pc.day_phone,
+  pc.smoker_flag,
+  pc.current_location,
+  pc.sec_lang_name,
+  pc.addr_string,
+  pc.block_code,
+  pc.last_edit_time,
+  pc.county,
+  pc.sub_building_name,
+  pc.building_name,
+  pc.building_nbr,
+  pc.head_of_house_patient_id,
+  pc.current_flag,
   CASE
    WHEN archive_number = 1 THEN DATE '1901-01-01'
    ELSE NVL(LAG(effective_from) OVER(PARTITION BY network, patient_id ORDER BY archive_number NULLS LAST), DATE '1901-01-01')
   END
    effective_from,
-  CASE WHEN archive_number IS NULL THEN DATE '9999-12-31' ELSE effective_from END effedtive_to 
+  CASE WHEN archive_number IS NULL      THEN DATE '9999-12-31'
+      ELSE effective_from 
+ END effedtive_to 
   
  FROM
-  pat_comb;
+  pat_comb pc )
+
+SELECT
+ network_key || pc.patient_id || archive_number AS patient_key,
+ pc.network,
+ --SEQ_DIM_PATIENTS.NEXTVAL AS patient_key,
+ pc.patient_id,
+ archive_number,
+ pc.name,
+ pc.pcp_provider_id,
+ pc.pcp_provider_name,
+ pc.title_id,
+ pc.medical_record_number,
+ pc.sex,
+ pc.birthdate,
+ pc.date_of_death,
+ pc.apt_suite,
+ pc.street_address,
+ pc.city,
+ pc.state,
+ pc.country,
+ pc.mailing_code,
+ pc.marital_status_id,
+ pc.marital_status_desc,
+ pc.race_id,
+ pc.race_desc,
+ pc.religion_id,
+ pc.religion_desc,
+ pc.free_text_religion,
+ pc.free_text_occupation,
+ pc.free_text_employer,
+ pc.mother_patient_id,
+ pc.collapsed_into_patient_id,
+ pc.social_security_number,
+ pc.lifecare_visit_id,
+ pc.confidential_flag,
+ pc.home_phone,
+ pc.day_phone,
+ cell_phone,
+ pc.smoker_flag,
+ pc.current_location,
+ pc.sec_lang_name,
+ pc.addr_string,
+ pc.block_code,
+ pc.last_edit_time,
+ pc.county,
+ pc.sub_building_name,
+ pc.building_name,
+ pc.building_nbr,
+ pc.head_of_house_patient_id,
+ pc.current_flag,
+ CASE
+  WHEN archive_number = 1 THEN
+   DATE '1901-01-01'
+  ELSE
+   NVL( LAG(pc.effective_from) OVER(PARTITION BY pc.network, pc.patient_id ORDER BY pc.archive_number NULLS LAST), DATE '1901-01-01')
+ END   effective_from,
+ CASE WHEN archive_number IS NULL THEN DATE '9999-12-31' 
+  ELSE effective_from
+ END effedtive_to
+FROM
+ pat_calc_arch pc
+ LEFT JOIN
+ (SELECT
+   a.network,
+   a.patient_id,
+   LISTAGG(VALUE, ' | ') WITHIN GROUP (ORDER BY item_number) OVER (PARTITION BY a.network, patient_id)
+    AS cell_phone
+  FROM
+   patient_generic_data a
+   JOIN (
+         SELECT
+          network, patient_generic_field_id
+         FROM
+          patient_generic_field
+         WHERE
+          REGEXP_LIKE(UPPER(name), 'CELL')
+        ) b
+    ON a.patient_generic_field_id = b.patient_generic_field_id AND a.network = b.network) b
+  ON b.network = pc.network AND pc.patient_id = b.patient_id
+ JOIN dim_hc_networks h ON h.network = pc.network;
+
+
+--SELECT
+-- -- network_key|| pc.patient_id || archive_number  AS patient_key,
+--  99999999999 as patient_key,
+--  pc.network,
+----SEQ_DIM_PATIENTS.NEXTVAL AS patient_key,
+--  pc.patient_id,
+--  archive_number,
+--  pc.name,
+--  pc.pcp_provider_id,
+--  pc.pcp_provider_name,
+--  pc.title_id,
+--  pc.medical_record_number,
+--  pc.sex,
+--  pc.birthdate,
+--  pc.date_of_death,
+--  pc.apt_suite,
+--  pc.street_address,
+--  pc.city,
+--  pc.state,
+--  pc.country,
+--  pc.mailing_code,
+--  pc.marital_status_id,
+--  pc.marital_status_desc,
+--  pc.race_id,
+--  pc.race_desc,
+--  pc.religion_id,
+--  pc.religion_desc,
+--  pc.free_text_religion,
+--  pc.free_text_occupation,
+--  pc.free_text_employer,
+--  pc.mother_patient_id,
+--  pc.collapsed_into_patient_id,
+--  pc.social_security_number,
+--  pc.lifecare_visit_id,
+--  pc.confidential_flag,
+--  pc.home_phone,
+--  pc.day_phone,
+-- null as cell_phone,
+--  pc.smoker_flag,
+--  pc.current_location,
+--  pc.sec_lang_name,
+--  pc.addr_string,
+--  pc.block_code,
+--  pc.last_edit_time,
+--  pc.county,
+--  pc.sub_building_name,
+--  pc.building_name,
+--  pc.building_nbr,
+--  pc.head_of_house_patient_id,
+--  pc.current_flag,
+--  effective_from,
+--  effedtive_to
+--  from PAT_CALC pc
+----LEFT JOIN
+----(
+----SELECT 
+----  a.network,a.patient_id, LISTAGG (VALUE, ' | ') WITHIN GROUP (ORDER BY item_number) OVER (PARTITION BY a.network,patient_id) AS cell_phone
+----FROM patient_generic_data a
+----JOIN (select network,patient_generic_field_id from patient_generic_field 
+----      where  REGEXP_LIKE (UPPER (name), 'CELL')
+----      ) b
+----  ON a.patient_generic_field_id = b.patient_generic_field_id and a.network = b.network
+----)b  ON b.network = pc.network and pc.patient_id  = b.patient_id
+----JOIN DIM_HC_NETWORKS h on h.network = pc.network  
