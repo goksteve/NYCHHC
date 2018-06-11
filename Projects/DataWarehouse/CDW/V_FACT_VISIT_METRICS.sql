@@ -292,8 +292,9 @@ LEFT JOIN bp_final_tb b ON b.network = a.network AND b.visit_id = a.visit_id AND
 
 SELECT 
  a.network,
+ NVL( v.visit_key,999999999999) as visit_key,
  a.visit_id,
- p.patient_key,
+NVL( p.patient_key,999999999999) as patient_key,
  a.admission_dt_key,
  a.visit_number,
  a.facility,
@@ -305,8 +306,9 @@ SELECT
  a.mrn,
  a.pat_lname || ', ' || a.pat_fname AS patient_name,
  a.sex,
+ race_desc AS race,
  TRUNC(a.birthdate) AS birthdate,
- patient_age_at_admission,
+ a.patient_age_at_admission,
  TRUNC(a.admission_dt) AS admission_dt,
  TRUNC(a.discharge_dt) AS discharge_dt,
  asthma_ind,
@@ -331,12 +333,14 @@ SELECT
  trunc(sysdate) as load_dt
 FROM
  qcpr_tmp a
- JOIN DIM_PATIENTS p on p.network = a.network and p.patient_id  = a.patient_id and p.current_flag  = 1
+ LEFT JOIN DIM_PATIENTS p on p.network = a.network and p.patient_id  = a.patient_id and p.current_flag  = 1
+ LEFT JOIN fact_visits v ON  v.NETWORK = a.NETWORK AND v.visit_id  =  a.visit_id
 WHERE
- admission_dt < TRUNC(SYSDATE)
+ a.admission_dt < TRUNC(SYSDATE)
 UNION ALL
 SELECT
  DISTINCT network,
+          999999999999 as visit_key,
           visit_id,
           patient_key,
           TO_NUMBER(TO_CHAR(admission_dt, 'yyyymmdd')) AS admission_dt_key,
@@ -351,6 +355,7 @@ SELECT
           mrn,
           patient_name,
           sex,
+          NULL AS race,
           birthdate,
           patient_age_at_admission,
           admission_dt,

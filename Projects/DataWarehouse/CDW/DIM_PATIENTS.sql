@@ -37,6 +37,7 @@ CREATE TABLE dim_patients
   CONFIDENTIAL_FLAG          VARCHAR2(1 BYTE),
   HOME_PHONE                 VARCHAR2(50 BYTE),
   DAY_PHONE                  VARCHAR2(50 BYTE),
+  --CELL_PHONE                 VARCHAR2(50 BYTE),  
   SMOKER_FLAG                VARCHAR2(1 BYTE),
   CURRENT_LOCATION           VARCHAR2(55 BYTE),
   SEC_LANG_NAME              VARCHAR2(100 BYTE),

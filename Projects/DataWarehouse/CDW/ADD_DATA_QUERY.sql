@@ -21,7 +21,7 @@ ALTER SESSION ENABLE parallel DML;
 --**********************************************
 --*******FACT_VISITS *****************************
 EXECUTE dwm.refresh_data('where etl_step_num = 2120')  
-EXECUTE dwm.refresh_data('where etl_step_num = 1102') ;  -- REF_DRUG_DESCRIPTIONS
+EXECUTE dwm.refresh_data('where etl_step_num = 4100') ;  -- REF_DRUG_DESCRIPTIONS
 
 --**********************************************
 select * from CNF_DW_REFRESH
@@ -39,7 +39,7 @@ select  * from  DBG_LOG_DATA where action like '%steve%';
 select a.*, DBMS_LOB.substr(comment_txt, 250) from DBG_LOG_DATA a
 where
 tstamp > date '2018-06-5'
-and proc_id   > 485
+and proc_id   > 488
 order by tstamp desc;
 --************************************************************
 
