@@ -203,8 +203,8 @@ AS
 			 effective_to
 	  FROM (SELECT p.network,
 						p.patient_id,
-						-99 AS archive_number,
-						DATE '1900-01-01' AS archive_time,
+						NULL AS archive_number,
+						NULL AS archive_time,
 						pcp.emp_provider_id,
 						pcp.emp_provider_name,
 						p.name,
@@ -364,8 +364,8 @@ AS
  pc.network,
  pc.patient_id,
 CASE
-   WHEN archive_number = -99 THEN
-    NVL(LAG(archive_number) OVER(PARTITION BY network, patient_id ORDER BY archive_number NULLS LAST),0) + 1
+   WHEN archive_number IS NULL THEN
+    LAG(archive_number) OVER(PARTITION BY network, patient_id ORDER BY archive_number NULLS LAST) + 1
    ELSE
     archive_number
   END
@@ -412,24 +412,26 @@ CASE
   pc.building_nbr,
   pc.head_of_house_patient_id,
   pc.current_flag,
-  CASE
-   WHEN archive_number = 1 THEN DATE '1901-01-01'
-   ELSE NVL(LAG(effective_from) OVER(PARTITION BY network, patient_id ORDER BY archive_number NULLS LAST), DATE '1901-01-01')
-  END
-   effective_from,
-  CASE WHEN archive_number IS NULL      THEN DATE '9999-12-31'
-      ELSE effective_from 
- END effedtive_to 
-  
+   case
+    when archive_number = 1 then date '1901-01-01'
+    else lag(effective_from) over(partition by network, patient_id order by archive_number nulls last)
+  end effective_from,
+  case
+    when archive_number is null then date '9999-12-31'
+    else effective_from
+  end effective_to
+
  FROM
   pat_comb pc )
 
 SELECT
- network_key || pc.patient_id || archive_number AS patient_key,
+ --- algorithm ( PAT_ID  * MAX(ARCHIVE_NUMBER = 1000) + ARCHIVE_NUMBER) * MAX NETWORK_ID  = 1000 + NETWORK_ID
+ (pc.patient_id * 1000 + NVL(archive_number, 1)) * 1000 + h.network_key AS patient_key,
+-- network_key || pc.patient_id || NVL(archive_number ,1),3,0)  AS patient_key,
  pc.network,
  --SEQ_DIM_PATIENTS.NEXTVAL AS patient_key,
- pc.patient_id,
- archive_number,
+pc.patient_id,
+NVL(archive_number ,1) as archive_number,
  pc.name,
  pc.pcp_provider_id,
  pc.pcp_provider_name,
@@ -473,15 +475,8 @@ SELECT
  pc.building_nbr,
  pc.head_of_house_patient_id,
  pc.current_flag,
- CASE
-  WHEN archive_number = 1 THEN
-   DATE '1901-01-01'
-  ELSE
-   NVL( LAG(pc.effective_from) OVER(PARTITION BY pc.network, pc.patient_id ORDER BY pc.archive_number NULLS LAST), DATE '1901-01-01')
- END   effective_from,
- CASE WHEN archive_number IS NULL THEN DATE '9999-12-31' 
-  ELSE effective_from
- END effedtive_to
+ NVL(effective_from, date '1901-01-01') as effective_from,
+ NVL( effective_to , date '9999-12-31') as  effective_to
 FROM
  pat_calc_arch pc
  LEFT JOIN
@@ -504,68 +499,3 @@ FROM
   ON b.network = pc.network AND pc.patient_id = b.patient_id
  JOIN dim_hc_networks h ON h.network = pc.network;
 
-
---SELECT
--- -- network_key|| pc.patient_id || archive_number  AS patient_key,
---  99999999999 as patient_key,
---  pc.network,
-----SEQ_DIM_PATIENTS.NEXTVAL AS patient_key,
---  pc.patient_id,
---  archive_number,
---  pc.name,
---  pc.pcp_provider_id,
---  pc.pcp_provider_name,
---  pc.title_id,
---  pc.medical_record_number,
---  pc.sex,
---  pc.birthdate,
---  pc.date_of_death,
---  pc.apt_suite,
---  pc.street_address,
---  pc.city,
---  pc.state,
---  pc.country,
---  pc.mailing_code,
---  pc.marital_status_id,
---  pc.marital_status_desc,
---  pc.race_id,
---  pc.race_desc,
---  pc.religion_id,
---  pc.religion_desc,
---  pc.free_text_religion,
---  pc.free_text_occupation,
---  pc.free_text_employer,
---  pc.mother_patient_id,
---  pc.collapsed_into_patient_id,
---  pc.social_security_number,
---  pc.lifecare_visit_id,
---  pc.confidential_flag,
---  pc.home_phone,
---  pc.day_phone,
--- null as cell_phone,
---  pc.smoker_flag,
---  pc.current_location,
---  pc.sec_lang_name,
---  pc.addr_string,
---  pc.block_code,
---  pc.last_edit_time,
---  pc.county,
---  pc.sub_building_name,
---  pc.building_name,
---  pc.building_nbr,
---  pc.head_of_house_patient_id,
---  pc.current_flag,
---  effective_from,
---  effedtive_to
---  from PAT_CALC pc
-----LEFT JOIN
-----(
-----SELECT 
-----  a.network,a.patient_id, LISTAGG (VALUE, ' | ') WITHIN GROUP (ORDER BY item_number) OVER (PARTITION BY a.network,patient_id) AS cell_phone
-----FROM patient_generic_data a
-----JOIN (select network,patient_generic_field_id from patient_generic_field 
-----      where  REGEXP_LIKE (UPPER (name), 'CELL')
-----      ) b
-----  ON a.patient_generic_field_id = b.patient_generic_field_id and a.network = b.network
-----)b  ON b.network = pc.network and pc.patient_id  = b.patient_id
-----JOIN DIM_HC_NETWORKS h on h.network = pc.network  

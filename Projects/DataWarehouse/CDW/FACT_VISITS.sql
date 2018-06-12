@@ -5,7 +5,7 @@ CREATE TABLE fact_visits
  visit_key                  NUMBER(12) NOT NULL,
  network                    CHAR(3 BYTE) NOT NULL,
  visit_id                   NUMBER(12) NOT NULL,
- patient_key                NUMBER(12) NOT NULL,
+ patient_key                NUMBER(18) NOT NULL,
  patient_id                 NUMBER(12) NOT NULL,
  facility_key               NUMBER(12) NOT NULL,
  admission_dt_key           NUMBER(8) NOT NULL,

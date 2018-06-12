@@ -3,7 +3,7 @@ DROP TABLE dim_patients CASCADE CONSTRAINTS;
 
 CREATE TABLE dim_patients
 (
-  PATIENT_KEY                NUMBER(12) NOT NULL,
+  PATIENT_KEY                NUMBER(18) NOT NULL,
   NETWORK                    CHAR(3 BYTE) NOT NULL,
   PATIENT_ID                 NUMBER(12) NOT NULL,
   ARCHIVE_NUMBER             NUMBER(12) NOT NULL,

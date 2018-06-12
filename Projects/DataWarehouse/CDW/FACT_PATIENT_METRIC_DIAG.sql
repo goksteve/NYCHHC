@@ -2,6 +2,7 @@ DROP TABLE fact_patient_metric_diag CASCADE CONSTRAINTS;
 
 CREATE TABLE fact_patient_metric_diag
 (
+ PATIENT_KEY           NUMBER(18),
  network               CHAR(3 BYTE) NOT NULL,
  patient_id            NUMBER(12) NOT NULL,
  asthma_ind            NUMBER(3) NULL,
