@@ -2,6 +2,7 @@ DROP TABLE fact_patient_metric_diag CASCADE CONSTRAINTS;
 
 CREATE TABLE fact_patient_metric_diag
 (
+ patient_key           NUMBER(20),
  network               CHAR(3 BYTE) NOT NULL,
  patient_id            NUMBER(12) NOT NULL,
  asthma_ind            NUMBER(3) NULL,
@@ -38,3 +39,5 @@ ALTER TABLE fact_patient_metric_diag ADD (
   ENABLE VALIDATE);
 
 GRANT SELECT ON fact_patient_metric_diag TO PUBLIC;
+
+CREATE OR REPLACE PUBLIC SYNONYM fact_patient_metric_diag FOR cdw.fact_patient_metric_diag;

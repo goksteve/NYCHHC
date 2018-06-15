@@ -6,7 +6,7 @@ ALTER SESSION ENABLE parallel DML;
 --  etl.add_data
 --  (
 --    p_operation => 'REPLACE /*+ Parallel(32)  */',
---    p_tgt => 'FACT_PATIENT_PRESCRIPTIONS',
+--    p_tgt => 'DIM_PATIENTS1',
 --    p_src => 'V_FACT_PATIENT_PRESCRIPTIONS',
 --   -- p_whr => 'Where 1= 1 ',
 --    p_commit_at => -1
@@ -20,7 +20,8 @@ ALTER SESSION ENABLE parallel DML;
 --end;
 --**********************************************
 --*******FACT_VISITS *****************************
-EXECUTE dwm.refresh_data('where etl_step_num = 4000') ;  -- epic daily 
+EXECUTE dwm.refresh_data('where etl_step_num = 2120')  
+EXECUTE dwm.refresh_data('where etl_step_num = 4100')  
 
 --**********************************************
 select * from CNF_DW_REFRESH
@@ -37,11 +38,16 @@ select  * from  DBG_LOG_DATA where action like '%steve%';
 --**************************************************************
 select a.*, DBMS_LOB.substr(comment_txt, 250) from DBG_LOG_DATA a
 where
-tstamp > date '2018-05-31'
-and proc_id   > 471
+tstamp > date '2018-06-5'
+and proc_id   > 491
 order by tstamp desc;
 --************************************************************
 
 select a.*, DBMS_LOB.substr(comment_txt, 250) from DBG_LOG_DATA a
-where action like '%FACT_VISIT_DIAGNOSES%'
-order by tstamp desc
+where  upper( action) like '%DAILY%'
+order by tstamp desc;
+
+--**************************************
+INSERT INTO cnf_dw_refresh  VALUES    (2120, 'REPLACE /*+ APPEND PARALLEL(32) */', 'FACT_VISIT_PAYERS', 'V_FACT_VISIT_PAYERS', NULL,     NULL, NULL, NULL);
+COMMIT;
+--*******************************

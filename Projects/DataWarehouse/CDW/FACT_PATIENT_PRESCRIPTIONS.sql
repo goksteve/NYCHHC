@@ -3,7 +3,7 @@ EXEC dbm.drop_tables('FACT_PATIENT_PRESCRIPTIONS');
 CREATE TABLE fact_patient_prescriptions
 (
  network            VARCHAR2(3 BYTE) NOT NULL,
- patient_key        NUMBER(12) NOT NULL,
+ patient_key        NUMBER(18) NOT NULL,
  facility_key       NUMBER(12) NULL,
  order_dt_key       NUMBER(12) NOT NULL,
  patient_id         NUMBER(12) NOT NULL,

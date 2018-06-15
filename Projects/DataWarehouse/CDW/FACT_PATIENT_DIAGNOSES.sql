@@ -3,7 +3,7 @@ exec dbm.drop_tables('FACT_PATIENT_DIAGNOSES');
 CREATE TABLE fact_patient_diagnoses
 (
   network                CHAR(3 BYTE) NOT NULL,
-  patient_key            NUMBER(12) NOT NULL,
+  patient_key            NUMBER(18) NOT NULL,
   patient_id             NUMBER(12) NOT NULL,
   problem_number         NUMBER(12) NOT NULL,
   diag_coding_scheme     VARCHAR2(50 BYTE) NULL,

@@ -1,146 +1,148 @@
 CREATE OR REPLACE VIEW V_DIM_PATIENTS_FULL AS
---2018-JUNE-12 SSG 
  WITH patient_archive_stage AS
-		(
-      SELECT --+ materialize
-      network,
-      patient_id,
-      archive_number,
-      archive_time,
-      emp_provider_id,
-      name,
-      title_id,
-      medical_record_number,
-      sex,
-      birthdate,
-      date_of_death,
-      apt_suite,
-      street_address,
-      city,
-      state,
-      country,
-      mailing_code,
-      marital_status_id,
-      race_id,
-      religion_id,
-      free_text_religion,
-      occupation_id,
-      free_text_occupation,
-      employer_id,
-      free_text_employer,
-      mother_patient_id,
-      collapsed_into_patient_id,
-      social_security_number,
-      confidential_flag,
-      home_phone,
-      day_phone,
-      smoker_flag,
-      sec_lang_name,
-      addr_string,
-      block_code,
-      county,
-      sub_building_name,
-      building_name,
-      building_nbr,
-      dependent_street,
-      dependent_locality,
-      uk_nhs_number,
-      uk_ha_res_code,
-      uk_pct_res_code,
-      head_of_house_patient_id,
-      patient_archive_type_id,
-      archive_source_id,
-      ROW_NUMBER()	OVER(PARTITION BY network, patient_id, TRUNC(archive_time, 'HH12') ORDER BY
-      network,
-      patient_id ASC,
-      archive_number DESC,
-      archive_time DESC)
-      row_num
-      FROM patient_archive pa
-      WHERE 	 1 = 1
-      AND archive_time IS NOT NULL
-      AND TRIM(
-      DECODE(emp_provider_id, CHR(127), NULL, emp_provider_id)
-      || DECODE(name, CHR(127), NULL, name)
-      || DECODE(title_id, CHR(127), NULL, title_id)
-      || DECODE(medical_record_number, CHR(127), NULL, medical_record_number)
-      || DECODE(sex, CHR(127), NULL, sex)
-      || DECODE(birthdate, CHR(127), NULL, birthdate)
-      || DECODE(date_of_death, CHR(127), NULL, date_of_death)
-      || DECODE(apt_suite, CHR(127), NULL, apt_suite)
-      || DECODE(street_address, CHR(127), NULL, street_address)
-      || DECODE(city, CHR(127), NULL, city)
-      || DECODE(state, CHR(127), NULL, state)
-      || DECODE(country, CHR(127), NULL, country)
-      || DECODE(mailing_code, CHR(127), NULL, mailing_code)
-      || DECODE(REPLACE(marital_status_id, -99, NULL),
-        NULL, NULL,
-        CHR(127), NULL,
-        marital_status_id)
-      || DECODE(REPLACE(race_id, -99, NULL),  NULL, NULL,	CHR(127), NULL,  race_id)
-      || DECODE(REPLACE(religion_id, -99, NULL),
-        NULL, NULL,
-        CHR(127), NULL,
-        religion_id)
-      || DECODE(free_text_religion,  CHR(127), NULL,  NULL, NULL,  free_text_religion)
-      || DECODE(REPLACE(occupation_id, -99, NULL),
-        NULL, NULL,
-        CHR(127), NULL,
-        occupation_id)
-      || DECODE(free_text_occupation,  CHR(127), NULL,	NULL, NULL,  free_text_occupation)
-      || DECODE(REPLACE(employer_id, -99, NULL),
-        NULL, NULL,
-        CHR(127), NULL,
-        employer_id)
-      || DECODE(free_text_employer, CHR(127), NULL, free_text_employer)
-      || DECODE(REPLACE(mother_patient_id, -99),
-        NULL, NULL,
-        CHR(127), NULL,
-        mother_patient_id)
-      || DECODE(REPLACE(collapsed_into_patient_id, -99, NULL),
-        NULL, NULL,
-        CHR(127), NULL,
-        collapsed_into_patient_id)
-      || DECODE(social_security_number, CHR(127), NULL, social_security_number)
-      || DECODE(confidential_flag, CHR(127), NULL, confidential_flag)
-      || DECODE(home_phone, CHR(127), NULL, home_phone)
-      || DECODE(day_phone, CHR(127), NULL, day_phone)
-      || DECODE(smoker_flag, CHR(127), NULL, smoker_flag)
-      || DECODE(sec_lang_name, CHR(127), NULL, sec_lang_name)
-      || DECODE(addr_string, CHR(127), NULL, addr_string)
-      || DECODE(block_code, CHR(127), NULL, block_code)
-      || DECODE(county, CHR(127), NULL, county)
-      || DECODE(sub_building_name, CHR(127), NULL, sub_building_name)
-      || DECODE(building_name, CHR(127), NULL, building_name)
-      || DECODE(building_nbr, CHR(127), NULL, building_nbr)
-      || DECODE(dependent_street, CHR(127), NULL, dependent_street)
-      || DECODE(dependent_locality, CHR(127), NULL, dependent_locality)
-      || DECODE(REPLACE(uk_nhs_number, -99, NULL),
-        NULL, NULL,
-        CHR(127), NULL,
-        uk_nhs_number)
-      || DECODE(uk_ha_res_code, CHR(127), NULL, uk_ha_res_code)
-      || DECODE(uk_pct_res_code, CHR(127), NULL, uk_pct_res_code)
-      || DECODE(head_of_house_patient_id, CHR(127), NULL, head_of_house_patient_id))
-      IS NOT NULL
-      AND LOWER(pa.name) NOT LIKE 'test,%'
-      AND LOWER(pa.name) NOT LIKE 'testing,%'
-      AND LOWER(pa.name) NOT LIKE '%,test'
-      AND LOWER(pa.name) NOT LIKE 'testggg,%'
-      AND LOWER(pa.name) NOT LIKE '%,test%ccd'
-      AND LOWER(pa.name) NOT LIKE 'test%ccd,%'
-      AND LOWER(pa.name) <> 'emergency,testone'
-      AND LOWER(pa.name) <> 'testtwo,testtwo'
-      AND EXISTS
-      (SELECT 1
-      FROM patient pp
-      WHERE pp.patient_id = pa.patient_id AND pp.network = pa.network)
-   ),
+		  (
+ SELECT --+ materialize
+  network,
+  patient_id,
+  archive_number,
+  archive_time,
+  emp_provider_id,
+  name,
+  title_id,
+  medical_record_number,
+  sex,
+  birthdate,
+  date_of_death,
+  apt_suite,
+  street_address,
+  city,
+  state,
+  country,
+  mailing_code,
+  marital_status_id,
+  race_id,
+  religion_id,
+  free_text_religion,
+  occupation_id,
+  free_text_occupation,
+  employer_id,
+  free_text_employer,
+  mother_patient_id,
+  collapsed_into_patient_id,
+  social_security_number,
+  confidential_flag,
+  home_phone,
+  day_phone,
+  smoker_flag,
+  sec_lang_name,
+  addr_string,
+  block_code,
+  county,
+  sub_building_name,
+  building_name,
+  building_nbr,
+  dependent_street,
+  dependent_locality,
+  uk_nhs_number,
+  uk_ha_res_code,
+  uk_pct_res_code,
+  head_of_house_patient_id,
+  patient_archive_type_id,
+  archive_source_id,
+  ROW_NUMBER()	OVER(PARTITION BY network, patient_id, TRUNC(archive_time, 'HH12') ORDER BY
+          network,
+          patient_id ASC,
+          archive_number DESC,
+          archive_time DESC)
+    row_num
+FROM patient_archive pa
+WHERE 	 1 = 1
+  AND archive_time IS NOT NULL
+  AND TRIM(
+         DECODE(emp_provider_id, CHR(127), NULL, emp_provider_id)
+       || DECODE(name, CHR(127), NULL, name)
+       || DECODE(title_id, CHR(127), NULL, title_id)
+       || DECODE(medical_record_number, CHR(127), NULL, medical_record_number)
+       || DECODE(sex, CHR(127), NULL, sex)
+       || DECODE(birthdate, CHR(127), NULL, birthdate)
+       || DECODE(date_of_death, CHR(127), NULL, date_of_death)
+       || DECODE(apt_suite, CHR(127), NULL, apt_suite)
+       || DECODE(street_address, CHR(127), NULL, street_address)
+       || DECODE(city, CHR(127), NULL, city)
+       || DECODE(state, CHR(127), NULL, state)
+       || DECODE(country, CHR(127), NULL, country)
+       || DECODE(mailing_code, CHR(127), NULL, mailing_code)
+       || DECODE(REPLACE(marital_status_id, -99, NULL),
+              NULL, NULL,
+              CHR(127), NULL,
+              marital_status_id)
+       || DECODE(REPLACE(race_id, -99, NULL),  NULL, NULL,	CHR(127), NULL,  race_id)
+       || DECODE(REPLACE(religion_id, -99, NULL),
+              NULL, NULL,
+              CHR(127), NULL,
+              religion_id)
+       || DECODE(free_text_religion,  CHR(127), NULL,  NULL, NULL,  free_text_religion)
+       || DECODE(REPLACE(occupation_id, -99, NULL),
+              NULL, NULL,
+              CHR(127), NULL,
+              occupation_id)
+       || DECODE(free_text_occupation,  CHR(127), NULL,	NULL, NULL,  free_text_occupation)
+       || DECODE(REPLACE(employer_id, -99, NULL),
+              NULL, NULL,
+              CHR(127), NULL,
+              employer_id)
+       || DECODE(free_text_employer, CHR(127), NULL, free_text_employer)
+       || DECODE(REPLACE(mother_patient_id, -99),
+              NULL, NULL,
+              CHR(127), NULL,
+              mother_patient_id)
+       || DECODE(REPLACE(collapsed_into_patient_id, -99, NULL),
+              NULL, NULL,
+              CHR(127), NULL,
+              collapsed_into_patient_id)
+       || DECODE(social_security_number, CHR(127), NULL, social_security_number)
+       || DECODE(confidential_flag, CHR(127), NULL, confidential_flag)
+       || DECODE(home_phone, CHR(127), NULL, home_phone)
+       || DECODE(day_phone, CHR(127), NULL, day_phone)
+       || DECODE(smoker_flag, CHR(127), NULL, smoker_flag)
+       || DECODE(sec_lang_name, CHR(127), NULL, sec_lang_name)
+       || DECODE(addr_string, CHR(127), NULL, addr_string)
+       || DECODE(block_code, CHR(127), NULL, block_code)
+       || DECODE(county, CHR(127), NULL, county)
+       || DECODE(sub_building_name, CHR(127), NULL, sub_building_name)
+       || DECODE(building_name, CHR(127), NULL, building_name)
+       || DECODE(building_nbr, CHR(127), NULL, building_nbr)
+       || DECODE(dependent_street, CHR(127), NULL, dependent_street)
+       || DECODE(dependent_locality, CHR(127), NULL, dependent_locality)
+       || DECODE(REPLACE(uk_nhs_number, -99, NULL),
+              NULL, NULL,
+              CHR(127), NULL,
+              uk_nhs_number)
+       || DECODE(uk_ha_res_code, CHR(127), NULL, uk_ha_res_code)
+       || DECODE(uk_pct_res_code, CHR(127), NULL, uk_pct_res_code)
+       || DECODE(head_of_house_patient_id, CHR(127), NULL, head_of_house_patient_id))
+       IS NOT NULL
+  AND LOWER(pa.name) NOT LIKE 'test,%'
+  AND LOWER(pa.name) NOT LIKE 'testing,%'
+  AND LOWER(pa.name) NOT LIKE '%,test'
+  AND LOWER(pa.name) NOT LIKE 'testggg,%'
+  AND LOWER(pa.name) NOT LIKE '%,test%ccd'
+  AND LOWER(pa.name) NOT LIKE 'test%ccd,%'
+  AND LOWER(pa.name) <> 'emergency,testone'
+  AND LOWER(pa.name) <> 'testtwo,testtwo'
+  AND EXISTS
+       (SELECT 1
+         FROM patient pp
+        WHERE pp.patient_id = pa.patient_id AND pp.network = pa.network)
+) 
+--pat		 WHERE row_num = 1)
+,
 pat_comb
 AS
 (
-	SELECT --+ materialize
-			 network,
+	SELECT /*+ PARALLEL(32) */
+			network,
+			-- SEQ_DIM_PATIENTS.NEXTVAL AS patient_key,
 			 patient_id,
 			 archive_number,
 			 archive_time,
@@ -343,7 +345,9 @@ AS
 						archive_source_id,
 						0 AS current_flag,
 						archive_time AS effective_from,
-						NVL(LEAD(archive_time, 1) OVER(PARTITION BY p.network, p.patient_id ORDER BY p.network, patient_id ASC, archive_number ASC), date '9999-12-31')		AS effective_to
+						NVL(LEAD(archive_time, 1) OVER(PARTITION BY patient_id ORDER BY patient_id ASC, archive_number ASC),
+							 DATE '9999-12-31')
+							AS effective_to
 				 FROM patient_archive_stage p
 						LEFT JOIN marital_status ms ON p.marital_status_id = ms.marital_status_id AND p.network = ms.network
 						LEFT JOIN race mr ON p.race_id = mr.race_id AND p.network = mr.network
@@ -420,89 +424,16 @@ CASE
  FROM
   pat_comb pc 
 )
-,
-TMP_FINAL
-AS
-(
-  SELECT
-  pc.network,
-  h.network_key,
-  pc.patient_id,
-  NVL(pc.archive_number ,1) as archive_number,
-  pc.name,
-  pc.pcp_provider_id,
-  pc.pcp_provider_name,
-  pc.title_id,
-  pc.medical_record_number,
-  pc.sex,
-  pc.birthdate,
-  pc.date_of_death,
-  pc.apt_suite,
-  pc.street_address,
-  pc.city,
-  pc.state,
-  pc.country,
-  pc.mailing_code,
-  pc.marital_status_id,
-  pc.marital_status_desc,
-  pc.race_id,
-  pc.race_desc,
-  pc.religion_id,
-  pc.religion_desc,
-  pc.free_text_religion,
-  pc.free_text_occupation,
-  pc.free_text_employer,
-  pc.mother_patient_id,
-  pc.collapsed_into_patient_id,
-  pc.social_security_number,
-  pc.lifecare_visit_id,
-  pc.confidential_flag,
-  pc.home_phone,
-  pc.day_phone,
-  cell_phone,
-  pc.smoker_flag,
-  pc.current_location,
-  pc.sec_lang_name,
-  pc.addr_string,
-  pc.block_code,
-  pc.last_edit_time,
-  pc.county,
-  pc.sub_building_name,
-  pc.building_name,
-  pc.building_nbr,
-  pc.head_of_house_patient_id,
-  pc.current_flag,
-  NVL(effective_from, date '1901-01-01') as effective_from,
-  NVL( effective_to , date '9999-12-31') as  effective_to
-FROM
- pat_calc_arch pc
- LEFT JOIN
- (SELECT
-   a.network,
-   a.patient_id,
-   LISTAGG(VALUE, ' | ') WITHIN GROUP (ORDER BY item_number) OVER (PARTITION BY a.network, patient_id)
-    AS cell_phone
-  FROM
-   patient_generic_data a
-   JOIN (
-         SELECT
-          network, patient_generic_field_id
-         FROM
-          patient_generic_field
-         WHERE
-          REGEXP_LIKE(UPPER(name), 'CELL')
-        ) b
-    ON a.patient_generic_field_id = b.patient_generic_field_id AND a.network = b.network) b
-   ON b.network = pc.network AND pc.patient_id = b.patient_id
- JOIN dim_hc_networks h ON h.network = pc.network
-)
 
 SELECT
- -- algorithm ( PAT_ID  * 50000 + ARCHIVE_NUMBER) * 1000 + NETWORK_KEY
- ((pc.patient_id * 50000 + archive_number) * 1000 + pc.network_key) AS patient_key,
+ --- algorithm ( PAT_ID  * MAX(ARCHIVE_NUMBER = 50000) + ARCHIVE_NUMBER) * MAX NETWORK_ID  = 1000 + NETWORK_ID
+ (pc.patient_id * 50000 + NVL(pc.archive_number, 1)) * 1000 + h.network_key AS patient_key,
+-- network_key || pc.patient_id || NVL(archive_number ,1),3,0)  AS patient_key,
  pc.network,
- pc.patient_id,
- pc.archive_number,
+ h.network_key,
+ --SEQ_DIM_PATIENTS.NEXTVAL AS patient_key,
+pc.patient_id,
+NVL(pc.archive_number ,1) as archive_number,
  pc.name,
  pc.pcp_provider_id,
  pc.pcp_provider_name,
@@ -533,7 +464,7 @@ SELECT
  pc.confidential_flag,
  pc.home_phone,
  pc.day_phone,
- pc.cell_phone,
+ cell_phone,
  pc.smoker_flag,
  pc.current_location,
  pc.sec_lang_name,
@@ -546,7 +477,27 @@ SELECT
  pc.building_nbr,
  pc.head_of_house_patient_id,
  pc.current_flag,
- pc.effective_from,
- pc.effective_to
+ NVL(effective_from, date '1901-01-01') as effective_from,
+ NVL( effective_to , date '9999-12-31') as  effective_to
 FROM
- tmp_final pc;
+ pat_calc_arch pc
+ LEFT JOIN
+ (SELECT
+   a.network,
+   a.patient_id,
+   LISTAGG(VALUE, ' | ') WITHIN GROUP (ORDER BY item_number) OVER (PARTITION BY a.network, patient_id)
+    AS cell_phone
+  FROM
+   patient_generic_data a
+   JOIN (
+         SELECT
+          network, patient_generic_field_id
+         FROM
+          patient_generic_field
+         WHERE
+          REGEXP_LIKE(UPPER(name), 'CELL')
+        ) b
+    ON a.patient_generic_field_id = b.patient_generic_field_id AND a.network = b.network) b
+   ON b.network = pc.network AND pc.patient_id = b.patient_id
+ JOIN dim_hc_networks h ON h.network = pc.network;
+

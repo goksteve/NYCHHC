@@ -3,7 +3,7 @@ DROP TABLE dim_patients CASCADE CONSTRAINTS;
 
 CREATE TABLE dim_patients
 (
-  PATIENT_KEY                NUMBER(12) NOT NULL,
+  PATIENT_KEY                NUMBER(18) NOT NULL,
   NETWORK                    CHAR(3 BYTE) NOT NULL,
   PATIENT_ID                 NUMBER(12) NOT NULL,
   ARCHIVE_NUMBER             NUMBER(12) NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE dim_patients
   CONFIDENTIAL_FLAG          VARCHAR2(1 BYTE),
   HOME_PHONE                 VARCHAR2(50 BYTE),
   DAY_PHONE                  VARCHAR2(50 BYTE),
-  --CELL_PHONE                 VARCHAR2(50 BYTE),  
+  CELL_PHONE                 VARCHAR2(50 BYTE),  
   SMOKER_FLAG                VARCHAR2(1 BYTE),
   CURRENT_LOCATION           VARCHAR2(55 BYTE),
   SEC_LANG_NAME              VARCHAR2(100 BYTE),
@@ -86,6 +86,6 @@ CREATE UNIQUE INDEX uk2_dim_patient ON dim_patients
 ) PARALLEL 32;
 ALTER INDEX uk2_dim_patient NOPARALLEL;
 
-CREATE OR REPLACE SYNONYM dim_patient FOR dim_patients;
+CREATE OR REPLACE PUBLIC SYNONYM dim_patients FOR dim_patients;
 
 GRANT SELECT ON dim_patients TO PUBLIC WITH GRANT OPTION;

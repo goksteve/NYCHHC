@@ -299,7 +299,7 @@ NVL( p.patient_key,999999999999) as patient_key,
  a.visit_number,
  a.facility,
  a.visit_type_id,
- a.visit_type,
+ vt.name as visit_type,
  a.medicaid_ind,
  a.medicare_ind,
  CAST(a.patient_id AS VARCHAR2(256)) patient_id,
@@ -335,6 +335,7 @@ FROM
  qcpr_tmp a
  LEFT JOIN DIM_PATIENTS p on p.network = a.network and p.patient_id  = a.patient_id and p.current_flag  = 1
  LEFT JOIN fact_visits v ON  v.NETWORK = a.NETWORK AND v.visit_id  =  a.visit_id
+ LEFT JOIN REF_VISIT_TYPES vt on vt.visit_type_id = a.visit_type_id
 WHERE
  a.admission_dt < TRUNC(SYSDATE)
 UNION ALL
@@ -381,9 +382,9 @@ SELECT
           'EPIC' AS source,
            trunc(sysdate) as load_dt
 FROM
-get_dates cross JOIN
- STG_VISIT_METRICS_EPIC
-where   admission_dt >= epic_start_dt and admission_dt < TRUNC(sysdate);
+ get_dates 
+CROSS JOIN  STG_VISIT_METRICS_EPIC
+WHERE   admission_dt >= epic_start_dt AND admission_dt < TRUNC(SYSDATE);
 
 
 GRANT SELECT ON v_fact_visit_metrics TO PUBLIC;
