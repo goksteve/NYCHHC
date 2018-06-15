@@ -19,6 +19,7 @@ CREATE TABLE fact_results
  event_status_id                 NUMBER(12),
  event_type_id                   NUMBER(12),
  data_element_id                 VARCHAR2(25 BYTE) NOT NULL,
+ data_element_name               VARCHAR2(120 BYTE),
  result_value                    VARCHAR2(1023 BYTE),
  decode_source_id                VARCHAR2(40 BYTE),
  decoded_value                   VARCHAR2(1300 BYTE),

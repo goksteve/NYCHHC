@@ -1,10 +1,11 @@
 CREATE OR REPLACE VIEW v_fact_results AS
 SELECT
+ -- 15-Jun-2018, GK: Added data_element_name to the script 
+ -- 18-MAY-2018 SG : modified
  -- 29-Mar-2018, GK: modified patient join condition to current_flag logic
  -- 09-Mar-2018, OK: added column PATIENT_ID
  -- 09-Mar-2018, OK: added column PATIENT_ID
  -- 07-Mar-2018, GK: modified
- -- 18-MAY-2018 SG : modified
   ld.network,
   r.visit_id,
   r.event_id,
@@ -21,6 +22,7 @@ SELECT
   e.event_status_id,
   e.event_type_id,
   r.data_element_id,
+  rf.name AS data_element_name,
   r.value AS result_value,
   rf.decode_source_id,
   vd.decoded_value,
