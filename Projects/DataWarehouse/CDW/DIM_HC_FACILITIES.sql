@@ -16,7 +16,7 @@ end;
 CREATE TABLE dim_hc_facilities
 (
   facility_key    NUMBER(12) CONSTRAINT pk_dim_hc_facilities PRIMARY KEY,
-  facility_cd     CHAR(2 BYTE) CONSTRAINT uk_dim_hc_facilities_cd UNIQUE,
+  facility_cd     CHAR(3 BYTE) CONSTRAINT uk_dim_hc_facilities_cd UNIQUE,
   facility_name   VARCHAR2(64 BYTE) NOT NULL CONSTRAINT uk_dim_hc_facilities_nm UNIQUE,
   street_address  VARCHAR2(256 BYTE),
   city            VARCHAR2(32 BYTE),
@@ -35,8 +35,8 @@ ALTER TABLE dim_hc_facilities ADD CONSTRAINT uk_dim_hc_facilities_id UNIQUE(netw
 GRANT SELECT ON dim_hc_facilities TO PUBLIC;
 
 set define off
-INSERT INTO dim_hc_facilities(facility_key, facility_name, network, src_facility_id, source)
- VALUES(15, 'Health and Hospitals Corporation', 'CBN', 1, 'UD_MASTER.FACILITY');
+INSERT INTO dim_hc_facilities(facility_key, facility_cd, facility_name, network, src_facility_id, source)
+ VALUES(15, 'HHC', 'Health and Hospitals Corporation', 'CBN', 1, 'UD_MASTER.FACILITY');
 
 INSERT INTO dim_hc_facilities(facility_key, facility_cd, facility_name, street_address, city, state_cd, zip_cd, network, src_facility_id, source)
  VALUES(1, 'EL', 'Elmhurst Hospital Center', '79-01 Broadway', 'Elmhurst', 'NY', '11373', 'QHN', 1, 'UD_MASTER.FACILITY');
