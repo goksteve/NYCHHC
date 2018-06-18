@@ -1,5 +1,4 @@
 CREATE OR REPLACE  VIEW V_FACT_VISIT_METRICS
-
 AS
   WITH
   get_dates
@@ -7,8 +6,9 @@ AS
     (
       select 
        TO_NUMBER(TO_CHAR(TRUNC(ADD_MONTHS(SYSDATE, -1), 'MONTH'), 'yyyymmdd') || '000000') AS starting_cid,
-     -- TO_NUMBER(TO_CHAR(SYSDATE - 10 , 'yyyymmdd') || '000000') AS starting_cid,
-       TRUNC( ADD_MONTHS(SYSDATE, - 12), 'MONTH')   epic_start_dt,
+     --TO_NUMBER(TO_CHAR(SYSDATE - 10 , 'yyyymmdd') || '000000') AS starting_cid,
+     --TRUNC( ADD_MONTHS(SYSDATE, - 12), 'MONTH')   epic_start_dt,
+      DATE '2017-01-01' epic_start_dt,
       TRUNC(SYSDATE ) AS start_dt
       from dual
     ),

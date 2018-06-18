@@ -1,5 +1,6 @@
 CREATE OR REPLACE VIEW v_fact_visit_diagnoses AS
 SELECT
+ -- 15-Jun-2018, GK: Added visit_key to the script 
  -- 2-May-2018, GK: fixed diagnosis_dt_key to join with dim_date_time.date_num 
  -- 9-Mar-2018, SG: created
   ap.network,
