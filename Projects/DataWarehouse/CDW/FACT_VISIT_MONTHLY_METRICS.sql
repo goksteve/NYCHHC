@@ -1,10 +1,15 @@
-DROP TABLE FACT_VISIT_MONTHLY_METRICS CASCADE CONSTRAINTS;
+DROP TABLE fact_visit_monthly_metrics CASCADE CONSTRAINTS;
+
+DROP INDEX idx_fact_visit_monthly_metrics;
 
 CREATE TABLE fact_visit_monthly_metrics
 (
  network                    CHAR(3 BYTE) NULL,
+ visit_key                  NUMBER(12) NOT NULL,
  visit_id                   NUMBER(12) NOT NULL,
+ patient_key                NUMBER(20) NOT NULL,
  admission_dt_key           NUMBER(8) NULL,
+ visit_number               NUMBER(12),
  facility                   VARCHAR2(64 BYTE) NOT NULL,
  visit_type                 VARCHAR2(50 BYTE) NULL,
  patient_id                 VARCHAR2(256 CHAR) NULL,
@@ -37,7 +42,7 @@ CREATE TABLE fact_visit_monthly_metrics
  medicaid_ind               NUMBER NULL,
  medicare_ind               NUMBER NULL
 )
-NOLOGGING
+NOLOGGING 
 COMPRESS BASIC;
 
 CREATE UNIQUE INDEX idx_fact_visit_monthly_metrics

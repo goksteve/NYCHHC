@@ -1,9 +1,11 @@
 CREATE OR REPLACE VIEW v_fact_visit_metric_results AS
+
 -- 2018-April-10 SG OK GK OK --
 -- 2018-April-18 SG UPDATED BY SG 
 -- 2018-April-25 SG UPDATED BY SG 
 -- 2018-MAY-2 SG UPDATED added some ind BY SG 
 -- 2018-MAY-16 add pregnancy ind SG
+-- 2018-JUNE-16 add  p.flu_vaccine_ind, SG
   WITH crit_metric AS
    (
     SELECT --+ materialize 
@@ -122,6 +124,7 @@ SELECT --+ materialize
  v.facility_key,
  v.admission_dt_key,
  v.discharge_dt_key,
+ v.visit_number,
  v.patient_id,
  v.admission_dt,
  v.discharge_dt,
@@ -136,8 +139,15 @@ SELECT --+ materialize
  p.heart_failure_ind,
  p.hypertension_ind,
  p.kidney_diseases_ind,
- pregnancy_ind,
+ p.smoker_ind,
+ p.pregnancy_ind,
  pregnancy_onset_dt,
+ p.flu_vaccine_ind,
+ p.flu_vaccine_onset_dt, 
+ p.pna_vaccine_ind, 
+ p.pna_vaccine_onset_dt,
+ p.bronchitis_ind,	
+ p.bronchitis_onset_dt,		
  q.criterion_id,
  TRUNC(q.result_dt) AS result_dt,
  q.result_value,
@@ -191,47 +201,55 @@ SELECT --+ materialize
 final_calc_tb
 AS
 (
-  SELECT --+ materialize
- network,
- visit_id,
- patient_key,
- facility_key,
- admission_dt_key,
- discharge_dt_key,
- patient_id,
- admission_dt,
- discharge_dt,
- patient_age_at_admission,
- first_payer_key,
- initial_visit_type_id,
- final_visit_type_id,
- asthma_ind,
- bh_ind,
- breast_cancer_ind,
- diabetes_ind,
- heart_failure_ind,
- hypertension_ind,
- kidney_diseases_ind,
- pregnancy_ind,
- pregnancy_onset_dt,
- neph_final_result_dt,
- neph_final_orig_value,
- neph_final_calc_value,
- retinal_final_result_dt,
- retinal_final_orig_value,
- retinal_final_calc_value,
- a1c_final_result_dt,
- a1c_final_orig_value,
- a1c_final_calc_value,
- gluc_final_result_dt,
- gluc_final_orig_value,
- gluc_final_calc_value,
- ldl_final_result_dt,
- ldl_final_orig_value,
- ldl_final_calc_value,
- bp_final_result_dt,
- bp_final_orig_value,
- bp_final_calc_value
+    SELECT --+ materialize
+    network,
+    visit_id,
+    patient_key,
+    facility_key,
+    admission_dt_key,
+    discharge_dt_key,
+    visit_number,
+    patient_id,
+    admission_dt,
+    discharge_dt,
+    patient_age_at_admission,
+    first_payer_key,
+    initial_visit_type_id,
+    final_visit_type_id,
+    asthma_ind,
+    bh_ind,
+    breast_cancer_ind,
+    diabetes_ind,
+    heart_failure_ind,
+    hypertension_ind,
+    kidney_diseases_ind,
+    smoker_ind,
+    pregnancy_ind,
+    pregnancy_onset_dt,
+    flu_vaccine_ind,
+    flu_vaccine_onset_dt,
+    pna_vaccine_ind, 
+    pna_vaccine_onset_dt,
+    bronchitis_ind,	
+    bronchitis_onset_dt,	
+    neph_final_result_dt,
+    neph_final_orig_value,
+    neph_final_calc_value,
+    retinal_final_result_dt,
+    retinal_final_orig_value,
+    retinal_final_calc_value,
+    a1c_final_result_dt,
+    a1c_final_orig_value,
+    a1c_final_calc_value,
+    gluc_final_result_dt,
+    gluc_final_orig_value,
+    gluc_final_calc_value,
+    ldl_final_result_dt,
+    ldl_final_orig_value,
+    ldl_final_calc_value,
+    bp_final_result_dt,
+    bp_final_orig_value,
+    bp_final_calc_value
 FROM
  calc_result
   PIVOT
@@ -242,6 +260,7 @@ FROM
    IN (4 AS a1c, 23 AS gluc, 10 AS ldl, 13 AS bp, 66 as neph, 68 as retinal ))
 )
 
+
 SELECT --+  PARALLEL (48)
  a.network,
  a.visit_id,
@@ -249,6 +268,7 @@ SELECT --+  PARALLEL (48)
  a.facility_key,
  a.admission_dt_key,
  a.discharge_dt_key,
+ a.visit_number,
  a.patient_id,
  a.admission_dt,
  a.discharge_dt,
@@ -256,30 +276,37 @@ SELECT --+  PARALLEL (48)
  a.first_payer_key,
  a.initial_visit_type_id,
  a.final_visit_type_id,
- NVL(a.asthma_ind,0) asthma_ind,
- NVL(a.bh_ind,0) bh_ind,
- NVL(a.breast_cancer_ind,0) breast_cancer_ind,
- NVL(a.diabetes_ind,0) diabetes_ind,
- NVL(a.heart_failure_ind,0) heart_failure_ind,
+ NVL(a.asthma_ind, 0) asthma_ind,
+ NVL(a.bh_ind, 0) bh_ind,
+ NVL(a.breast_cancer_ind, 0) breast_cancer_ind,
+ NVL(a.diabetes_ind, 0) diabetes_ind,
+ NVL(a.heart_failure_ind, 0) heart_failure_ind,
  NVL(a.hypertension_ind, 0) hypertansion_ind,
- NVL(a.kidney_diseases_ind,0) kidney_diseases_ind,
- NVL( pregnancy_ind,0) AS pregnancy_ind,
+ NVL(a.kidney_diseases_ind, 0) kidney_diseases_ind,
+ NVL(smoker_ind, 0) AS smoker_ind,
+ NVL(pregnancy_ind, 0) AS pregnancy_ind,
  pregnancy_onset_dt,
- NVL( a.neph_final_calc_value,0) as nephropathy_screen_ind,
- NVL( a.retinal_final_calc_value,0) as retinal_dil_eye_exam_ind,
+ NVL(flu_vaccine_ind, 0) AS flu_vaccine_ind,
+ flu_vaccine_onset_dt,
+ NVL(pna_vaccine_ind, 0) AS pna_vaccine_ind,
+ pna_vaccine_onset_dt,
+ NVL(bronchitis_ind, 0) AS bronchitis_ind,
+ bronchitis_onset_dt,
+ NVL(a.neph_final_calc_value, 0) AS nephropathy_screen_ind,
+ NVL(a.retinal_final_calc_value, 0) AS retinal_dil_eye_exam_ind,
  a.a1c_final_result_dt,
- CASE WHEN a.a1c_final_calc_value > 50 THEN 0 ELSE a.a1c_final_calc_value END AS  a1c_final_calc_value,
+ CASE WHEN a.a1c_final_calc_value between  3.5 and 22  THEN a.a1c_final_calc_value  ELSE 0 END AS a1c_final_calc_value,
  a.gluc_final_result_dt,
- CASE WHEN a.gluc_final_calc_value > 999 THEN  0 ELSE a.gluc_final_calc_value END AS gluc_final_calc_value  ,
+ CASE WHEN a.gluc_final_calc_value > 999 THEN 0 ELSE a.gluc_final_calc_value END AS gluc_final_calc_value,
  a.ldl_final_result_dt,
- CASE WHEN  a.ldl_final_calc_value  > 999 THEN 0 ELSE  a.ldl_final_calc_value END  AS ldl_final_calc_value,
- NVL(b.bp_final_result_dt,  a.bp_final_result_dt) AS bp_final_result_dt,
+ CASE WHEN a.ldl_final_calc_value > 999 THEN 0 ELSE a.ldl_final_calc_value END AS ldl_final_calc_value,
+ NVL(b.bp_final_result_dt, a.bp_final_result_dt) AS bp_final_result_dt,
  NVL(b.bp_final_calc_value, a.bp_final_calc_value) AS bp_final_calc_value,
  b.bp_final_calc_systolic,
  b.bp_final_calc_diastolic
 FROM
  final_calc_tb a
-LEFT JOIN bp_final_tb b ON b.network = a.network AND b.visit_id = a.visit_id AND b.rnum_per_visit = 1
+ LEFT JOIN bp_final_tb b ON b.network = a.network AND b.visit_id = a.visit_id AND b.rnum_per_visit = 1
 WHERE
  NVL(a.asthma_ind, 0) <> 0
  OR NVL(a.bh_ind, 0) <> 0
@@ -288,9 +315,16 @@ WHERE
  OR NVL(a.heart_failure_ind, 0) <> 0
  OR NVL(a.hypertension_ind, 0) <> 0
  OR NVL(a.kidney_diseases_ind, 0) <> 0
+ OR NVL(smoker_ind, 0) <> 0
+ OR NVL(pregnancy_ind, 0) <> 0
+ OR NVL(flu_vaccine_ind, 0) <> 0
+ OR NVL(pna_vaccine_ind, 0) <> 0
+ OR NVL(bronchitis_ind, 0) <> 0
+ OR NVL(a.neph_final_calc_value, 0) <> 0
+ OR NVL(a.retinal_final_calc_value, 0) <> 0
  OR a.a1c_final_orig_value IS NOT NULL
  OR a.gluc_final_orig_value IS NOT NULL
  OR a.ldl_final_orig_value IS NOT NULL
  OR a.neph_final_orig_value IS NOT NULL
-OR a.retinal_final_orig_value IS NOT NULL
-OR NVL(b.bp_final_calc_value, a.bp_final_calc_value) IS NOT NULL
+ OR a.retinal_final_orig_value IS NOT NULL
+ OR NVL(b.bp_final_calc_value, a.bp_final_calc_value) IS NOT NULL

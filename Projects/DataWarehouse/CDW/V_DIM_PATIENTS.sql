@@ -35,6 +35,7 @@ SELECT
   p.confidential_flag,
   NVL(p.home_phone, 'NA') AS home_phone,
   NVL(p.day_phone, 'NA') AS day_phone,
+  NVL(b.cell_phone, 'N/A') AS cell_phone,
   p.smoker_flag,
   p.current_location,
   NVL(p.sec_lang_name, 'NA') AS sec_lang_name,
@@ -49,6 +50,7 @@ SELECT
   p.dependent_locality,
   p.head_of_house_patient_id,
   'QCPR' AS source,
+  h.network_key,
   CASE
     WHEN d.patient_id IS NULL THEN 'NEW'
     WHEN NVL(d.name, '$$N/A$$') <> p.name THEN 'NAME'
@@ -102,8 +104,27 @@ LEFT JOIN patient_care_provider pcp
  AND pcp.patient_care_provider_number = 1 AND pcp.relationship_id = 1
 LEFT JOIN emp_provider mep
   ON mep.network = pcp.network AND mep.emp_provider_id = pcp.emp_provider_id
-LEFT JOIN dim_patients d
-  ON d.patient_id = p.patient_id AND d.network = p.network AND d.current_flag = 1   
+LEFT JOIN dim_patients d  ON d.patient_id = p.patient_id AND d.network = p.network AND d.current_flag = 1   
+LEFT JOIN
+ (
+    SELECT
+    a.network,
+    a.patient_id,
+    LISTAGG(VALUE, ' | ') WITHIN GROUP (ORDER BY item_number) OVER (PARTITION BY a.network, patient_id)
+    AS cell_phone
+    FROM
+    patient_generic_data a
+    JOIN 
+      (
+        SELECT
+        network, patient_generic_field_id
+        FROM
+        patient_generic_field
+        WHERE
+        REGEXP_LIKE(UPPER(name), 'CELL')
+       ) b     ON a.patient_generic_field_id = b.patient_generic_field_id AND a.network = b.network
+   ) b    ON b.network = p.network AND b.patient_id = p.patient_id
+ JOIN dim_hc_networks h ON h.network = p.network  
 WHERE LOWER(p.name) NOT LIKE 'test,%' AND LOWER(p.name) NOT LIKE 'testing,%' AND LOWER(p.name) NOT LIKE '%,test' AND LOWER(p.name) NOT LIKE 'testggg,%' 
 AND LOWER(p.name) NOT LIKE '%,test%ccd' AND LOWER(p.name) NOT LIKE 'test%ccd,%' AND LOWER(p.name) <> 'emergency,testone' AND LOWER(p.name) <> 'testtwo,testtwo';
 
@@ -131,7 +152,7 @@ BEGIN
     race_id, race_desc, religion_id, religion_desc, free_text_religion,
     free_text_occupation, free_text_employer, 
     mother_patient_id, collapsed_into_patient_id, social_security_number,
-    lifecare_visit_id, confidential_flag, home_phone, day_phone,
+    lifecare_visit_id, confidential_flag, home_phone, day_phone,cell_phone,
     smoker_flag, current_location, sec_lang_name, 
     addr_string, block_code, 
     last_edit_time, county, sub_building_name, building_name, building_nbr,
@@ -140,7 +161,8 @@ BEGIN
   )
   VALUES
   (
-    seq_dim_patients.NEXTVAL, 
+     ( :new.patient_id  * 50000 +  (NVL(:new.archive_number, 0) + 1) ) * 1000 +  :new.network_key,
+      -- seq_dim_patients.NEXTVAL, 
     :new.network, :new.patient_id, NVL(:new.archive_number, 0) + 1, :new.name,
     :new.pcp_provider_id, :new.pcp_provider_name, :new.title_id,
     :new.medical_record_number, :new.sex, :new.birthdate, :new.date_of_death,
@@ -149,7 +171,7 @@ BEGIN
     :new.race_id, :new.race_desc, :new.religion_id, :new.religion_desc, :new.free_text_religion,
     :new.free_text_occupation, :new.free_text_employer,
     :new.mother_patient_id, :new.collapsed_into_patient_id, :new.social_security_number,
-    :new.lifecare_visit_id, :new.confidential_flag, :new.home_phone, :new.day_phone,
+    :new.lifecare_visit_id, :new.confidential_flag, :new.home_phone, :new.day_phone,:new.cell_phone,
     :new.smoker_flag, :new.current_location, :new.sec_lang_name,
     :new.addr_string, :new.block_code,
     :new.last_edit_time, :new.county, :new.sub_building_name, :new.building_name, :new.building_nbr,

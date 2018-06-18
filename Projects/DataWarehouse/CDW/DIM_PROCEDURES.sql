@@ -39,7 +39,7 @@ CREATE OR REPLACE TRIGGER bir_dim_procedures
 BEFORE INSERT ON dim_procedures FOR EACH ROW
 BEGIN
   IF :new.proc_key IS NULL THEN
-    :new.proc_key := seq_dim_procedure_key.NEXTVAL;
+     :new.proc_key := seq_dim_procedure_key.NEXTVAL;
   END IF;
 END;
 /

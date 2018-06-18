@@ -6,33 +6,38 @@ AS
     (
      SELECT 
   --   TRUNC(ADD_MONTHS(SYSDATE, - 24), 'MONTH')start_dt,
-      TRUNC(ADD_MONTHS(SYSDATE, -12 ), 'MONTH')start_dt
+       TRUNC(ADD_MONTHS(SYSDATE, -12 ), 'MONTH')start_dt
  from dual
     ) , 
   meta_diag AS
      (
 
-     SELECT --+ MATERIALIZE
-      DISTINCT cnd.VALUE AS VALUE,
-      CASE WHEN cr.criterion_id IN (1,6,37,50,51,52,58,60,66,68) THEN 'diabetes'
-          WHEN cr.criterion_id IN (21,48,49,53,57,59) THEN 'asthma'
-          WHEN cr.criterion_id IN (7,9,31,32) THEN 'bh'
-          WHEN cr.criterion_id IN (17, 18) THEN 'breast_cancer'
-          WHEN cr.criterion_id IN (27) THEN 'cervical_cancer'
-          WHEN cr.criterion_id IN (30,39,70,71) THEN 'heart_failure'
-          WHEN cr.criterion_id IN (3, 36, 38) THEN 'hypertension'
-          WHEN cr.criterion_id IN (63, 65) THEN 'kidney_diseases'
-          WHEN cr.criterion_id IN (73) THEN 'pregnancy'
-          WHEN cr.criterion_id IN (66) THEN 'nephropathy_screen'
-          WHEN cr.criterion_id IN (68) THEN 'retinal_dil_eye_exam'
-      END AS diag_type_ind,
-        cr.criterion_id diag_type_id,
-        cr.criterion_cd,
-        include_exclude_ind
-    FROM
-      meta_criteria cr JOIN meta_conditions cnd ON cnd.criterion_id = cr.criterion_id
+  SELECT --+ materialize
+   DISTINCT cnd.VALUE AS VALUE,
+  CASE
+    WHEN cr.criterion_id IN (1,6,37,50,51,52,58,60) THEN  'diabetes'
+    WHEN cr.criterion_id IN (21,48,49,53,57,59) THEN      'asthma'
+    WHEN cr.criterion_id IN (7,9,31,32) THEN              'bh'
+    WHEN cr.criterion_id IN (17,18) THEN                  'breast_cancer'
+    WHEN cr.criterion_id IN (27) THEN                     'cervical_cancer'
+    WHEN cr.criterion_id IN (30,39,70,71) THEN            'heart_failure'
+    WHEN cr.criterion_id IN (3,36,38) THEN                'hypertension'
+    WHEN cr.criterion_id IN (63, 65) THEN                 'kidney_diseases'
+    WHEN cr.criterion_id IN (73) THEN                     'pregnancy'
+    WHEN cr.criterion_id IN(99) then                      'influenza'
+    when cr.criterion_id IN(100) then                     'pneumoniae'
+    when cr.criterion_id IN(11,19,20) then                'bronchitis'
+   ELSE
+   'N/A'
+  END   AS diag_type_ind,
+    --  cr.criterion_id diag_type_id,
+     -- cr.criterion_cd,
+  include_exclude_ind
+  FROM
+   meta_criteria cr JOIN meta_conditions cnd ON cnd.criterion_id = cr.criterion_id
   WHERE
-      cr.criterion_id IN (1,3,6,7,9,11,17,18,21,27,30,31,32,36,37,38,39,48,49,50,51,52,53,57,58,59,60,63,65,70,71,73) --and INCLUDE_EXCLUDE_IND  = 'I'
+   cr.criterion_cd like 'DIAGNOSES%' -- IN (1,3,6,7,9,11,17,18,19,20,21,27,30,31,32,36,37,38,39,48,49,50,51,52,53,57,58,59,60,63,65,70,71,73,99,100) 
+  -- and cnd.INCLUDE_EXCLUDE_IND  = 'I'
   ),
    diag_pat AS
     (
@@ -60,17 +65,12 @@ AS
       p.sex,
       p.birthdate,
       ROUND(MONTHS_BETWEEN(SYSDATE, p.birthdate) / 12, 1) AS age,
-    --  'ICD-10' AS coding_scheme,
       pdx.dx_id,
-    --  pdx.primary_dx_yn AS is_primary_problem,
-   --   CASE WHEN pdx.primary_dx_yn = 'Y' THEN 1 ELSE 0 END AS problem_status_id,
-    --  pdx.comments AS problem_comments,
       edg.current_icd10_list AS icd_code,
       edg.dx_name AS diagnosis_name,
       pdx.line AS problem_nbr,
-    --  TO_NUMBER(TO_CHAR(pdx.contact_date, 'YYYYMMDD')) AS diagnosis_dt_key,
       pdx.contact_date AS onset_date,
-      'Y' epic_flag
+      v.epic_flag
      FROM
      get_dates
      CROSS JOIN ptfinal.s_visit v
@@ -79,12 +79,11 @@ AS
       LEFT JOIN epic_clarity.pat_enc_dx pdx ON v.visit_id = pdx.pat_enc_csn_id
       LEFT OUTER JOIN epic_clarity.clarity_edg edg ON pdx.dx_id = edg.dx_id
      WHERE
-      v.epic_flag = 'Y' AND v.admission_date_time >= start_dt  -- LAST_DAY(ADD_MONTHS(SYSDATE, -1))
+      v.epic_flag = 'Y' AND v.admission_date_time >= start_dt  AND v.admission_date_time < TRUNC(sysdate)-- LAST_DAY(ADD_MONTHS(SYSDATE, -1))
    ),
     pat_inc_exc AS
     (
-      SELECT diag_type_ind, include_exclude_ind, d.network,
-      d.patient_id, d.visit_id
+      SELECT  d.network, d.patient_id, d.visit_id, diag_type_ind
       FROM  diag_pat d 
       LEFT JOIN meta_diag m ON d.icd_code = m.VALUE
       WHERE
@@ -97,7 +96,19 @@ AS
                                             WHERE
                                             m1.include_exclude_ind = 'E'
                                             )
-      ),
+     UNION ALL
+        SELECT network,patient_id,d.visit_id,'influenza' AS diag_type_ind
+        FROM diag_pat d 
+        WHERE  icd_code = 'Z23'
+        AND LOWER(diagnosis_name) LIKE '%influenza%'  
+     UNION ALL
+      SELECT network,patient_id,d.visit_id,'pneumoniae' AS diag_type_ind
+      FROM diag_pat d 
+      WHERE  icd_code = 'Z23'
+      AND REGEXP_LIKE (diagnosis_name, 'pneumoniae|pneumococcus ','i')
+    )
+
+,
 ldl AS
 (
   SELECT
@@ -290,6 +301,10 @@ AS
     kidney_diseases_ind,
     pregnancy_ind,
     pregnancy_onset_dt,
+    flu_vaccine_ind,
+    flu_vaccine_onset_dt,
+    pna_vaccine_ind,
+    pna_vaccine_onset_dt,
     nephropathy_screen_ind,
     retinal_eye_exam_ind,
     ldl_order_time,
@@ -355,8 +370,12 @@ AS
               'hypertension' AS hypertension,
               'kidney_diseases' AS kidney_diseases,
               'pregnancy' AS pregnancy,
+              'influenza' AS  flu_vaccine ,
+              'pneumoniae' AS pna_vaccine ,
+              'bronchitis' AS bronchitis,
               'nephropathy_screen' AS nephropathy_screen,
               'retinal_dil_eye_exam' AS retinal_eye_exam
+
               )
   )
          )
@@ -391,7 +410,11 @@ SELECT /*+ PARALLEL (32) */
   CASE WHEN kidney_diseases_ind > 0 THEN 1 ELSE 0 END AS kidney_diseases_ind,
   CASE WHEN sm.SMOKER_IND > 0 then 1 ELSE 0 END AS SMOKER_IND,
   CASE WHEN pregnancy_ind > 0 THEN 1 ELSE 0 END AS pregnancy_ind,
- pregnancy_onset_dt,
+  pregnancy_onset_dt,
+  CASE WHEN  flu_vaccine_ind  > 0 THEN 1 ELSE 0 END AS flu_vaccine_ind,
+  flu_vaccine_onset_dt,
+  CASE WHEN  pna_vaccine_ind  > 0 THEN 1 ELSE 0 END AS pna_vaccine_ind,
+  pna_vaccine_onset_dt,
   CASE WHEN nephropathy_screen_ind > 0 THEN 1  ELSE 0 END AS  nephropathy_screen_ind,
   CASE WHEN retinal_eye_exam_ind  > 0 THEN 1 ELSE 0 END AS retinal_eye_exam_ind,
  ldl_order_time,
