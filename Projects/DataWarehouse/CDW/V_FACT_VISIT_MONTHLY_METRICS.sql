@@ -66,5 +66,5 @@ SELECT
      OR TRIM(UPPER(p.payer_name)) LIKE '%MEDICARE%')) med
    ON med.payer_key = v.first_payer_key
  WHERE
- a.admission_dt >= TRUNC(ADD_MONTHS(SYSDATE, -2), 'MONTH') --01 Apr 2018 to 30-Apr-2018
+ a.admission_dt >=  DATE '2017-01-01'
 AND  a.admission_dt < TRUNC(ADD_MONTHS(SYSDATE, -1), 'MONTH');
