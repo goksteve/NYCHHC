@@ -1,6 +1,6 @@
 DROP TABLE stg_visit_metrics_epic;
 
-CREATE TABLE STG_VISIT_METRICS_EPIC
+CREATE TABLE stg_visit_metrics_epic
 (
  network                    VARCHAR2(4 BYTE),
  facility_key               NUMBER,
@@ -31,6 +31,10 @@ CREATE TABLE STG_VISIT_METRICS_EPIC
  smoker_ind                 NUMBER(3),
  pregnancy_ind              NUMBER(3),
  pregnancy_onset_dt         DATE,
+ flu_vaccine_ind            NUMBER(3),
+ flu_vaccine_onset_dt       DATE,
+ pna_vaccine_ind            NUMBER(3),
+ pna_vaccine_onset_dt       DATE,
  nephropathy_screen_ind     NUMBER(3),
  retinal_eye_exam_ind       NUMBER(3),
  ldl_order_time             DATE,

@@ -19,9 +19,7 @@ CREATE OR REPLACE VIEW V_FACT_PATIENT_METRIC_DIAG AS
    ELSE
    'N/A'
   END   AS diag_type_ind,
-      cr.criterion_id diag_type_id,
-      cr.criterion_cd,
-     include_exclude_ind
+       include_exclude_ind
   FROM
    meta_criteria cr JOIN meta_conditions cnd ON cnd.criterion_id = cr.criterion_id
   WHERE
@@ -40,7 +38,7 @@ AS
      dim_patients
     WHERE
      current_flag = 1 AND smoker_flag IS NOT NULL
-    AND network = SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
+ --   AND network = SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
   ),
 
 pat_flu_pna
@@ -52,8 +50,7 @@ AS(
       WHERE
       problem_status = 'active'    AND s.diag_code = 'Z23'
       AND LOWER(problem_comments) LIKE '%influenza%'  
-      AND diag_coding_scheme = 'ICD-10'
-      AND s.network = SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
+       --   AND s.network = SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
     UNION ALL
       SELECT network,patient_id,onset_date,'pneumoniae' AS diag_type_ind,
       ROW_NUMBER() OVER(PARTITION BY network, patient_id ORDER BY s.onset_date DESC) cnt
@@ -62,8 +59,7 @@ AS(
       WHERE
       problem_status = 'active'    AND s.diag_code = 'Z23'
       AND REGEXP_LIKE (problem_comments, 'pneumoniae|pneumococcus ','i')
-      AND diag_coding_scheme = 'ICD-10'
-      AND s.network = SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
+        --  AND s.network = SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
   )
 ,
 rslt_pat
@@ -84,7 +80,7 @@ AS
     fact_patient_diagnoses s JOIN meta_diag d ON s.diag_code = d.VALUE AND d.diag_type_ind <> 'N/A'
     WHERE
     problem_status = 'active'
-   AND s.network = SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
+--   AND s.network = SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
   )
   WHERE cnt = 1
 )
