@@ -9,6 +9,7 @@ CREATE TABLE fact_visit_metric_results
  facility_key               NUMBER(12),
  admission_dt_key           NUMBER(8),
  discharge_dt_key           NUMBER(8),
+ visit_number              NUMBER(12),
  patient_id                 NUMBER(12) NOT NULL,
  admission_dt               DATE,
  discharge_dt               DATE,
@@ -21,10 +22,17 @@ CREATE TABLE fact_visit_metric_results
  breast_cancer_ind          NUMBER(12) NULL,
  diabetes_ind               NUMBER(2) NULL,
  heart_failure_ind          NUMBER(2) NULL,
- hypertansion_ind           NUMBER(2) NULL,
+ hypertension_ind           NUMBER(2) NULL,
  kidney_diseases_ind        NUMBER(2) NULL,
+ smoker_ind                 NUMBER(2) NULL,
  pregnancy_ind              NUMBER(2) NULL,
  pregnancy_onset_dt         DATE,
+ flu_vaccine_ind            NUMBER(2) NULL,
+ flu_vaccine_onset_dt       DATE,
+ pna_vaccine_ind            NUMBER(2) NULL,
+ pna_vaccine_onset_dt       DATE,
+ bronchitis_ind             NUMBER(2) NULL,
+ bronchitis_onset_dt        DATE,
  retinal_dil_eye_exam_ind   NUMBER(2) NULL,
  nephropathy_screen_ind     NUMBER(2) NULL,
  a1c_final_result_dt        DATE NULL,
@@ -37,6 +45,7 @@ CREATE TABLE fact_visit_metric_results
  bp_final_calc_value        VARCHAR2(255 BYTE) NULL,
  bp_final_calc_systolic     NUMBER(4) NULL,
  bp_final_calc_diastolic    NUMBER(4) NULL,
+ source                     VARCHAR2(6) DEFAULT 'QCPR',
  load_dt                    DATE DEFAULT SYSDATE
 )
 COMPRESS BASIC
@@ -65,3 +74,5 @@ ALTER TABLE fact_visit_metric_results
      USING INDEX pk_fact_visit_metric_results;
 
 GRANT SELECT ON fact_visit_metric_results TO PUBLIC;
+CREATE OR REPLACE   PUBLIC SYNONYM fact_visit_metric_results FOR cdw.fact_visit_metric_results;
+/
