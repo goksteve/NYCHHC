@@ -2,11 +2,11 @@ DROP TABLE dsrip_report_tr044;
 
 CREATE TABLE dsrip_report_tr044
 (
-  report_dt                 DATE,
+  report_dt                 DATE NOT NULL,
   network                   CHAR(3 BYTE) NOT NULL,
-  facility_name             VARCHAR2(100 BYTE),  
+  facility_name             VARCHAR2(100 BYTE)  NOT NULL,  
   patient_id                NUMBER(12) NOT NULL,
-  name                      VARCHAR2(150 BYTE),
+  name                      VARCHAR2(150 BYTE) NOT NULL,
   birthdate                 DATE,
   mrn                       VARCHAR2(512 BYTE),
   visit_id                  NUMBER(12)   NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE dsrip_report_tr044
   cardio_flag               VARCHAR2(1 BYTE),
   non_pcp_flag              VARCHAR2(1 BYTE),
   load_dt                   DATE DEFAULT SYSDATE NOT NULL,
-  CONSTRAINT pk_tr044_report PRIMARY KEY(network, patient_id, visit_id)
+  CONSTRAINT pk_tr044_report PRIMARY KEY(report_dt, network, patient_id, visit_id)
 );
 
 GRANT SELECT ON dsrip_report_tr044 TO PUBLIC;

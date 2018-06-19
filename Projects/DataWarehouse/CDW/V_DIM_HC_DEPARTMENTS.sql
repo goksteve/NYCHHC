@@ -1,6 +1,7 @@
 CREATE OR REPLACE VIEW v_dim_hc_departments AS
 WITH
- -- 31-JAN-2018, OK: created
+  -- 19-JUN-2018, SG, GK: Fixed speciality_code bug, where regexp_substr is failing to get the values.
+  -- 31-JAN-2018, OK: created
   loc AS
   (
     SELECT
@@ -26,15 +27,36 @@ WITH
     SELECT
       ar.network, ar.location_id, f.facility_key, 
       f.facility_name AS facility, ar.division, ar.department, ar.zone, ar.is_bed,
+--      CASE
+--        WHEN(division LIKE '%Interface%' OR division LIKE '%I/F%') AND LOWER(department) NOT LIKE 'shell%'
+--          THEN TO_NUMBER(REGEXP_SUBSTR(department, '([0-9]+) *$', 1, 1, 'c', 1))
+--      END specialty_code
       CASE
-        WHEN(division LIKE '%Interface%' OR division LIKE '%I/F%') AND LOWER(department) NOT LIKE 'shell%'
-          THEN TO_NUMBER(REGEXP_SUBSTR(department, '([0-9]+) *$', 1, 1, 'c', 1))
-      END specialty_code
+      WHEN(division LIKE '%Interface%' OR division LIKE '%I/F%') AND LOWER(department) NOT LIKE 'shell%'
+      THEN
+        CASE 
+        WHEN  LENGTH(TRIM(SUBSTR(TRIM(REGEXP_REPLACE(department, '([^[:digit:] ])')),-3,3))) = 3        
+        THEN  TO_NUMBER(TRIM(SUBSTR(TRIM(REGEXP_REPLACE(department, '([^[:digit:] ])', '')),-3,3)))
+        ELSE
+          CASE 
+            WHEN  LENGTH(TRIM(SUBSTR(TRIM(REGEXP_REPLACE(department, '([^[:digit:] ])', '')),1,3))) = 3
+            THEN  TO_NUMBER(TRIM(SUBSTR(TRIM(REGEXP_REPLACE(department, '([^[:digit:] ])', '')),1,3)))
+            ELSE NULL
+          END
+        END 
+      END AS specialty_code
     FROM area ar
     JOIN dim_hc_facilities f ON f.network = ar.network AND f.facility_id = ar.facility_id
   )
 SELECT
-  dep.*,
+  dep.network,
+  dep.location_id,
+  dep.facility_key,
+  dep.division,
+  dep.department,
+  dep.zone,
+  dep.is_bed,
+  dep.specialty_code,
   NVL(c.description, 'N/A') AS specialty,
   NVL(c.service, 'N/A') service,
   NVL(s.service_type, 'N/A') service_type,
