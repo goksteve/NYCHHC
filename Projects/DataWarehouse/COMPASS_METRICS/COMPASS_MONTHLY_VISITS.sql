@@ -1,0 +1,56 @@
+DROP TABLE compass_monthly_visits;
+
+CREATE TABLE compass_monthly_visits
+(
+  network                   VARCHAR2(4 BYTE),
+  visit_id                  NUMBER(12),
+  admission_dt_key          NUMBER(8),
+  facility                  VARCHAR2(100 BYTE),
+  visit_type                VARCHAR2(254 BYTE),
+  medicaid_ind              NUMBER,
+  medicare_ind              NUMBER,
+  patient_id                VARCHAR2(1024 CHAR),
+  mrn                       VARCHAR2(512 CHAR),
+  patient_name              VARCHAR2(302 BYTE),
+  sex                       VARCHAR2(8 BYTE),
+  birthdate                 DATE,
+  patient_age_at_admission  NUMBER(3),
+  admission_dt              DATE,
+  discharge_dt              DATE,
+  los                       NUMBER,
+  asthma_ind                NUMBER(2),
+  bh_ind                    NUMBER(2),
+  breast_cancer_ind         NUMBER,
+  diabetes_ind              NUMBER(2),
+  heart_failure_ind         NUMBER(2),
+  hypertension_ind          NUMBER,
+  kidney_diseases_ind       NUMBER(2),
+  smoker_ind                NUMBER,
+  pregnancy_ind             NUMBER(2),
+  pregnancy_onset_dt        DATE,
+  nephropathy_screen_ind    NUMBER(2),
+  retinal_dil_eye_exam_ind  NUMBER(2),
+  a1c_final_calc_value      NUMBER(6,2),
+  gluc_final_calc_value     NUMBER(6,2),
+  ldl_final_calc_value      NUMBER(6,2),
+  bp_final_calc_value       VARCHAR2(324 BYTE),
+  bp_final_calc_systolic    NUMBER,
+  bp_final_calc_diastolic   NUMBER,
+  readmission_ind           NUMBER,
+  soarian_medicaid_flag     NUMBER,
+  soarian_medicare_flag     NUMBER,
+  insured_flag              NUMBER,
+  soarian_payer             VARCHAR2(100 CHAR),
+  soarian_payer_group       VARCHAR2(100 CHAR),
+  pcp_ind                   NUMBER,
+  pcp_prov_ind              NUMBER,
+  pcp_alt_prov_ind          NUMBER,
+  pcp_clinic_code           NUMBER,
+  specialty                 VARCHAR2(64 BYTE),
+  service                   VARCHAR2(254 CHAR),
+  service_type              VARCHAR2(254 CHAR)
+);
+
+GRANT SELECT ON compass_monthly_visits TO PUBLIC;
+
+CREATE PUBLIC SYNONYM compass_monthly_visits FOR cdw.compass_monthly_visits;
