@@ -1,6 +1,6 @@
 CREATE OR REPLACE VIEW cdw.v_compass_monthly_visits
 AS
-SELECT --+ materialize
+SELECT --+ parallel(32)
   a.network,
   a.visit_id,
   a.admission_dt_key,
@@ -72,7 +72,7 @@ LEFT JOIN pcp_visits_all pcp
  AND a.visit_id = pcp.pcp_visit_id
  AND a.source = pcp.source
 UNION ALL
-SELECT --+ materialize
+SELECT 
   b.network,
   b.visit_id,
   b.admission_dt_key,

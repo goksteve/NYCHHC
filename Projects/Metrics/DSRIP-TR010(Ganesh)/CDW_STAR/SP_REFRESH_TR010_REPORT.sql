@@ -27,8 +27,8 @@ BEGIN
   etl.add_data
   (
     p_operation => 'INSERT /*+ APPEND PARALLEL(32) */',
-    p_tgt => 'DSRIP_REPORT_TR016',
-    p_src => 'V_DSRIP_REPORT_TR016',
+    p_tgt => 'DSRIP_REPORT_TR010',
+    p_src => 'V_DSRIP_REPORT_TR010',
     p_commit_at => -1
   );
   

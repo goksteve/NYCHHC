@@ -232,8 +232,8 @@ SELECT
   a.facility_name,
   a.patient_id,
   a.visit_id,	
-  ptnt.name patient_name,
-  nvl(stg.second_mrn, ptnt.medical_record_number) mrn,
+  ptnt.name AS patient_name,
+  nvl(stg.second_mrn, ptnt.medical_record_number) AS mrn,
   ptnt.apt_suite,		
   ptnt.street_address,	
   ptnt.city,			
@@ -243,8 +243,8 @@ SELECT
   ptnt.home_phone,
   ptnt.cell_phone,
   ptnt.birthdate, 
-  FLOOR((ADD_MONTHS(TRUNC(SYSDATE,'year'),12)-1 - ptnt.birthdate)/365) age,
-  ptnt.pcp_provider_id pcp_id,
+  FLOOR((ADD_MONTHS(TRUNC(SYSDATE,'year'),12)-1 - ptnt.birthdate)/365) AS age,
+  ptnt.pcp_provider_id AS pcp_id,
   ptnt.pcp_provider_name pcp_name,
   f.visit_id last_pcp_visit_id,
   f.admission_dt last_pcp_visit_dt,
@@ -322,10 +322,4 @@ WHERE a.ptnt_prb_rnum=1
     (e.asthma_cntrlr_med_cnt+d.asthma_other_med_cnt)>=4
     OR
     med_luk_antbdy_dspns_evnt_cnt>=4
-  );  
-  
-  
-  
-select report_dt, network, patient_id, count(1) from tst_gk_tr10_star_schema
-having count(1) > 1
-group by  report_dt, network, patient_id
+  ); 
