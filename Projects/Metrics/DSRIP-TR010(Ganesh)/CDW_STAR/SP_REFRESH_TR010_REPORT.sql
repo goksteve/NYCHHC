@@ -3,7 +3,8 @@ AS
   d_report_mon  DATE;
   n_cnt         PLS_INTEGER;
 BEGIN
- xl.open_log('DSRIP_REPORT_TR010', 'Refreshing dsrip_report_tr010', TRUE);
+ 
+ xl.open_log('PREPARE_DSRIP_REPORT_TR010', 'User '||SYS_CONTEXT('USERENV','OS_USER')||': Preparing data of the DSRIP report TR010', TRUE);
 
  EXECUTE IMMEDIATE 'ALTER SESSION ENABLE PARALLEL DML';
 

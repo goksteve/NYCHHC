@@ -1,0 +1,47 @@
+EXEC dbm.drop_tables('DSRIP_REPORT_TR018');
+
+CREATE TABLE DSRIP_REPORT_TR018
+(
+  report_dt               DATE NOT NULL,  
+  NETWORK                 CHAR(3 BYTE)          NOT NULL,
+  FACILITY_NAME           VARCHAR2(64 BYTE)     NOT NULL,
+  PATIENT_ID              NUMBER(12)            NOT NULL,
+  PATIENT_NAME            VARCHAR2(100 BYTE),
+  MRN                     VARCHAR2(512 BYTE),
+  BIRTHDATE               DATE,
+  APT_SUITE               VARCHAR2(1024 BYTE),
+  STREET_ADDRESS          VARCHAR2(1024 BYTE),
+  CITY                    VARCHAR2(50 BYTE),
+  STATE                   VARCHAR2(50 BYTE),
+  COUNTRY                 VARCHAR2(50 BYTE),
+  MAILING_CODE            VARCHAR2(50 BYTE),
+  HOME_PHONE              VARCHAR2(50 BYTE),
+  CELL_PHONE              VARCHAR2(50 BYTE),
+  AGE                     NUMBER,
+  VISIT_TYPE_NAME         VARCHAR2(50 BYTE),
+  VISIT_ID                NUMBER(12),
+  CLINIC_CODE             CHAR(3 BYTE),
+  CLINIC_CODE_SERVICE     VARCHAR2(64 BYTE),
+  CLINIC_CODE_DESC        VARCHAR2(64 BYTE),
+  ADMISSION_DT            DATE,
+  DISCHARGE_DT            DATE,
+  PAYER_GROUP             VARCHAR2(2048 BYTE),
+  PAYER_NAME              VARCHAR2(150 BYTE),
+  AGE_18_59               CHAR(1 CHAR),
+  AGE_60_85               CHAR(1 CHAR),
+  DIABETIC                CHAR(1 CHAR),
+  DIABETES_DIAG_CODE        VARCHAR2(100 BYTE),
+  DIABETES_ONSET_DATE     DATE,
+  HTN_DIAG_CODE             VARCHAR2(100 BYTE)    NOT NULL,
+  HTN_ONSET_DATE          DATE,
+  BP_READING_TIME         DATE,
+  SYSTOLIC_BP             NUMBER,
+  DIASTOLIC_BP            NUMBER,
+  NUMERATOR_FLAG1         CHAR(1 CHAR),
+  NUMERATOR_FLAG2         CHAR(1 CHAR),
+  NUMERATOR_FLAG3         CHAR(1 CHAR),
+  CONSTRAINT pk_dsrip_report_tr018 PRIMARY KEY(report_dt, network, patient_id) USING INDEX COMPRESS 
+)
+COMPRESS BASIC;
+
+GRANT SELECT ON dsrip_report_tr018 TO PUBLIC;

@@ -1,11 +1,13 @@
-CREATE OR REPLACE VIEW v_dsrip_report_tr013_14
+CREATE OR REPLACE VIEW v_dsrip_report_tr013_014
 AS
- -- 17-Apr-2018, GK:Fixed duplicate records caused my error join on mdm table
 WITH 
+ -- 21-JUN-2018, GK:renamed report_period_start_d to report_dt
+ -- 17-Apr-2018, GK:Fixed duplicate records caused my error join on mdm table
+
   dt AS 
   (
     SELECT --+ materialize
-      TRUNC(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), SYSDATE), 'MONTH') AS report_period_start_dt,
+      TRUNC(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), SYSDATE), 'MONTH') AS report_dt,
       TRUNC(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), SYSDATE), 'YEAR') AS msrmnt_yr,
       ADD_MONTHS(TRUNC(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), SYSDATE), 'MONTH'), -24) begin_dt,
       TRUNC(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), SYSDATE), 'MONTH') -1 end_dt
@@ -15,7 +17,7 @@ WITH
   (
     SELECT --+ parallel(32)
       a.network,
-      a.report_period_start_dt,
+      a.report_dt,
       a.begin_dt,
       a.end_dt,  
       a.patient_id,
@@ -41,7 +43,7 @@ WITH
     (       
       SELECT --+ materialize
         DISTINCT vst.network,
-        dt.report_period_start_dt,
+        dt.report_dt,
         dt.begin_dt,
         dt.end_dt,
         vst_prb.patient_id,
@@ -141,7 +143,7 @@ WITH
   (
     SELECT --+ materialize
       network,
-      report_period_start_dt,
+      report_dt,
       begin_dt,
       end_dt,
       patient_id,
@@ -157,7 +159,7 @@ WITH
           rx.drug_name derived_product_name,
           rx.rx_quantity,
           rx.rx_dc_dt rx_dc_time,
-          dt.report_period_start_dt,
+          dt.report_dt,
           dt.begin_dt,
           dt.end_dt
         FROM dt
@@ -303,7 +305,7 @@ WITH
   )
 SELECT --+ parallel(32) 
   DISTINCT
-  c.report_period_start_dt,
+  c.report_dt,
   c.begin_dt,
   c.end_dt,
   a.network,
@@ -321,6 +323,7 @@ SELECT --+ parallel(32)
   ptnt.country,			
   ptnt.mailing_code,	
   ptnt.home_phone,
+  ptnt.cell_phone,
   ptnt.birthdate, 
   FLOOR((ADD_MONTHS(TRUNC(SYSDATE,'year'),12)-1 - ptnt.birthdate)/365) age,
   ptnt.pcp_provider_id pcp_id,
