@@ -44,7 +44,7 @@ BEGIN
         DECODE(GROUPING(facility_name), 1, ''ALL facilities'', facility_name) AS facility_name,
         COUNT(CASE WHEN numerator_flag = ''Y'' THEN 1 END ) AS numerator_1
       FROM dsrip_report_tr010 r
-      WHERE report_period_start_dt = '''||d_report_mon||'''
+      WHERE report_dt = '''||d_report_mon||'''
       GROUP BY GROUPING SETS((report_dt, network, facility_name),(report_dt))',
     p_commit_at => -1
   );  

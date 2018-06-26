@@ -6,7 +6,7 @@ WITH
   (
     SELECT --+ materialize
       NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')) report_dt,
-      NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'YEAR')) msrmnt_yr,
+      TRUNC(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')), 'YEAR') AS msrmnt_yr,
       ADD_MONTHS(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')), -24) begin_dt
     FROM dual
   ),
@@ -17,15 +17,20 @@ WITH
       fpd.patient_id,
       fpd.onset_date,
       fpd.diag_code htn_diag_code,
-      ROW_NUMBER() OVER (PARTITION BY fpd.patient_id ORDER BY fpd.onset_date DESC) htn_ptnt_rnum   
+      ROW_NUMBER() OVER (PARTITION BY fpd.network, fpd.patient_id ORDER BY fpd.onset_date DESC) htn_ptnt_rnum   
     FROM dt
     JOIN cdw.fact_patient_diagnoses fpd on  fpd.onset_date >= dt.msrmnt_yr 
      AND fpd.onset_date <  
-          CASE 
-            WHEN TO_CHAR(TRUNC(SYSDATE,'MONTH'),'mm/dd') < '06/01'
-            THEN TRUNC(SYSDATE,'MONTH')
-            ELSE TO_DATE('07/01','MM/DD')
-          END    
+--          CASE 
+--            WHEN TO_CHAR(TRUNC(SYSDATE,'MONTH'),'mm/dd') < '06/01'
+--            THEN TRUNC(SYSDATE,'MONTH')
+--            ELSE TO_DATE('07/01','MM/DD')
+--          END    
+        CASE 
+          WHEN report_dt <= TO_DATE('06/01/'||EXTRACT(YEAR FROM report_dt),'mm/dd/yyyy')
+          THEN TRUNC(report_dt,'MONTH')
+          ELSE TO_DATE('07/01/'||EXTRACT(YEAR FROM report_dt),'mm/dd/yyyy')
+        END
     JOIN meta_conditions mc
       ON mc.value=fpd.diag_code AND mc.criterion_id=36 AND include_exclude_ind='I'
     WHERE NOT EXISTS
@@ -35,11 +40,16 @@ WITH
       FROM dt
       JOIN fact_patient_diagnoses fpd1 on  fpd1.onset_date >= dt.msrmnt_yr 
       AND fpd1.onset_date <  
+--        CASE 
+--          WHEN TO_CHAR(TRUNC(SYSDATE,'MONTH'),'mm/dd') < '06/01'
+--          THEN TRUNC(SYSDATE,'MONTH')
+--          ELSE TO_DATE('07/01','MM/DD')
+--        END  
         CASE 
-          WHEN TO_CHAR(TRUNC(SYSDATE,'MONTH'),'mm/dd') < '06/01'
-          THEN TRUNC(SYSDATE,'MONTH')
-          ELSE TO_DATE('07/01','MM/DD')
-        END  
+          WHEN report_dt <= TO_DATE('06/01/'||EXTRACT(YEAR FROM report_dt),'mm/dd/yyyy')
+          THEN TRUNC(report_dt,'MONTH')
+          ELSE TO_DATE('07/01/'||EXTRACT(YEAR FROM report_dt),'mm/dd/yyyy')
+        END
       JOIN meta_conditions mc ON mc.value=fpd1.diag_code AND mc.criterion_id=36 AND include_exclude_ind='E'  
       WHERE fpd1.patient_id=fpd.patient_id AND fpd1.network=fpd.network    
     )
@@ -64,7 +74,7 @@ WITH
       dt.report_dt, dt.begin_dt AS begin_dt, dt.report_dt AS end_dt, v.network, v.visit_id,v.final_visit_type_id,
       v.first_payer_key,v.facility_key, v.admission_dt, v.discharge_dt, v.patient_id, lkp.onset_date,
       lkp.htn_diag_code, v.first_department_key,
-      row_number() over (partition by v.patient_id,v.network order by v.admission_dt desc) rnum_ltst_visit
+      ROW_NUMBER() OVER (PARTITION BY v.network, v.patient_id ORDER BY v.admission_dt DESC) rnum_ltst_visit
     FROM dt
     JOIN cdw.fact_visits v
       ON v.admission_dt >= dt.begin_dt
@@ -192,10 +202,10 @@ WITH
 		v.rnum_ltst_visit
 	FROM htn_op_visits v 
 	LEFT JOIN rslt_combo r 
-	ON v.patient_id=r.patient_id 
-	AND r.result_dt >= v.onset_date
-	AND r.network = v.network 
-	AND rnum_per_patient =1
+    ON v.patient_id=r.patient_id 
+   AND r.result_dt >= v.onset_date
+   AND r.network = v.network 
+   AND rnum_per_patient =1
 	WHERE v.rnum_ltst_visit=1
 	)
 SELECT --+ parallel(32)
@@ -214,23 +224,23 @@ SELECT --+ parallel(32)
 	p.mailing_code, 
 	p.home_phone,
 	p.cell_phone,
-	FLOOR((add_months(trunc(sysdate,'year'),12)-1 - p.birthdate)/365) AS age, 
+	FLOOR((ADD_MONTHS(TRUNC(report_dt,'YEAR'),12)-1 - p.birthdate)/365) AS age, 
 	vt.name visit_type_name, 
 	d.visit_id, 
   dept.specialty_code clinic_code,
   dept.service clinic_code_service,	
   dept.specialty clinic_code_desc,
-	trunc(d.admission_dt) admission_dt,
-	trunc(d.discharge_dt) discharge_dt, 
+	TRUNC(d.admission_dt) admission_dt,
+	TRUNC(d.discharge_dt) discharge_dt, 
 	dp.payer_group, 
   dp.payer_name,
 	CASE 
-		WHEN FLOOR((ADD_MONTHS(TRUNC(SYSDATE,'year'),12)-1 - p.birthdate)/365) BETWEEN 18 AND 59 
+		WHEN FLOOR((ADD_MONTHS(TRUNC(report_dt,'YEAR'),12)-1 - p.birthdate)/365) BETWEEN 18 AND 59 
 		THEN 'Y' 
 		ELSE 'N' 
 	END AGE_18_59,
 	CASE 
-		WHEN FLOOR((ADD_MONTHS(TRUNC(SYSDATE,'year'),12)-1 - p.birthdate)/365) BETWEEN 60 AND 85 
+		WHEN FLOOR((ADD_MONTHS(TRUNC(report_dt,'YEAR'),12)-1 - p.birthdate)/365) BETWEEN 60 AND 85 
 		THEN 'Y' 
 		ELSE 'N' 
 	END AGE_60_85,
@@ -247,17 +257,17 @@ SELECT --+ parallel(32)
 	d.systolic_bp, 
 	d.diastolic_bp, 
 	CASE 
-		WHEN ((FLOOR((add_months(trunc(sysdate,'year'),12)-1 - p.birthdate)/365) BETWEEN 18 AND 59)AND (systolic_bp < 140 AND diastolic_bp <90))
+		WHEN ((FLOOR((ADD_MONTHS(TRUNC(report_dt,'YEAR'),12)-1 - p.birthdate)/365) BETWEEN 18 AND 59) AND (systolic_bp < 140 AND diastolic_bp <90))
 		THEN 'Y'
 		ELSE 'N'
 	END numerator_flag1,
 	CASE 
-		WHEN FLOOR((add_months(trunc(sysdate,'year'),12)-1 - p.birthdate)/365) BETWEEN 60 AND 85 AND (systolic_bp < 140 AND diastolic_bp <90) AND diab_prob_pat.patient_id IS NOT NULL
+		WHEN FLOOR((ADD_MONTHS(TRUNC(report_dt,'YEAR'),12)-1 - p.birthdate)/365) BETWEEN 60 AND 85 AND (systolic_bp < 140 AND diastolic_bp <90) AND diab_prob_pat.patient_id IS NOT NULL
 		THEN 'Y'
 		ELSE 'N'
 	END numerator_flag2,
 	CASE 
-		WHEN FLOOR((add_months(trunc(sysdate,'year'),12)-1 - p.birthdate)/365) BETWEEN 60 AND 85 AND (systolic_bp < 150 AND diastolic_bp <90) AND diab_prob_pat.patient_id IS NULL
+		WHEN FLOOR((ADD_MONTHS(TRUNC(report_dt,'YEAR'),12)-1 - p.birthdate)/365) BETWEEN 60 AND 85 AND (systolic_bp < 150 AND diastolic_bp <90) AND diab_prob_pat.patient_id IS NULL
 		THEN 'Y'
 		ELSE 'N'
 	END numerator_flag3
@@ -296,8 +306,8 @@ LEFT JOIN
   )g
   GROUP BY g.network,g.patient_id 
 )diab_prob_pat
-ON diab_prob_pat.patient_id = p.patient_id 
-AND diab_prob_pat.network = p.network
+  ON diab_prob_pat.patient_id = p.patient_id 
+ AND diab_prob_pat.network = p.network
 JOIN cdw.dim_hc_facilities f
   ON d.facility_key = f.facility_key
 JOIN cdw.ref_visit_types vt
@@ -307,4 +317,4 @@ LEFT JOIN cdw.dim_payers dp
 LEFT JOIN cdw.dim_hc_departments dept
   ON dept.department_key=d.first_department_key
 WHERE
-FLOOR((add_months(trunc(sysdate,'year'),12)-1 - p.birthdate)/365) BETWEEN 18 and 85;
+FLOOR((add_months(trunc(report_dt,'year'),12)-1 - p.birthdate)/365) BETWEEN 18 and 85;
