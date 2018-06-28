@@ -6,7 +6,11 @@ WITH
   (
     SELECT --+ materialize
       NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')) report_dt,
-      TRUNC(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')), 'YEAR') AS msrmnt_yr,
+      CASE
+        WHEN TO_CHAR(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')),'MON') = 'JAN'
+        THEN TRUNC(ADD_MONTHS(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')), -1), 'YEAR') 
+        ELSE TRUNC(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')), 'YEAR')
+      END AS msrmnt_yr,
       ADD_MONTHS(NVL(TO_DATE(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')), TRUNC(SYSDATE, 'MONTH')), -24) begin_dt
     FROM dual
   ),
@@ -21,16 +25,13 @@ WITH
     FROM dt
     JOIN cdw.fact_patient_diagnoses fpd on  fpd.onset_date >= dt.msrmnt_yr 
      AND fpd.onset_date <  
---          CASE 
---            WHEN TO_CHAR(TRUNC(SYSDATE,'MONTH'),'mm/dd') < '06/01'
---            THEN TRUNC(SYSDATE,'MONTH')
---            ELSE TO_DATE('07/01','MM/DD')
---          END    
-        CASE 
-          WHEN report_dt <= TO_DATE('06/01/'||EXTRACT(YEAR FROM report_dt),'mm/dd/yyyy')
-          THEN TRUNC(report_dt,'MONTH')
-          ELSE TO_DATE('07/01/'||EXTRACT(YEAR FROM report_dt),'mm/dd/yyyy')
-        END
+          CASE
+            WHEN EXTRACT(month FROM report_dt) = 1
+            THEN TO_DATE('07/01/'||EXTRACT(YEAR FROM msrmnt_yr),'mm/dd/yyyy')
+            WHEN EXTRACT(month FROM report_dt) between 2 and 7
+            THEN TRUNC(report_dt,'MONTH')
+            ELSE TO_DATE('07/01/'||EXTRACT(YEAR FROM report_dt),'mm/dd/yyyy')   
+          END
     JOIN meta_conditions mc
       ON mc.value=fpd.diag_code AND mc.criterion_id=36 AND include_exclude_ind='I'
     WHERE NOT EXISTS
@@ -40,16 +41,13 @@ WITH
       FROM dt
       JOIN fact_patient_diagnoses fpd1 on  fpd1.onset_date >= dt.msrmnt_yr 
       AND fpd1.onset_date <  
---        CASE 
---          WHEN TO_CHAR(TRUNC(SYSDATE,'MONTH'),'mm/dd') < '06/01'
---          THEN TRUNC(SYSDATE,'MONTH')
---          ELSE TO_DATE('07/01','MM/DD')
---        END  
-        CASE 
-          WHEN report_dt <= TO_DATE('06/01/'||EXTRACT(YEAR FROM report_dt),'mm/dd/yyyy')
-          THEN TRUNC(report_dt,'MONTH')
-          ELSE TO_DATE('07/01/'||EXTRACT(YEAR FROM report_dt),'mm/dd/yyyy')
-        END
+          CASE
+            WHEN EXTRACT(month FROM report_dt) = 1
+            THEN TO_DATE('07/01/'||EXTRACT(YEAR FROM msrmnt_yr),'mm/dd/yyyy')
+            WHEN EXTRACT(month FROM report_dt) between 2 and 7
+            THEN TRUNC(report_dt,'MONTH')
+            ELSE TO_DATE('07/01/'||EXTRACT(YEAR FROM report_dt),'mm/dd/yyyy')   
+          END
       JOIN meta_conditions mc ON mc.value=fpd1.diag_code AND mc.criterion_id=36 AND include_exclude_ind='E'  
       WHERE fpd1.patient_id=fpd.patient_id AND fpd1.network=fpd.network    
     )

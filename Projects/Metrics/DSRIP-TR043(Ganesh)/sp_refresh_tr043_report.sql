@@ -28,23 +28,23 @@ BEGIN
     p_commit_at   => -1
   );
   
-  etl.add_data
-  (
-    p_operation => 'INSERT',
-    p_tgt => 'DSRIP_REPORT_RESULTS',
-    p_src => 'SELECT 
-        ''DSRIP-TR043'' report_cd, 
-        report_period_dt AS period_start_dt,
-        DECODE(GROUPING(network), 1, ''ALL networks'', network) network,
-        DECODE(GROUPING(facility_name), 1, ''ALL facilities'', facility_name) AS facility_name,
-        COUNT(1) denominator,
-        NULL numerator_1,
-        NULL numerator_2
-      FROM dsrip_tr043_bh_visits_report r
-      WHERE r.report_period_dt = '''||d_report_mon||'''
-      GROUP BY GROUPING SETS((report_period_dt, network, Facility),(report_period_dt))',
-    p_commit_at => -1
-  );
+--  etl.add_data
+--  (
+--    p_operation => 'INSERT',
+--    p_tgt => 'DSRIP_REPORT_RESULTS',
+--    p_src => 'SELECT 
+--        ''DSRIP-TR043'' report_cd, 
+--        report_period_dt AS period_start_dt,
+--        DECODE(GROUPING(network), 1, ''ALL networks'', network) network,
+--        DECODE(GROUPING(facility_name), 1, ''ALL facilities'', facility_name) AS facility_name,
+--        COUNT(1) denominator,
+--        NULL numerator_1,
+--        NULL numerator_2
+--      FROM dsrip_tr043_bh_visits_report r
+--      WHERE r.report_period_dt = '''||d_report_mon||'''
+--      GROUP BY GROUPING SETS((report_period_dt, network, facility_name),(report_period_dt))',
+--    p_commit_at => -1
+--  );
         
   xl.close_log('Successfully completed');
 EXCEPTION

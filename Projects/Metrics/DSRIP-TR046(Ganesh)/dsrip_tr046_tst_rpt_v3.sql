@@ -1,3 +1,4 @@
+-- PT005
 --DROP TABLE dsrip_tr046_tst_rpt_v3;
 
 CREATE TABLE dsrip_tr046_tst_rpt_v3
@@ -28,12 +29,14 @@ AS
     SELECT 
       network, visit_id ,patient_id, prim_care_provider,name,medical_record_number,street_address,
       home_phone,cell_number,birth_date,visit_type,facility_name,city,mailing_code, payer_name 
-    FROM pt005.tr038_asthma_fnl
+    FROM pt005.tr038_asthma_fnl 
+    where trunc(ADMISSION_DATE_TIME)> add_months(RPT_END_DT,-12)
     UNION ALL
     SELECT 
       network, visit_id, patient_id, prim_care_provider,name,medical_record_number,street_address,
       home_phone,cell_number,birth_date,visit_type,facility_name,city,mailing_code, payer_name
     from pt005.tr038_adlt_asthma_fnl 
+    where trunc(ADMISSION_DATE_TIME)> add_months(RPT_END_DT,-12)
     ) a
 ),
 xx_tmp2_pcp_vsts AS
@@ -46,7 +49,7 @@ xx_tmp2_pcp_vsts AS
     ON fvsts.network = a.network  and fvsts.patient_id = a.patient_id
   JOIN cdw.visit vst
     ON vst.network = fvsts.network AND vst.visit_id = fvsts.visit_id
-  JOIN dim_hc_departments dept
+  JOIN cdw.dim_hc_departments dept
     ON dept.department_key = fvsts.first_department_key AND dept.service_type = 'PCP'
   LEFT JOIN cdw.ref_visit_types ref_vt
     ON ref_vt.visit_type_id = fvsts.initial_visit_type_id
@@ -112,7 +115,7 @@ xx_tmp1 AS
     a.payer_name
 --    a.LAST_PCP_VISIT_DT  
 --  FROM dsrip_tr10_asthma_medratio_rpt a
-  FROM dsrip_report_tr010 a
+  FROM DSRIP_REPORT_TR046_TR010 a
   WHERE --ASTHMA_OTHER_MED_CNT >= 5 and 
   report_dt = date '2018-06-01' 
 ),
@@ -126,7 +129,7 @@ xx_tmp1_pcp_vsts AS
     ON fvsts.network = a.network  and fvsts.patient_id = a.patient_id
   JOIN cdw.visit vst
     ON vst.network = fvsts.network AND vst.visit_id = fvsts.visit_id
-  JOIN dim_hc_departments dept
+  JOIN cdw.dim_hc_departments dept
     ON dept.department_key = fvsts.first_department_key AND dept.service_type = 'PCP'
   LEFT JOIN cdw.ref_visit_types ref_vt
     ON ref_vt.visit_type_id = fvsts.initial_visit_type_id
@@ -185,14 +188,18 @@ SELECT -- parallel(32)
   tmp1.asthma_med_ratio,
   tmp1.asthma_other_med_cnt,
   tmp1.asthma_cntrlr_med_cnt,
-  tmp2.ip_vst_cnt,
-  tmp2.ed_vst_cnt
+  nvl(tmp2.ip_vst_cnt, 0) as ip_vst_cnt,
+  nvl(tmp2.ed_vst_cnt, 0) as ed_vst_cnt
 FROM tmp1
 FULL OUTER JOIN tmp2
   ON tmp1.network = tmp2.network
  AND tmp1.patient_id = tmp2.patient_id
- WHERE tmp1.Asthma_Med_Ratio < 0.5
- AND tmp2.ip_vst_cnt !=0 AND tmp2.ed_vst_cnt != 0;
+-- WHERE tmp1.Asthma_Med_Ratio < 0.5
+-- AND tmp2.ip_vst_cnt !=0 AND tmp2.ed_vst_cnt != 0;
+ WHERE
+ (nvl(tmp2.ip_vst_cnt,0)  > 0 or nvl(tmp2.ed_vst_cnt,0) > 0)
+ OR
+ (nvl(tmp2.ip_vst_cnt,0)  = 0 AND nvl(tmp2.ed_vst_cnt,0) = 0 AND tmp1.Asthma_Med_Ratio < 0.5);
  
  
 --######################################################################################################################################################################### 
@@ -215,3 +222,4 @@ having count( network||'~'||patient_id) > 1
 ;
 
 */
+
