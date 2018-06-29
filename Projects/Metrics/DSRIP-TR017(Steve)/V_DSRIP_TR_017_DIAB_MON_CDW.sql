@@ -1,13 +1,3 @@
---truncate table DSRIP_TR_017_DIAB_MON_CDW;
---INSERT /*+ APPEND  PARALLEL(32) */
---     INTO
--- dsrip_tr_017_diab_mon_cdw
--- SELECT /* parallel(32) */
---  *
--- FROM
---  v_dsrip_tr_017_diab_mon_cdw
-
-
 CREATE OR REPLACE VIEW V_DSRIP_TR_017_DIAB_MON_CDW AS
 WITH report_dates AS
       (SELECT --+ materialize

@@ -28,23 +28,39 @@ AS
     -- 4-A1C, 10-LDL, 23-Glucose,  13-(incl-15,29)-BP, 66-Neph, 68-eye exam, HOLD 8-HYPERTENSION
     WHERE criterion_id IN (4,10,13,23,66,68) 
    ), 
+
+  metric_result
+As
+  ( 
+    SELECT --+ materialize
+    r.network,
+    r.visit_id,
+    r.event_id,
+    data_element_id,
+    TRIM(r.value) AS value,
+    c.criterion_id,
+    test_type
+    FROM 
+    get_dates d
+    CROSS JOIN crit_metric c
+    JOIN result r  ON r.data_element_id = c.VALUE AND r.network = c.network
+    AND  CID >=  d.starting_cid
+    WHERE
+    TRIM(r.value) IS NOT NULL
+    --   AND r.event_status_id IN (6, 11)
+  ),
   rslt AS  --- A1C, LDL, Glucose,   BP (BP only for space)
   (
      SELECT --+ materialize 
       r.network,
       r.visit_id,
-      TRIM(r.value) AS result_value,
-      c.criterion_id,
-      ROW_NUMBER() OVER(PARTITION BY r.network, r.visit_id, c.criterion_id ORDER BY event_id DESC) rnum
+      r.value AS result_value,
+      criterion_id,
+      ROW_NUMBER() OVER(PARTITION BY network, visit_id, criterion_id ORDER BY event_id DESC) rnum
       FROM 
-     get_dates d
-    CROSS JOIN crit_metric c
-      JOIN result r  ON r.data_element_id = c.VALUE AND r.network = c.network
-       AND  CID >=  d.starting_cid
-    --   AND r.event_status_id IN (6, 11)  --  AND r.network =  SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
+       metric_result r
       WHERE
-      TRIM(r.value) IS NOT NULL
-      AND c.criterion_id IN (4,10,23,13)
+      criterion_id IN (4,10,23,13)
       AND REGEXP_REPLACE
       (
         TRIM(r.value),
@@ -62,18 +78,32 @@ AS
       SELECT --+ materialize 
       r.network,
       r.visit_id,
-      TRIM(r.value) AS result_value,
-      c.criterion_id,
-      ROW_NUMBER() OVER(PARTITION BY r.network, r.visit_id, c.criterion_id ORDER BY event_id DESC) rnum
+      value,
+      criterion_id,
+      ROW_NUMBER() OVER(PARTITION BY network, visit_id, criterion_id ORDER BY event_id DESC) rnum
       FROM 
-      get_dates d
-      CROSS JOIN    crit_metric c
-      JOIN result r  ON r.data_element_id = c.VALUE AND r.network = c.network and r.CID > =  d.starting_cid
-    --  AND r.event_status_id IN (6, 11)  -- AND r.network =  SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
+      metric_result r
       WHERE
-      TRIM(r.value) IS NOT NULL
-      AND c.criterion_id  IN (66,68)
-),
+        criterion_id  IN (66,68)
+ UNION ALL
+  SELECT
+  p.network,
+  p.visit_id,
+  '1' AS result_value,
+  98 AS criterion_id,
+  ROW_NUMBER() OVER(PARTITION BY p.network, p.visit_id ORDER BY p.event_id DESC) rnum
+  FROM
+   get_dates d cross join
+  ref_proc_descriptions f JOIN proc_event p ON p.network = f.network AND p.proc_id = f.proc_id
+  JOIN result r ON r.network = p.network AND r.visit_id = p.visit_id AND r.event_id = p.event_id
+  WHERE   1=1
+    AND p.cid >= d.starting_cid
+    AND f.proc_type_id = 98 AND in_ind = 'I'
+    AND r.network =  SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
+
+
+
+    ),
 
  bp_rslt AS
    (
@@ -82,20 +112,18 @@ AS
     r.visit_id,
     r.event_id,
     CASE
-    WHEN lkp.test_type = 'C' THEN TO_NUMBER(REGEXP_SUBSTR (r.value,'^[^0-9]*([0-9]{2,})/([0-9]{2,})',1,1,'x',1))
-    WHEN lkp.test_type = 'S' THEN TO_NUMBER(REGEXP_SUBSTR (r.value,'^[^0-9]*([0-9]{2,})',1,1,'',1))
+    WHEN test_type = 'C' THEN TO_NUMBER(REGEXP_SUBSTR (r.value,'^[^0-9]*([0-9]{2,})/([0-9]{2,})',1,1,'x',1))
+    WHEN test_type = 'S' THEN TO_NUMBER(REGEXP_SUBSTR (r.value,'^[^0-9]*([0-9]{2,})',1,1,'',1))
     END AS bp_calc_systolic,      
     CASE                          
-    WHEN lkp.test_type = 'C' THEN TO_NUMBER(REGEXP_SUBSTR (r.VALUE,'^[^0-9]*([0-9]{2,})/([0-9]{2,})',1,1,'x',2))
-    WHEN lkp.test_type = 'D' THEN TO_NUMBER(REGEXP_SUBSTR (r.value,'^[^0-9]*([0-9]{2,})',1,1,'',1))
+    WHEN test_type = 'C' THEN TO_NUMBER(REGEXP_SUBSTR (r.VALUE,'^[^0-9]*([0-9]{2,})/([0-9]{2,})',1,1,'x',2))
+    WHEN test_type = 'D' THEN TO_NUMBER(REGEXP_SUBSTR (r.value,'^[^0-9]*([0-9]{2,})',1,1,'',1))
     END  AS bp_calc_diastolic
     FROM 
-    get_dates d
-    CROSS JOIN crit_metric lkp
-    JOIN result r ON r.data_element_id = lkp.value 
-    AND r.network = lkp.network  AND lkp.criterion_id = 13 
-   -- AND r.event_status_id IN (6, 11)
-    AND r.CID >  d.starting_cid
+    metric_result r
+       WHERE criterion_id = 13 
+ 
+   
    ),
 bp_final_tb
 AS
@@ -128,6 +156,7 @@ calc_result AS
   v.visit_id,
   to_number(TO_CHAR( v.admission_dt,'yyyymmdd')) AS admission_dt_key,
   v.visit_number,
+  v.facility_id,
   v.facility,
   v.visit_type_id,
   v.visit_type,
@@ -156,6 +185,10 @@ calc_result AS
   p.flu_vaccine_onset_dt, 
   p.pna_vaccine_ind, 
   p.pna_vaccine_onset_dt,
+  p.bronchitis_ind,	
+  p.bronchitis_onset_dt,
+  p.tabacco_scr_diag_ind,       
+  p.tabacco_scr_diag_onset_dt, 
   q.criterion_id,
   q.result_value,
   CASE
@@ -197,6 +230,8 @@ calc_result AS
         0
     WHEN q.criterion_id IN (66,68) THEN -- NEPH,eye EXAM
         1
+     WHEN criterion_id  = 98  THEN --- Tabacco screeneng
+      1
     END  AS calc_value
     FROM
     STG_METRICS_DAILY_VISITS v 
@@ -211,6 +246,7 @@ AS
   visit_id,
   admission_dt_key,
   visit_number,
+  facility_id,
   facility,
   visit_type_id,
   visit_type,
@@ -239,8 +275,13 @@ AS
   flu_vaccine_onset_dt, 
   pna_vaccine_ind, 
   pna_vaccine_onset_dt,
+  bronchitis_ind,	
+  bronchitis_onset_dt,
+  tabacco_scr_diag_ind,       
+  tabacco_scr_diag_onset_dt, 
   neph_final_calc_value,
   retinal_final_calc_value,
+  tabacco_final_calc_value, 
   a1c_final_calc_value,
   gluc_final_calc_value,
   ldl_final_calc_value,
@@ -252,7 +293,7 @@ AS
        MAX(result_value) AS final_orig_value, 
        MAX(calc_value) AS final_calc_value
       FOR criterion_id
-     IN (4 AS a1c, 23 AS gluc, 10 AS ldl, 13 AS bp, 66 as neph, 68 as retinal ))
+     IN (4 AS a1c, 23 AS gluc, 10 AS ldl, 13 AS bp, 66 as neph, 68 as retinal , 98 as tabacco  ))
  ),
 QCPR_TMP
 AS
@@ -261,6 +302,7 @@ SELECT --+  materialize
 a. network,
 a.visit_id,
 admission_dt_key,
+ facility_id,
 visit_number,
 facility,
 visit_type_id,
@@ -290,8 +332,13 @@ NVL(flu_vaccine_ind,0) AS flu_vaccine_ind,
 flu_vaccine_onset_dt,
 NVL(pna_vaccine_ind,0 )AS pna_vaccine_ind,
 pna_vaccine_onset_dt,
+NVL(bronchitis_ind, 0) AS bronchitis_ind,
+bronchitis_onset_dt,
+NVL(tabacco_scr_diag_ind,0) AS tabacco_scr_diag_ind,     
+tabacco_scr_diag_onset_dt, 
 NVL( a.neph_final_calc_value,0) as nephropathy_screen_ind,
 NVL( a.retinal_final_calc_value,0) as retinal_dil_eye_exam_ind,
+NVL( a.tabacco_final_calc_value, 0)AS tabacco_screen_proc_ind, 
 CASE WHEN a.a1c_final_calc_value between 3.5 and 22  THEN a.a1c_final_calc_value ELSE 0 END AS  a1c_final_calc_value,
 CASE WHEN a.gluc_final_calc_value > 999 THEN  0 ELSE a.gluc_final_calc_value END AS gluc_final_calc_value  ,
 CASE WHEN  a.ldl_final_calc_value  > 999 THEN 0 ELSE  a.ldl_final_calc_value END  AS ldl_final_calc_value,
@@ -303,50 +350,56 @@ FROM
 LEFT JOIN bp_final_tb b ON b.network = a.network AND b.visit_id = a.visit_id AND b.rnum_per_visit = 1)
 
 SELECT 
- a.network,
- NVL( v.visit_key,999999999999) as visit_key,
- a.visit_id,
-NVL( p.patient_key,999999999999) as patient_key,
- a.admission_dt_key,
- a.visit_number,
- a.facility,
- a.visit_type_id,
- vt.name as visit_type,
- a.medicaid_ind,
- a.medicare_ind,
- CAST(a.patient_id AS VARCHAR2(256)) patient_id,
- a.mrn,
- a.pat_lname || ', ' || a.pat_fname AS patient_name,
- a.sex,
- race_desc AS race,
- TRUNC(a.birthdate) AS birthdate,
- a.patient_age_at_admission,
- TRUNC(a.admission_dt) AS admission_dt,
- TRUNC(a.discharge_dt) AS discharge_dt,
- asthma_ind,
- bh_ind,
- breast_cancer_ind,
- diabetes_ind,
- heart_failure_ind,
- hypertension_ind,
- kidney_diseases_ind,
- smoker_ind,
- pregnancy_ind,
- pregnancy_onset_dt,
-  flu_vaccine_ind,
-  flu_vaccine_onset_dt, 
-  pna_vaccine_ind, 
-  pna_vaccine_onset_dt,
- nephropathy_screen_ind,
- retinal_dil_eye_exam_ind,
- a1c_final_calc_value,
- gluc_final_calc_value,
- ldl_final_calc_value,
- bp_final_calc_value,
- bp_final_calc_systolic,
- bp_final_calc_diastolic,
- 'QCPR' AS source ,
- trunc(sysdate) as load_dt
+    a.network,
+    NVL( v.visit_key,999999999999) as visit_key,
+    a.visit_id,
+    NVL( p.patient_key,999999999999) as patient_key,
+    a.admission_dt_key,
+    a.visit_number,
+    facility_id,
+    a.facility,
+    a.visit_type_id,
+    vt.name as visit_type,
+    a.medicaid_ind,
+    a.medicare_ind,
+    CAST(a.patient_id AS VARCHAR2(256)) patient_id,
+    a.mrn,
+    a.pat_lname || ', ' || a.pat_fname AS patient_name,
+    a.sex,
+    race_desc AS race,
+    TRUNC(a.birthdate) AS birthdate,
+    a.patient_age_at_admission,
+    TRUNC(a.admission_dt) AS admission_dt,
+    TRUNC(a.discharge_dt) AS discharge_dt,
+    asthma_ind,
+    bh_ind,
+    breast_cancer_ind,
+    diabetes_ind,
+    heart_failure_ind,
+    hypertension_ind,
+    kidney_diseases_ind,
+    smoker_ind,
+    pregnancy_ind,
+    pregnancy_onset_dt,
+    flu_vaccine_ind,
+    flu_vaccine_onset_dt, 
+    pna_vaccine_ind, 
+    pna_vaccine_onset_dt,
+     bronchitis_ind,
+     bronchitis_onset_dt,
+    tabacco_scr_diag_ind,     
+    tabacco_scr_diag_onset_dt, 
+    nephropathy_screen_ind,
+    retinal_dil_eye_exam_ind,
+    tabacco_screen_proc_ind,
+    a1c_final_calc_value,
+    gluc_final_calc_value,
+    ldl_final_calc_value,
+    bp_final_calc_value,
+    bp_final_calc_systolic,
+    bp_final_calc_diastolic,
+    'QCPR' AS source ,
+    trunc(sysdate) as load_dt
 FROM
  qcpr_tmp a
  LEFT JOIN DIM_PATIENTS p on p.network = a.network and p.patient_id  = a.patient_id and p.current_flag  = 1
@@ -356,51 +409,56 @@ WHERE
  a.admission_dt < TRUNC(SYSDATE)
 UNION ALL
 SELECT
- DISTINCT network,
-          999999999999 as visit_key,
-          visit_id,
-          patient_key,
-          TO_NUMBER(TO_CHAR(admission_dt, 'yyyymmdd')) AS admission_dt_key,
-          NULL visit_number,
-          -- facility_key,
-          facility_name,
-          NULL visit_type_id,
-          visit_type,
-          NULL medicaid_ind,
-          NULL as medicare_ind,
-          patient_id,
-          mrn,
-          patient_name,
-          sex,
-          NULL AS race,
-          birthdate,
-          patient_age_at_admission,
-          admission_dt,
-          discharge_dt,
-          asthma_ind,
-          bh_ind,
-          breast_cancer_ind,
-          diabetes_ind,
-          heart_failure_ind,
-          hypertension_ind,
-          kidney_diseases_ind,
-          smoker_ind,
-          pregnancy_ind,
-          TRUNC(pregnancy_onset_dt),
-          flu_vaccine_ind,
-          flu_vaccine_onset_dt, 
-          pna_vaccine_ind, 
-          pna_vaccine_onset_dt,
-          nephropathy_screen_ind,
-          retinal_eye_exam_ind AS retinal_dil_eye_exam_ind,
-          a1c_value,
-          NULL gluc_final_calc_value,
-          ldl_calc_value,
-          bp_orig_value,
-          bp_systolic,
-          bp_diastolic,
-          'EPIC' AS source,
-           trunc(sysdate) as load_dt
+     DISTINCT network,
+    999999999999 as visit_key,
+    visit_id,
+    patient_key,
+    TO_NUMBER(TO_CHAR(admission_dt, 'yyyymmdd')) AS admission_dt_key,
+    NULL visit_number,
+    999999999999 facility_ID,
+    facility_name,
+    NULL visit_type_id,
+    visit_type,
+    NULL medicaid_ind,
+    NULL as medicare_ind,
+    patient_id,
+    mrn,
+    patient_name,
+    sex,
+    race,
+    birthdate,
+    patient_age_at_admission,
+    admission_dt,
+    discharge_dt,
+    asthma_ind,
+    bh_ind,
+    breast_cancer_ind,
+    diabetes_ind,
+    heart_failure_ind,
+    hypertension_ind,
+    kidney_diseases_ind,
+    smoker_ind,
+    pregnancy_ind,
+    TRUNC(pregnancy_onset_dt),
+    flu_vaccine_ind,
+    flu_vaccine_onset_dt, 
+    pna_vaccine_ind, 
+    pna_vaccine_onset_dt,
+    null as   bronchitis_ind,
+    null as  bronchitis_onset_dt,
+    tabacco_scr_diag_ind,     
+    tabacco_scr_diag_onset_dt, 
+    nephropathy_screen_ind,
+    retinal_eye_exam_ind AS retinal_dil_eye_exam_ind,
+    tabacco_proc_screen_ind,
+    a1c_value,
+    NULL gluc_final_calc_value,
+    ldl_calc_value,
+    bp_orig_value,
+    bp_systolic,
+    bp_diastolic,
+    'EPIC' AS source,
+    trunc(sysdate) as load_dt
 FROM
  get_dates 
 CROSS JOIN  STG_VISIT_METRICS_EPIC

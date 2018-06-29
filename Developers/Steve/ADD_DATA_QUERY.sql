@@ -20,13 +20,13 @@ ALTER SESSION ENABLE parallel DML;
 --end;
 --**********************************************
 --*******FACT_VISITS *****************************
-EXECUTE dwm.refresh_data('where etl_step_num = 2120')  
-EXECUTE dwm.refresh_data('where etl_step_num = 4000')  
+--EXECUTE dwm.refresh_data('where etl_step_num = 2120')  
+--EXECUTE dwm.refresh_data('where etl_step_num = 4110')  
 
 --**********************************************
 select * from CNF_DW_REFRESH
 --where target_table  = 'FACT_RESULTS'
-order by etl_step_num ;
+order by etl_step_num desc;
 --**********************************************
 --EXECUTE dwm.refresh_data('where etl_step_num >= 3110 and etl_step_num <= 3160');
 
@@ -40,8 +40,8 @@ select  * from  DBG_LOG_DATA where action like '%steve%';
 select a.*, DBMS_LOB.substr(comment_txt, 250) from DBG_LOG_DATA a
 where
 tstamp > date '2018-06-5'
-and proc_id   > 536
-order by tstamp desc;
+and proc_id   > 600
+order by proc_id DESC ,tstamp desc;
 --************************************************************
 
 select a.*, DBMS_LOB.substr(comment_txt, 250) from DBG_LOG_DATA a
