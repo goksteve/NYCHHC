@@ -1,6 +1,6 @@
-CREATE OR REPLACE FORCE VIEW cdw.v_compass_monthly_visits
+CREATE OR REPLACE VIEW cdw.v_compass_monthly_visits
 AS
-SELECT 
+SELECT --+ parallel(32)
   a.network,
   a.visit_id,
   a.admission_dt_key,
@@ -16,6 +16,7 @@ SELECT
   a.patient_age_at_admission,
   a.admission_dt,
   a.discharge_dt,
+  (TRUNC (a.discharge_dt) - TRUNC (a.admission_dt)) los,
   a.asthma_ind,
   a.bh_ind,
   a.breast_cancer_ind,
@@ -33,11 +34,44 @@ SELECT
   a.ldl_final_calc_value,
   a.bp_final_calc_value,
   a.bp_final_calc_systolic,
-  a.bp_final_calc_diastolic
+  a.bp_final_calc_diastolic,
+  CASE WHEN r.visit_id IS NOT NULL THEN 1 ELSE 0 END
+  AS readmission_ind,
+  NVL(s.soarian_medicaid_flag, 0) AS soarian_medicaid_flag,
+  NVL(s.soarian_medicare_flag, 0) AS soarian_medicare_flag,
+  NVL(s.insured_flag, 0) AS insured_flag,
+  NVL(s.soarian_payer, 'N/A') soarian_payer,
+  NVL(s.soarian_payer_group, 'N/A') AS soarian_payer_group,
+  CASE 
+    WHEN pcp.pcp_visit_id IS NOT NULL 
+    THEN 1 ELSE 0 
+  END AS pcp_ind,
+  CASE
+    WHEN (pcp.pcp_attending_provider IS NOT NULL OR pcp.pcp_attending_provider_id IS NOT NULL)
+    THEN 1
+    ELSE 0
+  END AS pcp_prov_ind,
+  CASE
+    WHEN (pcp.pcp_resident_emp_provider IS NOT NULL OR pcp.pcp_resident_provider_id IS NOT NULL)
+    THEN 1
+    ELSE 0
+  END AS pcp_alt_prov_ind,
+  pcp_clinic_code,
+  pcp.specialty,
+  pcp.service,
+  pcp.service_type
 FROM fact_visit_metrics a
-
-UNION
-
+LEFT JOIN pt008.readmission_details r
+  ON a.source = DECODE (r.epic_flag,  'Y', 'EPIC',  'N', 'QCPR')
+ AND a.network = r.network
+ AND a.visit_id = r.visit_id
+LEFT JOIN sorian_visit_map_final s
+  ON a.visit_id = s.visit_id AND a.facility = s.facility_name
+LEFT JOIN pcp_visits_all pcp
+  ON a.network = pcp.network
+ AND a.visit_id = pcp.pcp_visit_id
+ AND a.source = pcp.source
+UNION ALL
 SELECT 
   b.network,
   b.visit_id,
@@ -54,6 +88,7 @@ SELECT
   b.patient_age_at_admission,
   b.admission_dt,
   b.discharge_dt,
+  (TRUNC(b.discharge_dt) - TRUNC (b.admission_dt)) los,
   b.asthma_ind,
   b.bh_ind,
   b.breast_cancer_ind,
@@ -71,10 +106,39 @@ SELECT
   b.ldl_final_calc_value,
   b.bp_final_calc_value,
   b.bp_final_calc_systolic,
-  b.bp_final_calc_diastolic
+  b.bp_final_calc_diastolic,
+  CASE 
+    WHEN r.visit_id IS NOT NULL 
+    THEN 1 ELSE 0 
+  END AS readmission_ind,
+  NVL(s.soarian_medicaid_flag, 0) AS soarian_medicaid_flag,
+  NVL(s.soarian_medicare_flag, 0) AS soarian_medicare_flag,
+  NVL(s.insured_flag, 0) AS insured_flag,
+  NVL(s.soarian_payer, 'N/A') soarian_payer,
+  NVL(s.soarian_payer_group, 'N/A') AS soarian_payer_group,
+  CASE 
+    WHEN pcp.pcp_visit_id IS NOT NULL 
+    THEN 1 ELSE 0 
+  END AS pcp_ind,
+  CASE
+    WHEN (pcp.pcp_attending_provider IS NOT NULL OR pcp.pcp_attending_provider_id IS NOT NULL)
+    THEN 1
+    ELSE 0
+  END AS pcp_prov_ind,
+  CASE
+    WHEN (pcp.pcp_resident_emp_provider IS NOT NULL OR pcp.pcp_resident_provider_id IS NOT NULL)
+    THEN 1
+    ELSE 0
+  END AS pcp_alt_prov_ind,
+  pcp_clinic_code,
+  pcp.specialty,
+  pcp.service,
+  pcp.service_type
 FROM fact_visit_monthly_metrics b
+LEFT JOIN pt008.readmission_details r
+  ON b.network = r.network AND b.visit_id = r.visit_id
+LEFT JOIN sorian_visit_map_final s
+  ON b.visit_id = s.visit_id AND b.facility = s.facility_name
+LEFT JOIN pcp_visits_all pcp
+  ON b.network = pcp.network AND b.visit_id = pcp.pcp_visit_id
 WHERE b.admission_dt < TRUNC (SYSDATE, 'MONTH');
-
-CREATE OR REPLACE PUBLIC SYNONYM v_compass_monthly_visits FOR cdw.v_compass_monthly_visits;
-
-GRANT SELECT ON cdw.v_compass_monthly_visits TO PUBLIC;    
