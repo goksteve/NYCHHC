@@ -1,6 +1,6 @@
-DROP TABLE dsrip_report_tr044;
+DROP TABLE DSRIP_TR_044_STAT_CARDIO_CDW;
 
-CREATE TABLE dsrip_report_tr044
+CREATE TABLE DSRIP_TR_044_STAT_CARDIO_CDW
 (
   report_dt                 DATE NOT NULL,
   network                   CHAR(3 BYTE) NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE dsrip_report_tr044
   cardio_flag               VARCHAR2(1 BYTE),
   non_pcp_flag              VARCHAR2(1 BYTE),
   load_dt                   DATE DEFAULT SYSDATE NOT NULL,
-  CONSTRAINT pk_tr044_report PRIMARY KEY(report_dt, network, patient_id, visit_id)
+  CONSTRAINT pk_DSRIP_TR_044_STAT_CARDIO PRIMARY KEY(report_dt, network, patient_id, visit_id)
 );
 
-GRANT SELECT ON dsrip_report_tr044 TO PUBLIC;
+GRANT SELECT ON DSRIP_TR_044_STAT_CARDIO_CDW TO PUBLIC with grant option;

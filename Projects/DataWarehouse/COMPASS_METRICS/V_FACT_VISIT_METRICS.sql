@@ -305,7 +305,7 @@ LEFT JOIN bp_final_tb b ON b.network = a.network AND b.visit_id = a.visit_id AND
 
 SELECT 
  a.network,
- to_number(NVL(v.visit_key, (ntw.network_key || v.visit_id))) as visit_key,
+ to_number(ntw.network_key || a.visit_id) as visit_key,
  a.visit_id,
  NVL( p.patient_key,999999999999) as patient_key,
  a.admission_dt_key,
@@ -351,9 +351,9 @@ SELECT
 FROM
  qcpr_tmp a
  LEFT JOIN DIM_PATIENTS p on p.network = a.network and p.patient_id  = a.patient_id and p.current_flag  = 1
- LEFT JOIN fact_visits v ON  v.NETWORK = a.NETWORK AND v.visit_id  =  a.visit_id
+-- LEFT JOIN fact_visits v ON  v.NETWORK = a.NETWORK AND v.visit_id  =  a.visit_id
  LEFT JOIN REF_VISIT_TYPES vt on vt.visit_type_id = a.visit_type_id
- JOIN dim_hc_networks ntw ON ntw.network = v.network 
+ JOIN dim_hc_networks ntw ON ntw.network = a.network 
 WHERE
  a.admission_dt < TRUNC(SYSDATE)
 
@@ -362,7 +362,7 @@ UNION ALL
 SELECT
   DISTINCT a.network,
 --          999999999999 as visit_key,
-  to_number(ntw.network_key || visit_id) as visit_key,
+  to_number(ntw.network_key || a.visit_id) as visit_key,
   visit_id,
   patient_key,
   TO_NUMBER(TO_CHAR(admission_dt, 'yyyymmdd')) AS admission_dt_key,

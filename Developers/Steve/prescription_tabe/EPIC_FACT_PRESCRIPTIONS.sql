@@ -1,0 +1,255 @@
+/*EPIC FACT PRESCRIPTIONS*/
+
+SELECT F.NETWORK,
+                  F.FACILITY_NAME AS FACILITY,
+                  F.PROC_NAME AS PROCEDURE_NAME,
+                  F.PAT_NAME AS PATIENT_NAME,
+                  F.PAT_MRN_ID AS MEDICAL_RECORD_NUMBER,
+                  F.GENDER SEX,
+                  CAST (F.BIRTH_DATE AS DATE) AS BIRTHDATE,
+                  F.AGE_AT_RX,
+                  F.RACE,
+                  F.EID,
+                  F.AUTH_PROV_NAME AS ORDER_PROVIDER,
+                  F.ORDER_MED_ID AS RX_ID,
+                  F.RX_ARCHIVE_NBR,
+                  F.PRESCRIPTION_EVENT_TYPE_ID,
+                  F.PRESCRIPTION_ARCH_ACTION_ID,
+                  F.REC_ARCHIVED_YN AS RX_ARCHIVE_COMMENT,
+                  F.PAT_ID AS PATIENT_ID,
+                  F.RX_NUMBER,
+                  CAST (F.ORDERING_DATE AS DATE) AS ORDER_TIME,
+                  CAST (F.DISCON_TIME AS DATE) AS RX_DC_TIME,
+                  F.MED_LINKED_PROC_ID AS PROC_ID,
+                  F.DISPLAY_NAME AS MISC_NAME,
+                  F.DOSE_UNIT_C AS DOSAGE                     -- NEED TO CHECK
+                                         ,
+                  F.SIG AS FREQUENCY,
+                  F.QUANTITY AS RX_QUANTITY,
+                  F.REFILLS AS RX_REFILLS,
+                  F.RX_ALLOW_SUBS,
+                  F.RX_COMMENT,
+                  F.DISP_AS_WRITTEN_YN AS RX_DISPO,
+                  F.PRESCRIP_EXP_DATE AS RX_EXP_DATE,
+                  F.RX_POOL_ID,
+                  F.ORD_PROV_ID AS ORDER_PROVIDER_ID,
+                  F.ORD_PROV_NAME AS ORDER_PROVIDER_STRING,
+                  F.PAT_ENC_CSN_ID AS ORDER_VISIT_ID,
+                  F.ORDER_MED_ID AS ORDER_SPAN_ID,
+                  CASE
+                     WHEN F.ORDERING_DATE IS NOT NULL
+                     THEN
+                        TO_NUMBER (TO_CHAR (F.ORDERING_DATE, 'YYYYMMDD'),
+                                   99999999)
+                     ELSE
+                        NULL
+                  END
+                     AS ORDER_EVENT_ID,
+                  F.FACILITY_ID,
+                  F.AUTHRZING_PROV_ID AS EMP_PROVIDER_ID,
+                  F.ORDER_STATUS_C AS PRESCRIPTION_STATUS_ID,
+                  F.PRESCRIPTION_TYPE_ID,
+                  F.MEDICATION_NAME DERIVED_PRODUCT_NAME,
+                  1 NO_OF_ORDER,
+                  'Y' AS EPIC_FLAG
+             FROM (SELECT DISTINCT X.NETWORK,
+             X.FACILITY_NAME,
+             X.FACILITY_ID,
+                          PHARM_SUBCLASS_C,
+                          W.NAME PHARMACY_CLASS,
+                          A.PAT_ID,
+                          E.PAT_MRN_ID,
+                          INITCAP (E.PAT_NAME) PAT_NAME,
+                          E.ADD_LINE_1,
+                          E.ADD_LINE_2,
+                          E.CITY,
+                          E.ZIP,
+                          E.SEX_C,
+                          Z4.NAME GENDER,
+                          E.BIRTH_DATE,
+                          Round (
+                                      MONTHS_BETWEEN (SYSDATE, 
+                                           E.BIRTH_DATE)
+                                    / 12, 1)
+                             AS AGE_AT_RX,
+                          '-99' RX_ALLOW_SUBS,
+                          -99 RX_POOL_ID,
+                          -99 RX_ARCHIVE_NBR,
+                          -99 RX_NUMBER,
+                          -99 PRESCRIPTION_EVENT_TYPE_ID,
+                          -99 PRESCRIPTION_ARCH_ACTION_ID,
+                          -99 PRESCRIPTION_TYPE_ID,
+                          Z5.NAME RACE,
+                          -99 EID,
+                          --CONVERT(int,ROUND(DATEDIFF(hour,E.BIRTH_DATE,GETDATE())/8766.0,0)) AS AGE,
+                          A.ORDERING_DATE,
+                          A.PAT_ENC_DATE_REAL,
+                          TO_NUMBER (A.PAT_ENC_CSN_ID, 999999999999)
+                             AS PAT_ENC_CSN_ID,
+                          --R.DX_ID, S.DX_NAME,
+                          TO_NUMBER (A.MEDICATION_ID, 999999999999)
+                             AS MEDICATION_ID,
+                          G.NAME MEDICATION_NAME,
+                          A.DISPLAY_NAME,
+                          G.FORM,
+                          G.ROUTE MEDICATION_INDICATED_ROUTE,
+                          A.MED_ROUTE_C,
+                          P.NAME ADMINSTERED_ROUTE,
+                          A.MIN_DISCRETE_DOSE,
+                          A.MAX_DISCRETE_DOSE,
+                          TO_CHAR (A.DOSE_UNIT_C) AS DOSE_UNIT_C,
+                          A.ACT_ORDER_C,
+                          Q.NAME MED_ORDER_STATUS,
+                          A.MED_COMMENTS AS RX_COMMENT,
+                          A.ORDER_STATUS_C,
+                          O.NAME PRESCRIPTION_STATUS_NAME,
+                          TO_NUMBER (A.ORDER_MED_ID) AS ORDER_MED_ID,
+                          A.ORDER_CLASS_C,
+                          H.NAME ORDERING_CLASS_NAME,
+                          A.PHARMACY_ID,
+                          I.PHARMACY_NAME,
+                          I.FORMULARY_ID,
+                          I.PRES_FORMULARY_ID,
+                          I.DISP_INT_PP_ID,
+                          A.SIG,
+                          TO_NUMBER (
+                             REGEXP_REPLACE (A.QUANTITY, '[^0-9]', ''),
+                             99999)
+                             AS QUANTITY,
+                          TO_NUMBER (A.REFILLS, 999) AS REFILLS,
+                          A.PEND_ACTION_C,
+                          N.NAME PEND_ACTTION_REORDER_NAME,
+                          A.DISP_AS_WRITTEN_YN,
+                          A.MED_PRESC_PROV_ID,
+                          A.NONFRM_XCPT_CD_C,
+                          M.NAME NONFRM_XCPT_NAME,
+                          A.PAT_LOC_ID,
+                          C.DEPARTMENT_ID,
+                          INITCAP (LOC_NAME) LOC_NAME,
+                          A.UPDATE_DATE,
+                          A.ORDER_INST,
+                          A.ORDER_PRIORITY_C,
+                          J.NAME ORDERING_PRIORITY_NAME,
+                          A.CHNG_ORDER_MED_ID,
+                          A.START_DATE,
+                          A.END_DATE,
+                          A.ORDER_START_TIME,
+                          A.ORDER_END_TIME,
+                          CAST (Z.PRESCRIP_EXP_DATE AS DATE)
+                             AS PRESCRIP_EXP_DATE,
+                          A.DISCON_TIME,
+                          A.NON_FORMULARY_YN,
+                          TO_NUMBER (NVL (A.ORD_PROV_ID, 999999999999),
+                                     999999999999)
+                             AS ORD_PROV_ID,
+                          INITCAP (Z2.PROV_NAME) ORD_PROV_NAME,
+                          TO_NUMBER (NVL (A.AUTHRZING_PROV_ID, 999999999999),
+                                     999999999999)
+                             AS AUTHRZING_PROV_ID,
+                          INITCAP (Z3.PROV_NAME) AUTH_PROV_NAME,
+                          A.PROVIDER_TYPE_C,
+                          Z1.NAME PROVIDER_TYPE,
+                          A.IS_PENDING_ORD_YN,
+                          A.SCHED_START_TM,
+                          A.MED_COMMENTS,
+                          A.MDL_ID,
+                          A.LASTDOSE,
+                          A.REFILLS_REMAINING,
+                          A.MED_REFILL_PROV_ID,
+                          A.RULE_BASED_ORD_T_YN,
+                          A.ORDERING_MODE_C,
+                          L.NAME ORDERING_MODE_NAME,
+                          A.PEND_APPROVE_FLAG_C,
+                          A.PROV_STATUS_C,
+                          A.NF_POST_VERIF_YN,
+                          A.MAX_DOSE,
+                          A.MAX_DOSE_UNIT_C,
+                          A.PRN_COMMENT,
+                          A.MED_DIS_DISP_QTY,
+                          A.MED_DIS_DISP_UNIT_C,
+                          A.END_BEFORE_CMP_INST,
+                          A.LAST_DOSE_TIME,
+                          A.HV_IS_SELF_ADM_YN,
+                          A.HV_HOSPITALIST_YN,
+                          A.HV_DISCR_FREQ_ID,
+                          A.HV_DISCRETE_DOSE,
+                          A.HV_DOSE_UNIT_C,
+                          U.MED_LINKED_PROC_ID,
+                          V.PROC_NAME,
+                          TO_NUMBER (NVL (A.ORDER_STATUS_C, 9999), 9999)
+                             AS ORDER_STATUS_CODE,
+                          X.NAME ORDER_STATUS_DESCRIPTION,
+                          A.RSN_FOR_DISCON_C,
+                          K.NAME DISCON_REASON,
+                          Z.REC_ARCHIVED_YN
+                     FROM ORDER_MED A
+                                           LEFT OUTER JOIN PATIENT_3 B
+                             ON B.PAT_ID = A.PAT_ID
+                          LEFT OUTER JOIN CLARITY_DEP C
+                             ON C.DEPARTMENT_ID = A.PAT_LOC_ID
+                          LEFT OUTER JOIN CLARITY_LOC D
+                             ON d.LOC_ID = C.REV_LOC_ID
+                               LEFT OUTER JOIN epic_clarity.X_LOC_FACILITY_MAPPING x
+                  ON x.facility_id = D.ADT_PARENT_ID
+                             
+                          LEFT OUTER JOIN PATIENT E
+                             ON E.PAT_ID = A.PAT_ID
+                          LEFT OUTER JOIN CLARITY_MEDICATION G
+                             ON A.MEDICATION_ID = G.MEDICATION_ID
+                          LEFT OUTER JOIN ZC_ORDER_CLASS H
+                             ON H.ORDER_CLASS_C = A.ORDER_CLASS_C
+                          LEFT OUTER JOIN RX_PHR I
+                             ON I.PHARMACY_ID = A.PHARMACY_ID
+                          LEFT OUTER JOIN ZC_ORDER_PRIORITY J
+                             ON J.ORDER_PRIORITY_C = A.ORDER_PRIORITY_C
+                          LEFT OUTER JOIN ZC_RSN_FOR_DISCON K
+                             ON K.RSN_FOR_DISCON_C = a.RSN_FOR_DISCON_C
+                          LEFT OUTER JOIN ZC_ORDERING_MODE L
+                             ON L.ORDERING_MODE_C = A.ORDERING_MODE_C
+                          LEFT OUTER JOIN ZC_NONFRM_XCPT_CD M
+                             ON M.NONFRM_XCPT_CD_C = A.NONFRM_XCPT_CD_C
+                          LEFT OUTER JOIN ZC_PEND_ACTION N
+                             ON N.PEND_ACTION_C = A.PEND_ACTION_C
+                          LEFT OUTER JOIN ZC_ORDER_STATUS O
+                             ON O.ORDER_STATUS_C = A.ORDER_STATUS_C
+                          LEFT OUTER JOIN ZC_ADMIN_ROUTE P
+                             ON P.MED_ROUTE_C = A.MED_ROUTE_C
+                          LEFT OUTER JOIN ZC_ACTIVE_ORDER Q
+                             ON Q.ACTIVE_ORDER_C = A.ACT_ORDER_C
+                          LEFT OUTER JOIN ORDER_DX_MED R
+                             ON R.ORDER_MED_ID = A.ORDER_MED_ID
+                          LEFT OUTER JOIN CLARITY_EDG S
+                             ON S.DX_ID = R.DX_ID
+                          LEFT OUTER JOIN ORDER_MEDINFO U
+                             ON U.ORDER_MED_ID = A.ORDER_MED_ID
+                          LEFT OUTER JOIN CLARITY_EAP V
+                             ON V.PROC_ID = U.MED_LINKED_PROC_ID
+                          LEFT OUTER JOIN ZC_PHARM_CLASS W
+                             ON W.PHARM_CLASS_C = G.PHARM_CLASS_C
+                          LEFT OUTER JOIN ZC_ORDER_STATUS X
+                             ON X.ORDER_STATUS_C = A.ORDER_STATUS_C
+                          LEFT OUTER JOIN ORDER_MED_3 Z
+                             ON Z.ORDER_ID = A.ORDER_MED_ID
+                          LEFT OUTER JOIN ZC_PROVIDER_TYPE Z1
+                             ON Z1.PROVIDER_TYPE_C = A.PROVIDER_TYPE_C
+                          LEFT OUTER JOIN CLARITY_SER Z2
+                             ON Z2.PROV_ID = A.ORD_PROV_ID
+                          LEFT OUTER JOIN CLARITY_SER Z3
+                             ON Z3.PROV_ID = A.AUTHRZING_PROV_ID
+                          LEFT OUTER JOIN ZC_PREF_PCP_SEX Z4
+                             ON Z4.PREF_PCP_SEX_C = E.SEX_C
+                          LEFT OUTER JOIN ZC_ETHNIC_GROUP Z5
+                             ON E.ETHNIC_GROUP_C = Z5.ETHNIC_GROUP_C
+                    WHERE     (B.IS_TEST_PAT_YN <> 'Y')
+                          AND A.ORDERING_MODE_C != 2    -- REMOVING INPATIENTS
+                         
+                          AND CAST (A.ORDERING_DATE AS DATE) BETWEEN '01-APR-2016'
+                                                                 AND TRUNC (
+                                                                        SYSDATE,
+                                                                        'MM') -- FOR APPEND DATA NEXT MONTH
+                          AND A.PEND_ACTION_C IN (2, 6, 1, 5, 7) --Reorder,Reorder from Order Review,Change,Reorder from Medication Activity,Reorder from Reports
+                                                                ) F
+                                                                
+                                                               --ORDER BY F.PAT_ID, F.ORDERING_DATE
+        WHERE ROWNUM < 100
+        ;

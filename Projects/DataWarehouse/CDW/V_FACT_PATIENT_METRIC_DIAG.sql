@@ -16,6 +16,7 @@ CREATE OR REPLACE VIEW V_FACT_PATIENT_METRIC_DIAG AS
     WHEN cr.criterion_id IN(99) then                      'influenza'
     when cr.criterion_id IN(100) then                     'pneumonia'
     when cr.criterion_id IN(11,19,20) then                'bronchitis'
+    when cr.criterion_id IN(102) then                    'tabacco_screen_diag'
    ELSE
    'N/A'
   END   AS diag_type_ind,
@@ -123,7 +124,9 @@ AS
    pna_vaccine_ind,
    pna_vaccine_onset_dt,
    bronchitis_ind,
-   bronchitis_onset_dt
+   bronchitis_onset_dt,
+   tabacco_scr_diag_ind,
+   tabacco_scr_diag_onset_dt
   FROM
    TMP_RES
 
@@ -133,18 +136,19 @@ AS
      MAX(onset_date) AS onset_dt
     FOR diag_type_ind  IN 
        (
-        'asthma'           AS asthma,
-        'bh'               AS bh,
-        'breast_cancer'    AS breast_cancer,
-        'diabetes'         AS diabetes,
-        'heart_failure'    AS heart_failure,
-        'hypertension'     AS hypertension,
-        'kidney_diseases'  AS kidney_diseases,
-        'smoker'           AS smoker,
-        'pregnancy'        AS pregnancy,
-        'influenza'        AS flu_vaccine ,
-        'pneumonia'        AS pna_vaccine ,
-        'bronchitis'       AS bronchitis
+        'asthma'                AS asthma,
+        'bh'                    AS bh,
+        'breast_cancer'         AS breast_cancer,
+        'diabetes'              AS diabetes,
+        'heart_failure'         AS heart_failure,
+        'hypertension'          AS hypertension,
+        'kidney_diseases'       AS kidney_diseases,
+        'smoker'                AS smoker,
+        'pregnancy'             AS pregnancy,
+        'influenza'             AS flu_vaccine ,
+        'pneumonia'             AS pna_vaccine ,
+        'bronchitis'            AS bronchitis,
+        'tabacco_screen_diag'   AS tabacco_scr_diag 
        )
    )
   )
@@ -167,7 +171,9 @@ SELECT
  a.pna_vaccine_ind,
  a.pna_vaccine_onset_dt,
  a.bronchitis_ind,
- a.bronchitis_onset_dt
+ a.bronchitis_onset_dt,
+ a.tabacco_scr_diag_ind,
+ a.tabacco_scr_diag_onset_dt 
 FROM
  tmp_final a
  JOIN dim_patients b ON b.network = a.network AND b.patient_id = a.patient_id AND b.current_flag = 1

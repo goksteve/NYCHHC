@@ -5,8 +5,9 @@ AS
   AS
     (
      SELECT 
-  --   TRUNC(ADD_MONTHS(SYSDATE, - 24), 'MONTH')start_dt,
-       TRUNC(ADD_MONTHS(SYSDATE, -12 ), 'MONTH')start_dt
+         DATE '2016-04-01' as start_dt
+        -- TRUNC(ADD_MONTHS(SYSDATE, - 24), 'MONTH')start_dt 
+     --  TRUNC(ADD_MONTHS(SYSDATE, -12 ), 'MONTH')start_dt
  from dual
     ) , 
   meta_diag AS
@@ -27,6 +28,7 @@ AS
     WHEN cr.criterion_id IN(99) then                      'influenza'
     when cr.criterion_id IN(100) then                     'pneumoniae'
     when cr.criterion_id IN(11,19,20) then                'bronchitis'
+    when cr.criterion_id IN(102) then                    'tabacco_screen_diag'
    ELSE
    'N/A'
   END   AS diag_type_ind,
@@ -38,6 +40,53 @@ AS
   WHERE
    cr.criterion_cd like 'DIAGNOSES%' -- IN (1,3,6,7,9,11,17,18,19,20,21,27,30,31,32,36,37,38,39,48,49,50,51,52,53,57,58,59,60,63,65,70,71,73,99,100) 
   -- and cnd.INCLUDE_EXCLUDE_IND  = 'I'
+  ),
+  tmp_smoker_ind 
+AS
+  ( 
+    SELECT --+ materialize
+       DISTINCT 1 SMOKER_IND, PAT_ID AS PATIENT_ID
+             FROM EPIC_CLARITY.SOCIAL_HX
+            WHERE SMOKING_TOB_USE_C IN (1,2,3,9,10)
+
+  ),
+
+tmp_tabacco_proc_screen
+AS
+ (
+    SELECT --+ materiaalize
+    network, patient_id, visit_id,  1 AS tabacco_proc_screen_ind , tabacco_result_dt ,
+    ROW_NUMBER() OVER( PARTITION BY patient_id, visit_id ORDER BY tabacco_result_dt DESC)  AS cnt
+   FROM (
+            SELECT --+ materialize
+            x.network,
+            order_proc.pat_id AS patient_id,
+            order_proc.pat_enc_csn_id AS visit_id,
+            CAST( NVL(order_proc.order_time, pat_enc.contact_date) AS DATE) AS tabacco_result_dt   
+            FROM epic_clarity.order_proc order_proc
+            LEFT JOIN epic_clarity.order_results res ON order_proc.order_proc_id = res.order_proc_id
+            LEFT JOIN epic_clarity.pat_enc pat_enc ON pat_enc.pat_id = order_proc.pat_id AND order_proc.pat_enc_csn_id = pat_enc.pat_enc_csn_id
+            LEFT OUTER JOIN epic_clarity.clarity_dep hsdep ON hsdep.department_id = pat_enc.department_id
+            LEFT OUTER JOIN epic_clarity.clarity_loc loc1 ON loc1.loc_id = hsdep.rev_loc_id
+            LEFT OUTER JOIN epic_clarity.x_loc_facility_mapping x ON x.facility_id = loc1.adt_parent_id
+            WHERE  1 = 1
+            AND order_proc.proc_code IN ('REF1001','REF100','99406','99407')
+            AND order_proc.order_status_c IN (1,3,5,12)
+            AND order_proc.result_time >=  DATE '2016-04-01'  OR (pat_enc.enc_type_c IN ('109'))
+      UNION 
+          SELECT --+ materialize
+          x.network,
+          sh.pat_id AS patient_id,
+          pe.pat_enc_csn_id AS visit_id,
+          CAST(  NVL(sh.contact_date, pe.contact_date) AS DATE) AS tabacco_result_dt 
+          FROM
+          epic_clarity.social_hx sh
+          LEFT JOIN  epic_clarity.pat_enc pe ON pe.pat_id = sh.pat_id
+          LEFT OUTER JOIN epic_clarity.clarity_dep hsdep ON hsdep.department_id = pe.department_id
+          LEFT OUTER JOIN epic_clarity.clarity_loc loc1 ON loc1.loc_id = hsdep.rev_loc_id
+          LEFT OUTER JOIN epic_clarity.x_loc_facility_mapping x ON x.facility_id = loc1.adt_parent_id
+          WHERE   smoking_tob_use_c IN (1,2,3,9,10)
+     )
   ),
    diag_pat AS
     (
@@ -63,8 +112,10 @@ AS
       p.name AS patient_name,
       p.medical_record_number AS mrn,
       p.sex,
+      rr.name  as race,
       p.birthdate,
       ROUND(MONTHS_BETWEEN(SYSDATE, p.birthdate) / 12, 1) AS age,
+    --  sm.smoker_ind,
       pdx.dx_id,
       edg.current_icd10_list AS icd_code,
       edg.dx_name AS diagnosis_name,
@@ -77,9 +128,13 @@ AS
       JOIN cdw.dim_hc_facilities f ON v.network = f.network AND v.facility_id = f.facility_id
       LEFT JOIN ptfinal.s_patient p  ON v.network = p.network AND v.patient_id = p.patient_id AND v.epic_flag = p.epic_flag
       LEFT JOIN epic_clarity.pat_enc_dx pdx ON v.visit_id = pdx.pat_enc_csn_id
-      LEFT OUTER JOIN epic_clarity.clarity_edg edg ON pdx.dx_id = edg.dx_id
+      LEFT JOIN epic_clarity.clarity_edg edg ON pdx.dx_id = edg.dx_id
+      LEFT JOIN ptfinal.race rr ON rr.network  = p.network AND rr.race_id  =  p.race_id
+   --   LEFT JOIN tmp_smoker_ind  sm on sm.patient_id = p.patient_id
+
      WHERE
-      v.epic_flag = 'Y' AND v.admission_date_time >= start_dt  AND v.admission_date_time < TRUNC(sysdate)-- LAST_DAY(ADD_MONTHS(SYSDATE, -1))
+      v.epic_flag = 'Y' AND v.admission_date_time >= start_dt 
+    AND v.admission_date_time < TRUNC(sysdate)-- LAST_DAY(ADD_MONTHS(SYSDATE, -1))
    ),
     pat_inc_exc AS
     (
@@ -106,6 +161,7 @@ AS
       FROM diag_pat d 
       WHERE  icd_code = 'Z23'
       AND REGEXP_LIKE (diagnosis_name, 'pneumoniae|pneumococcus ','i')
+  
     )
 
 ,
@@ -273,87 +329,91 @@ a1c_val.rn1 = 1
 tmp_final
 AS 
   (
-    SELECT --+ MATERIALIZE
-    DISTINCT network,
-    facility_key,
-    facility_name,
-    visit_id,
-    admission_dt,
-    discharge_dt,
-    visit_type,
-    patient_key,
-    patient_id,
-    patient_name,
-    mrn,
-    birth_date,
-    sex,
-    age,
-  --  coding_scheme,
- --   diagnosis_name,
-  --  icd_code,
- --   is_primary_problem,
-    asthma_ind,
-    bh_ind,
-    breast_cancer_ind,
-    diabetes_ind,
-    heart_failure_ind,
-    hypertension_ind,
-    kidney_diseases_ind,
-    pregnancy_ind,
-    pregnancy_onset_dt,
-    flu_vaccine_ind,
-    flu_vaccine_onset_dt,
-    pna_vaccine_ind,
-    pna_vaccine_onset_dt,
-    nephropathy_screen_ind,
-    retinal_eye_exam_ind,
-    ldl_order_time,
-    ldl_result_time,
-    ldl_calc_value,
-    bp_diastolic,
-    bp_systolic,
-    bp_orig_value,
-    bp_result_time,
-    a1c_value,
-    a1c_result_dt
+      SELECT --+ MATERIALIZE
+      DISTINCT
+      network,
+      patient_key,
+      facility_id,
+      facility_name,
+      visit_id,
+      visit_type,
+      patient_id,
+      mrn,
+      patient_name,
+      sex,
+      race,
+      birth_date,
+      age,
+      admission_dt,
+      discharge_dt,
+      asthma_ind,
+      bh_ind,
+      breast_cancer_ind,
+      diabetes_ind,
+      heart_failure_ind,
+      hypertension_ind,
+      kidney_diseases_ind,
+      pregnancy_ind,
+      pregnancy_onset_dt,
+      flu_vaccine_ind,
+      flu_vaccine_onset_dt,
+      pna_vaccine_ind,
+      pna_vaccine_onset_dt,
+      bronchitis_ind,
+      bronchitis_onset_dt,
+      tabacco_scr_diag_ind,
+      tabacco_scr_diag_onset_dt,
+      nephropathy_screen_ind,
+      retinal_eye_exam_ind,
+      tabacco_proc_screen_ind ,
+      tabacco_result_dt,
+      ldl_order_time,
+      ldl_result_time,
+      ldl_calc_value,
+      bp_diastolic,
+      bp_systolic,
+      bp_orig_value,
+      bp_result_time,
+      a1c_value,
+      a1c_result_dt
     FROM
           (
-          SELECT
-          d.network,
-          d.facility_key,
-          d.facility_name,
-          d.visit_id,
-          d.admission_dt,
-          d.discharge_dt,
-          d.visit_type,
-          d.patient_key,
-          d.patient_id,
-          d.patient_name,
-          d.mrn,
-          d.birthdate AS birth_date,
-          d.sex,
-          d.age,
-        --  d.coding_scheme,
-            d.onset_date,
-        --  d.diagnosis_dt_key,
-       --   d.icd_code,
-       --   d.diagnosis_name,
-       --   d.is_primary_problem,
-          pat_inc.diag_type_ind,
-          ldl.ldl_calc_value,
-          ldl.ldl_order_time,
-          bp1.bp_diastolic,
-          bp1.bp_systolic,
-          bp1.bp_orig_value,
-          bp1.bp_result_time,
-          ldl.ldl_result_time,
-          a1c.a1c_value,
-          a1c.a1c_result_dt
+        SELECT
+           d.network,
+           d.facility_ID,
+           d.facility_name,
+           d.visit_id,
+           d.admission_dt,
+           d.discharge_dt,
+           d.visit_type,
+           d.patient_key,
+           d.patient_id,
+           d.patient_name,
+           d.mrn,
+           d.birthdate AS birth_date,
+           d.sex,
+           d.race,
+           d.age,
+           d.onset_date,
+          -- d.smoker_ind,
+           pat_inc.diag_type_ind,
+           tabacco_proc_screen_ind ,
+           tabacco_result_dt,
+           ldl.ldl_calc_value,
+           ldl.ldl_order_time,
+           bp1.bp_diastolic,
+           bp1.bp_systolic,
+           bp1.bp_orig_value,
+           bp1.bp_result_time,
+           ldl.ldl_result_time,
+           a1c.a1c_value,
+           a1c.a1c_result_dt
           FROM  diag_pat d
-          LEFT JOIN pat_inc_exc pat_inc ON d.network = pat_inc.network AND d.patient_id = pat_inc.patient_id
+          LEFT JOIN pat_inc_exc pat_inc ON d.network = pat_inc.network AND d.patient_id = pat_inc.patient_id AND pat_inc.visit_id  = d.visit_id
           LEFT JOIN ldl ldl ON d.patient_id = ldl.patient_id AND d.visit_id = ldl.visit_id
           LEFT JOIN bp_final bp1 ON d.patient_id = bp1.patient_id AND d.visit_id = bp1.visit_id
           LEFT JOIN a1c a1c ON d.patient_id = a1c.patient_id AND d.visit_id = a1c.visit_id
+          LEFT JOIN  tmp_tabacco_proc_screen tt  ON d.patient_id = tt.patient_id AND d.visit_id = tt.visit_id and  tt.cnt  = 1
           WHERE  d.network IS NOT NULL
         )
   PIVOT
@@ -374,67 +434,69 @@ AS
               'pneumoniae' AS pna_vaccine ,
               'bronchitis' AS bronchitis,
               'nephropathy_screen' AS nephropathy_screen,
-              'retinal_dil_eye_exam' AS retinal_eye_exam
-
-              )
+              'retinal_dil_eye_exam' AS retinal_eye_exam,
+              'tabacco_screen_diag' AS tabacco_scr_diag
+                           )
   )
          )
 
 SELECT /*+ PARALLEL (32) */
- DISTINCT 
- f.network,
- f.facility_key,
- f.facility_name,
- f.visit_id,
- TO_NUMBER(TO_CHAR(NVL(admission_dt, DATE '1901-01-01'), 'YYYYMMDD')) AS admission_dt_key,
- admission_dt,
- f.discharge_dt,
- f.visit_type,
- f.patient_key,
- f.patient_id,
- f.patient_name,
- NVL(f.mrn,vp.mrn) AS mrn,
- f.birth_date AS birthdate,
- f.sex,
- f.age AS patient_age_at_admission,
--- f.coding_scheme,
--- f.diagnosis_name,
--- f.icd_code,
--- f.is_primary_problem,
-  CASE WHEN asthma_ind > 0 THEN 1 ELSE 0 END AS asthma_ind ,
-  CASE WHEN bh_ind > 0 THEN 1 ELSE 0 END AS bh_ind,
-  CASE WHEN breast_cancer_ind > 0 THEN 1 ELSE 0 END AS breast_cancer_ind,
-  CASE WHEN diabetes_ind > 0 THEN 1  ELSE 0 END AS diabetes_ind,
-  CASE WHEN heart_failure_ind > 0 THEN 1 ELSE 0 END AS heart_failure_ind,
-  CASE WHEN hypertension_ind > 0 THEN 1  ELSE 0 END AS hypertension_ind,
-  CASE WHEN kidney_diseases_ind > 0 THEN 1 ELSE 0 END AS kidney_diseases_ind,
-  CASE WHEN sm.SMOKER_IND > 0 then 1 ELSE 0 END AS SMOKER_IND,
-  CASE WHEN pregnancy_ind > 0 THEN 1 ELSE 0 END AS pregnancy_ind,
-  pregnancy_onset_dt,
-  CASE WHEN  flu_vaccine_ind  > 0 THEN 1 ELSE 0 END AS flu_vaccine_ind,
-  flu_vaccine_onset_dt,
-  CASE WHEN  pna_vaccine_ind  > 0 THEN 1 ELSE 0 END AS pna_vaccine_ind,
-  pna_vaccine_onset_dt,
-  CASE WHEN nephropathy_screen_ind > 0 THEN 1  ELSE 0 END AS  nephropathy_screen_ind,
-  CASE WHEN retinal_eye_exam_ind  > 0 THEN 1 ELSE 0 END AS retinal_eye_exam_ind,
- ldl_order_time,
- ldl_result_time,
- ldl_calc_value,
- bp_diastolic,
- bp_systolic,
- bp_orig_value,
- bp_result_time,
- a1c_value,
- a1c_result_dt
+ DISTINCT f.network,
+          f.visit_id,
+          f.patient_key,
+          TO_NUMBER(TO_CHAR(NVL(admission_dt, DATE '1901-01-01'), 'YYYYMMDD')) AS admission_dt_key,
+          f.facility_id,
+          f.facility_name,
+          f.visit_type,
+          f.patient_id,
+          NVL(f.mrn, vp.mrn) AS mrn,
+          f.patient_name,
+          f.sex,
+          f.race,
+          f.birth_date AS birthdate,
+          f.age AS patient_age_at_admission,
+          admission_dt,
+          f.discharge_dt,
+          CASE WHEN asthma_ind > 0 THEN 1 ELSE 0 END AS asthma_ind,
+          CASE WHEN bh_ind > 0 THEN 1 ELSE 0 END AS bh_ind,
+          CASE WHEN breast_cancer_ind > 0 THEN 1 ELSE 0 END AS breast_cancer_ind,
+          CASE WHEN diabetes_ind > 0 THEN 1 ELSE 0 END AS diabetes_ind,
+          CASE WHEN heart_failure_ind > 0 THEN 1 ELSE 0 END AS heart_failure_ind,
+          CASE WHEN hypertension_ind > 0 THEN 1 ELSE 0 END AS hypertension_ind,
+          CASE WHEN kidney_diseases_ind > 0 THEN 1 ELSE 0 END AS kidney_diseases_ind,
+          CASE WHEN sm.smoker_ind > 0 THEN 1 ELSE 0 END AS smoker_ind,
+          CASE WHEN pregnancy_ind > 0 THEN 1 ELSE 0 END AS pregnancy_ind,
+          pregnancy_onset_dt,
+          CASE WHEN flu_vaccine_ind > 0 THEN 1 ELSE 0 END AS flu_vaccine_ind,
+          flu_vaccine_onset_dt,
+          CASE WHEN pna_vaccine_ind > 0 THEN 1 ELSE 0 END AS pna_vaccine_ind,
+          pna_vaccine_onset_dt,
+          tabacco_scr_diag_ind,
+          tabacco_scr_diag_onset_dt,
+          CASE WHEN nephropathy_screen_ind > 0 THEN 1 ELSE 0 END AS nephropathy_screen_ind,
+          CASE WHEN retinal_eye_exam_ind > 0 THEN 1 ELSE 0 END AS retinal_eye_exam_ind,
+          NVL(tabacco_proc_screen_ind,0) AS tabacco_proc_screen_ind,
+          tabacco_result_dt,
+          ldl_order_time,
+          ldl_result_time,
+          ldl_calc_value,
+          bp_diastolic,
+          bp_systolic,
+          bp_orig_value,
+          bp_result_time,
+          a1c_value,
+          a1c_result_dt
 FROM
-tmp_final f
-LEFT JOIN (
-            SELECT  mrn, pat_id,
-           ROW_NUMBER() OVER(PARTITION BY pat_id ORDER BY mrn) cnt
-           FROM epic_clarity.x_hhc_v_patients_v 
-          ) vp ON vp.pat_id = f.patient_id and vp.cnt = 1
-LEFT JOIN (
-           SELECT DISTINCT 1 AS  SMOKER_IND, PAT_ID AS PATIENT_ID
-           FROM EPIC_CLARITY.SOCIAL_HX  WHERE SMOKING_TOB_USE_C IN (1,2,3,9,10)
-          ) sm ON sm.patient_id  = f.patient_id
-WHERE admission_dt < TRUNC(SYSDATE);
+ tmp_final f
+    LEFT JOIN 
+         (
+          SELECT  mrn, pat_id,
+          ROW_NUMBER() OVER(PARTITION BY pat_id ORDER BY mrn) cnt
+          FROM epic_clarity.x_hhc_v_patients_v 
+        ) vp ON vp.pat_id = f.patient_id and vp.cnt = 1
+    LEFT JOIN 
+        (
+          SELECT DISTINCT 1 AS  smoker_ind, PAT_ID AS PATIENT_ID
+          FROM EPIC_CLARITY.SOCIAL_HX  WHERE SMOKING_TOB_USE_C IN (1,2,3,9,10)
+        ) sm ON sm.patient_id  = f.patient_id
+    WHERE admission_dt < TRUNC(SYSDATE);

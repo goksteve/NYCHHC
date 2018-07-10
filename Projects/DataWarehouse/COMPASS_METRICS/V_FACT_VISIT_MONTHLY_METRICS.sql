@@ -6,9 +6,12 @@ CREATE OR REPLACE VIEW v_fact_visit_monthly_metrics AS
   p.patient_key,
   a.admission_dt_key,
   a.visit_number,
+  f.facility_id,
   f.facility_name AS facility,
   rvt.visit_type_id,
   rvt.name AS visit_type,
+  DECODE(med.payer_type, 'medicaid', 1, 0) medicaid_ind,
+  DECODE(med.payer_type, 'medicare', 1, 0) medicare_ind,
   CAST(a.patient_id AS VARCHAR2(256)) AS patient_id,
   NVL(rmrn.second_mrn, p.medical_record_number) mrn,
   p.name AS patient_name,
@@ -32,16 +35,20 @@ CREATE OR REPLACE VIEW v_fact_visit_monthly_metrics AS
   a.flu_vaccine_onset_dt,
   a.pna_vaccine_ind,
   a.pna_vaccine_onset_dt,
-  nephropathy_screen_ind,
-  retinal_dil_eye_exam_ind,
-  a1c_final_calc_value,
-  gluc_final_calc_value,
-  ldl_final_calc_value,
-  bp_final_calc_value,
-  bp_final_calc_systolic,
-  bp_final_calc_diastolic, --, SOURCE, LOAD_DT
-  DECODE(med.payer_type, 'medicaid', 1, 0) medicaid_ind,
-  DECODE(med.payer_type, 'medicare', 1, 0) medicare_ind
+  a.bronchitis_ind,
+  a.bronchitis_onset_dt,
+  a.tabacco_scr_diag_ind,
+  a.tabacco_scr_diag_onset_dt,
+  a.nephropathy_screen_ind,
+  a.retinal_dil_eye_exam_ind,
+  a.tabacco_screen_proc_ind,
+  a.a1c_final_calc_value,
+  a.gluc_final_calc_value,
+  a.ldl_final_calc_value,
+  a.bp_final_calc_value,
+  a.bp_final_calc_systolic,
+  a.bp_final_calc_diastolic --, SOURCE, LOAD_DT
+  
  FROM
   fact_visit_metric_results a
   -- JOIN fact_patient_metric_diag b ON a.network = b.network AND a.patient_id = b.patient_id
@@ -69,4 +76,4 @@ CREATE OR REPLACE VIEW v_fact_visit_monthly_metrics AS
      OR TRIM(UPPER(p.payer_name)) LIKE '%MEDICARE%')) med
    ON med.payer_key = v.first_payer_key
  WHERE
-  a.admission_dt >= DATE '2017-01-01' AND a.admission_dt < TRUNC(ADD_MONTHS(SYSDATE, -1), 'MONTH');
+  a.admission_dt >= DATE '2014-01-01' AND a.admission_dt < TRUNC(ADD_MONTHS(SYSDATE, -1), 'MONTH');
