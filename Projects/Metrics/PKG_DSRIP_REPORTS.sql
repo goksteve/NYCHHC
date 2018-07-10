@@ -9,11 +9,11 @@ CREATE OR REPLACE PACKAGE pkg_dsrip_reports AS
     1.0        06/21/2018      goreliks1       1. Created this package.
  ******************************************************************************/
 
+ PROCEDURE sp_dsrip_tr_002_023 ;
+ PROCEDURE sp_dsrip_tr_017; 
  PROCEDURE sp_dsrip_tr_022;
-
- PROCEDURE sp_dsrip_tr_017;
-
  PROCEDURE sp_dsrip_tr_024;
+PROCEDURE sp_dsrip_tr_044;
 
 END;
 /
@@ -29,22 +29,35 @@ CREATE OR REPLACE PACKAGE BODY pkg_dsrip_reports AS
     1.0        06/21/2018      goreliks1       1. Created this package body.
  ******************************************************************************/
 
- PROCEDURE sp_dsrip_tr_022 AS
+PROCEDURE sp_dsrip_tr_002_023 AS
  -- 2018-MAY-23 SG Create
  BEGIN
 
   EXECUTE IMMEDIATE 'ALTER SESSION enable parallel DML';
 
-  xl.open_log('DSRIP_TR_022_DIAB_SCREEN_CDW', 'DSRIP_TR_022_DIAB_SCREEN_CDW', TRUE);
+  xl.open_log('DSRIP_TR002_023_CDW_EPIC', 'DSRIP_TR002_023_CDW_EPIC', TRUE);
 
+  xl.begin_action('RUNNING QCPR');
   etl.add_data(
    p_operation => 'INSERT /*+ Parallel(32)  */',
-   p_tgt => 'DSRIP_TR_022_DIAB_SCREEN_CDW',
-   p_src => 'V_DSRIP_TR_022_DIAB_SCREEN_CDW',
+   p_tgt => 'DSRIP_TR002_023_A1C_CDW',
+   p_src => 'V_DSRIP_TR002_023_A1C_CDW',
    p_whr => 'Where 1= 1 ',
    p_commit_at => -1);
 
-  xl.close_log('COMPLETE DSRIP_TR_022 OK ');
+  xl.end_action('COMPLETE QCPR');
+
+  xl.begin_action('RUNNING EPIC');
+  etl.add_data(
+   p_operation => 'INSERT /*+ Parallel(32)  */',
+   p_tgt => 'DSRIP_TR002_023_A1C_EPIC',
+   p_src => 'V_DSRIP_TR002_023_A1C_EPIC',
+   p_whr => 'Where 1= 1 ',
+   p_commit_at => -1);
+
+  xl.end_action('COMPLETE EPIC');
+
+  xl.close_log('DSRIP_TR002_023 OK ');
  EXCEPTION
   WHEN OTHERS THEN
    xl.close_log(SQLERRM, TRUE);
@@ -86,7 +99,29 @@ CREATE OR REPLACE PACKAGE BODY pkg_dsrip_reports AS
    xl.close_log(SQLERRM, TRUE);
    RAISE;
  END;
+ --**************** SP_DSRIP_TR_022 *****************
 
+ PROCEDURE sp_dsrip_tr_022 AS
+ -- 2018-MAY-23 SG Create
+ BEGIN
+
+  EXECUTE IMMEDIATE 'ALTER SESSION enable parallel DML';
+
+  xl.open_log('DSRIP_TR_022_DIAB_SCREEN_CDW', 'DSRIP_TR_022_DIAB_SCREEN_CDW', TRUE);
+
+  etl.add_data(
+   p_operation => 'INSERT /*+ Parallel(32)  */',
+   p_tgt => 'DSRIP_TR_022_DIAB_SCREEN_CDW',
+   p_src => 'V_DSRIP_TR_022_DIAB_SCREEN_CDW',
+   p_whr => 'Where 1= 1 ',
+   p_commit_at => -1);
+
+  xl.close_log('COMPLETE DSRIP_TR_022 OK ');
+ EXCEPTION
+  WHEN OTHERS THEN
+   xl.close_log(SQLERRM, TRUE);
+   RAISE;
+ END;
  --****** sp_DSRIP_tr_024 *********************
 
  PROCEDURE sp_dsrip_tr_024 AS
@@ -112,6 +147,32 @@ CREATE OR REPLACE PACKAGE BODY pkg_dsrip_reports AS
    xl.close_log(SQLERRM, TRUE);
    RAISE;
  END;
+
+--******************* DSRIP_TR_044_STAT_CARDIO_CDW *************
+PROCEDURE sp_dsrip_tr_044 AS
+ 
+ BEGIN
+
+  EXECUTE IMMEDIATE 'ALTER SESSION enable parallel DML';
+
+  xl.open_log('sp_dsrip_tr_044', 'DSRIP_TR_044', TRUE);
+
+  xl.begin_action('RUNNING QCPR');
+  etl.add_data(
+   p_operation => 'INSERT /*+ Parallel(32)  */',
+   p_tgt => 'DSRIP_TR_044_STAT_CARDIO_CDW',
+   p_src => 'V_DSRIP_TR_044_STAT_CARDIO_CDW',
+   p_whr => 'Where 1= 1 ',
+   p_commit_at => -1);
+
+  xl.end_action('COMPLETE DSRIP_TR_044');
+  xl.close_log('COMPLETE DSRIP_TR_044OK ');
+ EXCEPTION
+  WHEN OTHERS THEN
+   xl.close_log(SQLERRM, TRUE);
+   RAISE;
+ END;
+
 
 END pkg_dsrip_reports;
 /

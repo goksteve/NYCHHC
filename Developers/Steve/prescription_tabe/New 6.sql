@@ -1,4 +1,5 @@
 SELECT
+NETWORK
  pm.patient_id,
  pm.medication_id,
  pma.medication_archive_id,
@@ -43,8 +44,7 @@ FROM
  patient_med pm,
  patient_med_archive_med pmam,
  patient_med_archive pma,
- --  ud_master.facility                      f
- ud_master.patient_med_last_action_taken lat
+ patient_med_last_action_taken lat
 WHERE
  1 = 1
  AND pm.patient_id = pmam.patient_id

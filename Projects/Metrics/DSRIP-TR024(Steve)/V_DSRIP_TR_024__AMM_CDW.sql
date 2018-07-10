@@ -6,7 +6,7 @@ CREATE OR REPLACE VIEW v_dsrip_tr_024_amm_cdw AS
     TRUNC(SYSDATE, 'MONTH') report_dt,
     ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -24) start_dt,
     ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -28) drug_calc_dt,
-    --ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -12) rslt_start_date,
+    ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -26) visit_calc_date,
     ADD_MONTHS(TRUNC((TRUNC(SYSDATE, 'MONTH') - 1), 'YEAR'), 12) - 1 AS report_year
     FROM
     DUAL
@@ -25,7 +25,7 @@ CREATE OR REPLACE VIEW v_dsrip_tr_024_amm_cdw AS
     SUBSTR(pp.name, 1, INSTR(pp.name, ',', 1) - 1) AS pat_lname,
     SUBSTR(pp.name, INSTR(pp.name, ',') + 1) AS pat_fname,
     NVL(sec.second_mrn, pp.medical_record_number) AS mrn,
-    pp.birthdate,
+    trunc(pp.birthdate) as birthdate,
     ROUND((v.admission_dt - pp.birthdate) / 365) AS age,
     pp.apt_suite,
     pp.street_address,
@@ -39,8 +39,8 @@ CREATE OR REPLACE VIEW v_dsrip_tr_024_amm_cdw AS
     vt1.name AS initial_visit_type,
     v.final_visit_type_id AS visit_type_id,
     vt.name AS visit_type,
-    v.admission_dt,
-    v.discharge_dt,
+    trunc(v.admission_dt) as admission_dt,
+    trunc(v.discharge_dt)  as  discharge_dt,
     prov.physician_service_name_1 AS service,
     CASE UPPER(TRIM(pm.payer_group)) WHEN 'MEDICAID' THEN 'Y' ELSE NULL END AS medicaid_ind,
     CASE
@@ -59,9 +59,10 @@ CREATE OR REPLACE VIEW v_dsrip_tr_024_amm_cdw AS
     d.icd_code,
     d.problem_comments,
     diagnosis_dt,
-    ROW_NUMBER() OVER(PARTITION BY d.network, d.patient_id ORDER BY diagnosis_dt DESC) cnt
+    ROW_NUMBER() OVER(PARTITION BY d.network, d.patient_id ORDER BY diagnosis_dt ) cnt
     FROM
-    meta_conditions mc
+     report_dates
+     CROSS JOIN  meta_conditions mc
     JOIN fact_visit_diagnoses d ON d.icd_code = mc.VALUE
     JOIN dim_patients pp ON pp.patient_id = d.patient_id AND pp.network = d.network AND current_flag = 1
     JOIN fact_visits v ON v.network = d.network AND v.visit_id = d.visit_id
@@ -75,7 +76,7 @@ CREATE OR REPLACE VIEW v_dsrip_tr_024_amm_cdw AS
     AND sec.patient_id = pp.patient_id  AND sec.facility_key = v.facility_key
     WHERE
     mc.criterion_id IN (104)
-    AND diagnosis_dt >= ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -24)
+    AND diagnosis_dt >=  visit_calc_date -- 26 months
     AND ROUND((admission_dt - pp.birthdate) / 365) >= 18
   ),
  tmp_drug_pat AS
@@ -88,44 +89,43 @@ CREATE OR REPLACE VIEW v_dsrip_tr_024_amm_cdw AS
     d.dosage,
     d.rx_quantity,
     d.frequency,
-    drug_frequency_num_val AS daily_cnt,
+    daily_cnt,
     TRUNC(d.order_dt) AS order_dt,
-    LAG(order_dt, 1) OVER(PARTITION BY d.network, d.patient_id ORDER BY order_dt)  AS prev_order_dt,
+    LAG(order_dt, 1)  OVER(PARTITION BY d.network, d.patient_id ORDER BY order_dt)  AS prev_order_dt,
     LEAD(order_dt, 1) OVER(PARTITION BY d.network, d.patient_id ORDER BY order_dt) AS next_order_dt,
     LEAD(order_dt, 2) OVER(PARTITION BY d.network, d.patient_id ORDER BY order_dt) AS second_next_order_dt,
     LEAD(order_dt, 3) OVER(PARTITION BY d.network, d.patient_id ORDER BY order_dt) AS third_next_order_dt,
     LEAD(order_dt, 4) OVER(PARTITION BY d.network, d.patient_id ORDER BY order_dt) AS fourth_next_order_dt,
     LEAD(order_dt, 5) OVER(PARTITION BY d.network, d.patient_id ORDER BY order_dt) AS fifth_next_order_dt,
     TRUNC(order_dt) - LAG(order_dt, 1) OVER(PARTITION BY d.network, d.patient_id ORDER BY order_dt) AS diff_days,
-    start_dt AS rep_start_dt
-    --ROW_NUMBER() OVER(PARTITION BY network, patient_id ORDER BY order_dt) cnt
+     rep_start_dt
     FROM
-    report_dates dt
-    CROSS JOIN
-           (
-            select 
-            d.network,
-            d.patient_id,
-            d.drug_name,
-            d.drug_description,
-            d.dosage,
-            d.rx_quantity,
-            d.frequency,
-            TRUNC(d.order_dt) AS order_dt,
-            ROW_NUMBER() OVER(PARTITION BY network, patient_id,  TRUNC(d.order_dt) ORDER BY TRUNC(order_dt) ASC, rx_quantity DESC) cnt
-            from  fact_patient_prescriptions d
-            JOIN ref_drug_descriptions rd
-            ON rd.drug_description = d.drug_description AND rd.drug_type_id = 103
-            AND  order_dt >=  ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -28)
+         (
+           SELECT
+             d.network,
+             d.patient_id,
+             d.drug_name,
+             d.drug_description,
+             d.dosage,
+             d.rx_quantity,
+             d.frequency,
+             a.drug_frequency_num_val AS daily_cnt,
+             TRUNC(d.order_dt) AS order_dt,
+             ROW_NUMBER()
+              OVER(PARTITION BY network, patient_id, TRUNC(d.order_dt) ORDER BY TRUNC(order_dt) ASC, rx_quantity DESC)
+              cnt,
+             start_dt AS rep_start_dt
+            FROM
+             report_dates dt
+             CROSS JOIN fact_patient_prescriptions d
+             JOIN ref_drug_descriptions rd  ON rd.drug_description = d.drug_description AND rd.drug_type_id = 103
+             LEFT JOIN ref_drug_frequency a  ON d.frequency LIKE a.drug_frequency
+            WHERE
+             order_dt >= drug_calc_dt AND order_dt < dt.report_dt
           ) d
-    JOIN ref_drug_descriptions rd
-    ON rd.drug_description = d.drug_description AND rd.drug_type_id = 103
-    JOIN ref_drug_frequency A
-    ON d.frequency LIKE a.drug_frequency
-    WHERE
-    d.cnt = 1
-   AND  order_dt >= drug_calc_dt AND order_dt < dt.report_dt
-    
+   
+    WHERE   d.cnt = 1
+      
   ),
  drug_pat AS
  (
@@ -163,7 +163,7 @@ CREATE OR REPLACE VIEW v_dsrip_tr_024_amm_cdw AS
     fifth_next_order_dt,
     diff_days,
     rep_start_dt,
-    ROW_NUMBER() OVER(PARTITION BY network, patient_id ORDER BY order_dt, rx_quantity DESC) cnt
+    ROW_NUMBER() OVER(PARTITION BY network, patient_id ORDER BY order_dt) cnt
     FROM
     tmp_drug_pat
     WHERE
@@ -172,7 +172,7 @@ CREATE OR REPLACE VIEW v_dsrip_tr_024_amm_cdw AS
       WHERE
       cnt = 1 AND (diff_days > 105 OR diff_days IS NULL)
 ),
-      final_dug_pat AS
+      final_drug_pat AS
        (SELECT --+ materialize
          network,
          patient_id,
@@ -210,7 +210,7 @@ CREATE OR REPLACE VIEW v_dsrip_tr_024_amm_cdw AS
           ELSE
            1
          END
-          AS numerator_flag
+          AS tr_024_num_flag
         FROM
          drug_pat)
  SELECT /*+ parallel(32) */
@@ -261,8 +261,9 @@ CREATE OR REPLACE VIEW v_dsrip_tr_024_amm_cdw AS
   p.next_order_dt,
   p.second_next_order_dt,
   p.third_next_order_dt,
-  p.numerator_flag
+  p.tr_024_num_flag
  FROM
-  visit_pat v JOIN final_dug_pat p ON p.network = v.network AND p.patient_id = v.patient_id
+  visit_pat v JOIN final_drug_pat p ON p.network = v.network AND p.patient_id = v.patient_id
  WHERE
   v.cnt = 1
+AND ABS(p.order_dt - diagnosis_dt) >= 60

@@ -14,30 +14,6 @@ BEGIN
   dbms_session.set_identifier(d_report_mon);
   xl.end_action('Set to '||d_report_mon);
   
---  xl.begin_action('Checking that new data has been imported from the source databases');
---  SELECT COUNT(DISTINCT network) INTO n_cnt
---  FROM dsrip_TR044_a1c_glucose_rslt
---  WHERE result_dt > ADD_MONTHS(d_report_mon, -1);
-  
---  IF n_cnt < 6 THEN
---    Raise_Application_Error
---    (
---      -20000,
---      'Staging table DSRIP_TR044_A1C_GLUCOSE_RSLT contains '||ADD_MONTHS(d_report_mon, -1)||
---      ' data from '||n_cnt||' Networks only.'||CHR(10)||'Should be from 6 Networks.'
---    ); 
---  END IF;
-  
---  SELECT COUNT(1) INTO n_cnt FROM v_dsrip_report_TR044_epic;
---  IF n_cnt = 0 THEN
---    Raise_Application_Error
---    (
---      -20000,
---      'Staging table EPIC_CLARITY.DSRIP_DIAB_SCRN_EPIC contains no data for '||TO_CHAR(d_report_mon, 'Month YYYY')||'.'
---    ); 
---  END IF;
---  xl.end_action;
---  
   n_cnt := 0;
   
   xl.begin_action('Deleting old TR044 data (if any) for '||d_report_mon);
@@ -45,8 +21,6 @@ BEGIN
   DELETE FROM dsrip_report_tr044 WHERE report_dt = d_report_mon;
   n_cnt := n_cnt + SQL%ROWCOUNT;
   
---  DELETE FROM dsrip_report_tr044_epic WHERE report_dt = d_report_mon;
---  n_cnt := n_cnt + SQL%ROWCOUNT;
   
   DELETE FROM dsrip_report_results WHERE report_cd LIKE 'DSRIP-TR044%' AND period_start_dt = d_report_mon;
   n_cnt := n_cnt + SQL%ROWCOUNT;
@@ -79,31 +53,6 @@ BEGIN
       GROUP BY GROUPING SETS((report_dt, network, facility_name),(report_dt))',
     p_commit_at => -1
   );
-  
---  etl.add_data
---  (
---    p_operation => 'INSERT',
---    p_tgt => 'DSRIP_REPORT_TR044_EPIC',
---    p_src => 'V_DSRIP_REPORT_TR044_EPIC',
---    p_commit_at => -1
---  );
---  
---  etl.add_data
---  (
---    p_operation => 'INSERT',
---    p_tgt => 'DSRIP_REPORT_RESULTS',
---    p_src => 'SELECT 
---        ''DSRIP-TR044-EPIC'' report_cd, 
---        report_dt AS period_start_dt,
---        DECODE(GROUPING(network), 1, ''ALL networks'', network) network,
---        DECODE(GROUPING(facility_name), 1, ''ALL facilities'', facility_name) AS facility_name,
---        COUNT(1) denominator,
---        COUNT(numerator_flag_hemoglobin_test) numerator_1
---      FROM dsrip_report_TR044_epic r
---      WHERE report_dt = '''||d_report_mon||'''
---      GROUP BY GROUPING SETS((report_dt, network, facility_name),(report_dt))',
---    p_commit_at => -1
---  );
   
   xl.close_log('Successfully completed');
 EXCEPTION
