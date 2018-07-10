@@ -1,6 +1,7 @@
 CREATE OR REPLACE  VIEW V_FACT_VISIT_METRICS
 AS
   WITH
+--  10-Jul-2018, GK: Added visit_key logic to QCPR and EPIC data.  
   get_dates
    AS
     (
@@ -304,9 +305,9 @@ LEFT JOIN bp_final_tb b ON b.network = a.network AND b.visit_id = a.visit_id AND
 
 SELECT 
  a.network,
- NVL( v.visit_key,999999999999) as visit_key,
+ to_number(NVL(v.visit_key, (ntw.network_key || v.visit_id))) as visit_key,
  a.visit_id,
-NVL( p.patient_key,999999999999) as patient_key,
+ NVL( p.patient_key,999999999999) as patient_key,
  a.admission_dt_key,
  a.visit_number,
  a.facility,
@@ -352,58 +353,63 @@ FROM
  LEFT JOIN DIM_PATIENTS p on p.network = a.network and p.patient_id  = a.patient_id and p.current_flag  = 1
  LEFT JOIN fact_visits v ON  v.NETWORK = a.NETWORK AND v.visit_id  =  a.visit_id
  LEFT JOIN REF_VISIT_TYPES vt on vt.visit_type_id = a.visit_type_id
+ JOIN dim_hc_networks ntw ON ntw.network = v.network 
 WHERE
  a.admission_dt < TRUNC(SYSDATE)
+
 UNION ALL
+
 SELECT
- DISTINCT network,
-          999999999999 as visit_key,
-          visit_id,
-          patient_key,
-          TO_NUMBER(TO_CHAR(admission_dt, 'yyyymmdd')) AS admission_dt_key,
-          NULL visit_number,
-          -- facility_key,
-          facility_name,
-          NULL visit_type_id,
-          visit_type,
-          NULL medicaid_ind,
-          NULL as medicare_ind,
-          patient_id,
-          mrn,
-          patient_name,
-          sex,
-          NULL AS race,
-          birthdate,
-          patient_age_at_admission,
-          admission_dt,
-          discharge_dt,
-          asthma_ind,
-          bh_ind,
-          breast_cancer_ind,
-          diabetes_ind,
-          heart_failure_ind,
-          hypertension_ind,
-          kidney_diseases_ind,
-          smoker_ind,
-          pregnancy_ind,
-          TRUNC(pregnancy_onset_dt),
-          flu_vaccine_ind,
-          flu_vaccine_onset_dt, 
-          pna_vaccine_ind, 
-          pna_vaccine_onset_dt,
-          nephropathy_screen_ind,
-          retinal_eye_exam_ind AS retinal_dil_eye_exam_ind,
-          a1c_value,
-          NULL gluc_final_calc_value,
-          ldl_calc_value,
-          bp_orig_value,
-          bp_systolic,
-          bp_diastolic,
-          'EPIC' AS source,
-           trunc(sysdate) as load_dt
-FROM
- get_dates 
-CROSS JOIN  STG_VISIT_METRICS_EPIC
+  DISTINCT a.network,
+--          999999999999 as visit_key,
+  to_number(ntw.network_key || visit_id) as visit_key,
+  visit_id,
+  patient_key,
+  TO_NUMBER(TO_CHAR(admission_dt, 'yyyymmdd')) AS admission_dt_key,
+  NULL visit_number,
+  -- facility_key,
+  facility_name,
+  NULL visit_type_id,
+  visit_type,
+  NULL medicaid_ind,
+  NULL as medicare_ind,
+  patient_id,
+  mrn,
+  patient_name,
+  sex,
+  NULL AS race,
+  birthdate,
+  patient_age_at_admission,
+  admission_dt,
+  discharge_dt,
+  asthma_ind,
+  bh_ind,
+  breast_cancer_ind,
+  diabetes_ind,
+  heart_failure_ind,
+  hypertension_ind,
+  kidney_diseases_ind,
+  smoker_ind,
+  pregnancy_ind,
+  TRUNC(pregnancy_onset_dt),
+  flu_vaccine_ind,
+  flu_vaccine_onset_dt, 
+  pna_vaccine_ind, 
+  pna_vaccine_onset_dt,
+  nephropathy_screen_ind,
+  retinal_eye_exam_ind AS retinal_dil_eye_exam_ind,
+  a1c_value,
+  NULL gluc_final_calc_value,
+  ldl_calc_value,
+  bp_orig_value,
+  bp_systolic,
+  bp_diastolic,
+  'EPIC' AS source,
+  trunc(sysdate) as load_dt
+FROM get_dates 
+CROSS JOIN  STG_VISIT_METRICS_EPIC a
+JOIN dim_hc_networks ntw
+  ON ntw.network = a.network
 WHERE   admission_dt >= epic_start_dt AND admission_dt < TRUNC(SYSDATE);
 
 

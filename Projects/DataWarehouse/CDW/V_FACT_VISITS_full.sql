@@ -5,7 +5,7 @@ WITH
   visit_info AS
   (
     SELECT --+ ordered use_hash(vs vl) materialize
-      n.network_key || v.visit_id  AS visit_key,
+      to_number(n.network_key || v.visit_id)  AS visit_key,
       v.network, 
       v.visit_id, 
       v.visit_number, 
