@@ -18,6 +18,7 @@ CREATE TABLE fact_visits
  resident_provider_key      NUMBER(12),
  admitting_provider_key     NUMBER(12),
  visit_emp_provider_key     NUMBER(12),
+ addl_resp_emp_provider_key NUMBER(12), 
  discharge_type_key         NUMBER(12),
  first_payer_key            NUMBER(12),
  patient_age_at_admission   NUMBER(3),
