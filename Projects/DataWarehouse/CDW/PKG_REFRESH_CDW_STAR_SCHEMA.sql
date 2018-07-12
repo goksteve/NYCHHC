@@ -14,12 +14,16 @@ PROCEDURE sp_start_refresh(p_refresh_type IN VARCHAR2, p_refresh_step VARCHAR2);
 PROCEDURE sp_refresh_ref_tables;
 -- Procedure SP_REFRESH_DIM_TABLES to refresh the dimension tables
 PROCEDURE sp_refresh_dim_tables;
+-- Procedure SP_REFRESH_RX_FACT TABLES to refresh the prescription fact tables
+PROCEDURE sp_refresh_rx_fact_tables;
+-- Procedure SP_REFRESH_FACT_VISITS_FULL to refresh the fact-visits tables
+PROCEDURE sp_refresh_fact_visits_full;
 -- Procedure SP_REFRESH_FACT_TABLES to refresh the fact tables
 PROCEDURE sp_refresh_fact_tables;
+-- Procedure SP_REFRESH_FACT_RESULTS_FULL to refresh the fact-results tables
+PROCEDURE sp_refresh_fact_results_full;
 -- Procedure SP_REFRESH_METRIC_TABLES to refresh the fact-metric tables
 PROCEDURE sp_ref_fact_visit_metric_rslt;
--- Procedure SP_REFRESH_FACT_RREULTS_FULL to refresh the fact-metric tables
-PROCEDURE sp_refresh_fact_results_full;
 -- Procedure SP_REFRESH_PATIENT_METRIC_DIAG to refresh the fact-metric tables
 PROCEDURE sp_refresh_patient_metric_diag;
 -- Procedure  SP_FACT_VISIT_METRIC_FLAGS to refresh the fact-metric tables
@@ -73,16 +77,150 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
   dwm.refresh_data('where etl_step_num >=820 and etl_step_num <=1020');
  END;
 
+ PROCEDURE sp_refresh_rx_fact_tables IS
+ BEGIN
+  dwm.refresh_data('where etl_step_num >=1101 and etl_step_num <=1104');
+ END;
+
+  PROCEDURE sp_refresh_fact_visits_full IS
+  --  v_table   VARCHAR2(100) := 'FACT_VISITS';
+  --  n_cnt     NUMBER;
+ BEGIN
+  xl.open_log('FACT_VISITS - RESET MAX CID NUMBERS AND DROP INDEXES', SYS_CONTEXT('USERENV','OS_USER')||': reset max cid numbers and drop indexes for FACT_VISITS', TRUE);
+
+  UPDATE log_incremental_data_load SET max_cid = 0 WHERE table_name = 'FACT_VISITS';
+  COMMIT;
+
+  --************   DROP CONSTRAINTS/ INDEXES /TRIGGERES **************
+  BEGIN
+   EXECUTE IMMEDIATE 'ALTER TABLE FACT_VISITS DROP CONSTRAINT PK_FACT_VISITS';
+  EXCEPTION    
+    WHEN OTHERS THEN
+    NULL;
+  END;
+
+  BEGIN
+   EXECUTE IMMEDIATE 'DROP INDEX PK_FACT_VISITS';
+   EXECUTE IMMEDIATE 'DROP INDEX IDX_FACT_VISIT_ADMISSION';
+   EXECUTE IMMEDIATE 'DROP INDEX IDX_FACT_VISIT_ADM_DTKEY';
+   EXECUTE IMMEDIATE 'DROP INDEX UI_FACT_VISITS';
+  EXCEPTION 
+    WHEN OTHERS THEN
+    NULL;
+  END;
+
+  BEGIN
+   EXECUTE IMMEDIATE 'DROP TRIGGER TR_INSERT_FACT_VISITS';
+  EXCEPTION 
+    WHEN OTHERS THEN
+    NULL;
+  END;
+
+  xl.close_log('Successfully completed');
+  --*************  LOAD TABLE  ***************************
+  -- IF n_cnt > 0 THEN
+  dwm.refresh_data('where etl_step_num = 2000');
+  --******************************************************
+ 
+   xl.open_log('Create Indexes/RTriggers For FACT_VISITS', 'Create Indexes For FACT_VISITS', TRUE);
+
+  ---  CREATE CONSTRAINTS, INDEXES AND TRIGGERS BACK ----------
+  EXECUTE IMMEDIATE 'CREATE UNIQUE INDEX PK_FACT_VISITS ON FACT_VISITS(visit_key) LOCAL PARALLEL 32 ';
+  EXECUTE IMMEDIATE 'ALTER INDEX PK_FACT_VISITS  NOPARALLEL ';
+  EXECUTE IMMEDIATE 'ALTER TABLE FACT_VISITS ADD CONSTRAINT PK_FACT_VISITS PRIMARY KEY(visit_key) USING INDEX PK_FACT_VISITS';
+
+  EXECUTE IMMEDIATE 'CREATE UNIQUE INDEX UI_FACT_VISITS  ON FACT_VISITS(VISIT_ID, NETWORK) LOCAL PARALLEL 32';
+  EXECUTE IMMEDIATE 'ALTER INDEX UI_FACT_VISITS NOPARALLEL';
+
+  EXECUTE IMMEDIATE 'CREATE INDEX IDX_FACT_VISIT_ADM_DTKEY ON FACT_VISITS(ADMISSION_DT_KEY) LOCAL PARALLEL 32';
+  EXECUTE IMMEDIATE 'ALTER INDEX IDX_FACT_VISIT_ADM_DTKEY NOPARALLEL';
+
+  EXECUTE IMMEDIATE 'CREATE INDEX IDX_FACT_VISIT_ADMISSION  ON FACT_VISITS(ADMISSION_DT)  LOCAL  PARALLEL 32';
+  EXECUTE IMMEDIATE 'ALTER INDEX IDX_FACT_VISIT_ADMISSION  NOPARALLEL';
+
+
+
+  -- Tirgger
+  EXECUTE IMMEDIATE
+      'CREATE OR REPLACE TRIGGER tr_insert_FACT_VISITS '
+   || 'FOR INSERT OR UPDATE '
+   || 'ON FACT_VISITS  '
+   || 'COMPOUND TRIGGER  '
+   || 'BEFORE STATEMENT IS '
+   || 'BEGIN '
+   || ' dwm.init_max_cids(''FACT_VISITS''); '
+   || 'END BEFORE STATEMENT;  '
+   || 'AFTER EACH ROW IS '
+   || 'BEGIN '
+   || '  dwm.max_cids(:new.network) := GREATEST(dwm.max_cids(:new.network), :new.cid); '
+   || 'END AFTER EACH ROW; '
+   || ' AFTER STATEMENT IS '
+   || ' BEGIN '
+   || ' dwm.record_max_cids(''FACT_VISITS''); '
+   || 'END AFTER STATEMENT; '
+   || ' END tr_insert_FACT_VISITS; ';
+   
+   
+
+  ---- update  log_incremental_data_load table
+   xl.begin_action('Updateing log_incremental_data_load table with CID for FACT_VISITS' );
+  BEGIN
+    UPDATE /*+ PARALLEL(32) */ log_incremental_data_load
+      SET max_cid =  (SELECT MAX(cid) AS max_cid FROM FACT_VISITS PARTITION(cbn))
+      WHERE table_name = 'FACT_VISITS' AND network = 'CBN';
+
+   UPDATE /*+ PARALLEL(32) */log_incremental_data_load
+    SET max_cid =(SELECT MAX(cid) AS max_cid FROM FACT_VISITS PARTITION(gp1))
+    WHERE table_name = 'FACT_VISITS' AND network = 'GP1';
+
+   UPDATE /*+ PARALLEL(32) */  log_incremental_data_load
+    SET max_cid = ( SELECT MAX(cid) AS max_cid FROM FACT_VISITS PARTITION(gp2)) 
+    WHERE table_name = 'FACT_VISITS' AND network = 'GP2';
+
+    UPDATE /*+ PARALLEL(32) */ log_incremental_data_load
+      SET max_cid =( SELECT MAX(cid) AS max_cid FROM FACT_VISITS PARTITION(nbn) )
+      WHERE table_name = 'FACT_VISITS' AND network = 'NBN'; 
+  
+    UPDATE /*+ PARALLEL(32) */ log_incremental_data_load
+      SET max_cid =( SELECT MAX(cid) AS max_cid FROM FACT_VISITS PARTITION(nbx) )
+      WHERE table_name = 'FACT_VISITS' AND network = 'NBX'; 
+    
+    UPDATE /*+ PARALLEL(32) */ log_incremental_data_load
+      SET max_cid = ( SELECT MAX(cid) AS max_cid FROM FACT_VISITS PARTITION(qhn) )
+      WHERE table_name = 'FACT_VISITS' AND network = 'QHN';
+    
+    UPDATE /*+ PARALLEL(32) */ log_incremental_data_load
+      SET max_cid = ( SELECT MAX(cid) AS max_cid FROM FACT_VISITS PARTITION(sbn) )
+      WHERE table_name = 'FACT_VISITS' AND network = 'SBN';
+    
+    UPDATE /*+ PARALLEL(32) */ log_incremental_data_load
+    SET max_cid = ( SELECT MAX(cid) AS max_cid FROM FACT_VISITS PARTITION(smn))
+    WHERE table_name = 'FACT_VISITS' AND network = 'SMN';
+   
+   END;
+  xl.end_action;
+ COMMIT;
+ xl.close_log('Successfully completed');
+EXCEPTION WHEN OTHERS THEN
+   ROLLBACK;
+ xl.close_log(SQLERRM, TRUE);
+END;
+
  PROCEDURE sp_refresh_fact_tables IS
  BEGIN
 
-  dwm.refresh_data('where etl_step_num >=0 and etl_step_num <=0');
+  dwm.refresh_data('where etl_step_num >=2020 and etl_step_num <=2130');
  END;
+
+
 
  PROCEDURE sp_refresh_fact_results_full IS
  --  v_table   VARCHAR2(100) := 'FACT_RESULTS';
  --  n_cnt     NUMBER;
  BEGIN
+
+  xl.open_log('FACT_RESULTS - RESET MAX CID NUMBERS AND DROP INDEXES', SYS_CONTEXT('USERENV','OS_USER')||': reset max cid numbers and drop indexes for FACT_RESULTS', TRUE);
+
   UPDATE
    log_incremental_data_load
   SET
@@ -91,17 +229,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
    table_name = 'FACT_RESULTS';
   COMMIT;
 
-  --  EXECUTE IMMEDIATE 'ALTER TABLE ' || v_table || ' RENAME TO ' || v_table || '_STG1';
-  --  EXECUTE IMMEDIATE 'ALTER TABLE ' || v_table || '_STG  ' || 'RENAME TO ' || v_table;
-  --  EXECUTE IMMEDIATE 'ALTER TABLE ' || v_table || '_STG1 ' || ' RENAME TO ' || v_table || '_STG';
-  --  SELECT
-  --   COUNT(1)
-  --  INTO
-  --   n_cnt
-  --  FROM
-  --   fact_results_stg
-  --  WHERE
-  --   ROWNUM < 100;
   --************   DROP INDEXES /TRIGGERES **************
   BEGIN
    EXECUTE IMMEDIATE 'ALTER TABLE FACT_RESULTS_STG DROP CONSTRAINT PK_FACT_RESULTS';
@@ -121,6 +248,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
     NULL;
   END;
 
+  xl.close_log('Successfully completed');
   --*************  LOAD TABLE  ***************************
   -- IF n_cnt > 0 THEN
   dwm.refresh_data('where etl_step_num = 3110');
@@ -164,29 +292,29 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
    xl.begin_action('Updateing log_incremental_data_load table with CID for fact_results' );
   BEGIN
     UPDATE /*+ PARALLEL(32) */ log_incremental_data_load
-      SET max_cid =  (SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(cbn))
+      SET max_cid =  (SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(CBN))
       WHERE table_name = 'FACT_RESULTS' AND network = 'CBN';
 
      UPDATE /*+ PARALLEL(32) */log_incremental_data_load
-      SET max_cid =(SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(cbn))
+      SET max_cid =(SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(GP1))
       WHERE table_name = 'FACT_RESULTS' AND network = 'GP1';
      UPDATE /*+ PARALLEL(32) */  log_incremental_data_load
-      SET max_cid = ( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(cbn)) 
+      SET max_cid = ( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(GP2)) 
       WHERE table_name = 'FACT_RESULTS' AND network = 'GP2';
     UPDATE /*+ PARALLEL(32) */ log_incremental_data_load
-      SET max_cid =( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(cbn) )
+      SET max_cid =( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(NBN) )
       WHERE table_name = 'FACT_RESULTS' AND network = 'NBN'; 
     UPDATE /*+ PARALLEL(32) */ log_incremental_data_load
-      SET max_cid =( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(cbn) )
+      SET max_cid =( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(NBX) )
       WHERE table_name = 'FACT_RESULTS' AND network = 'NBX'; 
     UPDATE /*+ PARALLEL(32) */ log_incremental_data_load
-      SET max_cid = ( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(cbn) )
+      SET max_cid = ( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(QHN) )
       WHERE table_name = 'FACT_RESULTS' AND network = 'QHN';
     UPDATE /*+ PARALLEL(32) */ log_incremental_data_load
-      SET max_cid = ( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(cbn) )
+      SET max_cid = ( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(SBN) )
       WHERE table_name = 'FACT_RESULTS' AND network = 'SBN';
     UPDATE /*+ PARALLEL(32) */ log_incremental_data_load
-      SET max_cid = ( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(cbn))
+      SET max_cid = ( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(SMN))
       WHERE table_name = 'FACT_RESULTS' AND network = 'SMN';
    END;
   xl.end_action;
