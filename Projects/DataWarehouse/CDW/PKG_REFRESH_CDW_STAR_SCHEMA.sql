@@ -1,44 +1,55 @@
 --DROP PACKAGE PKG_REFRESH_CDW_STAR_SCHEMA;
 
 CREATE OR REPLACE PACKAGE pkg_refresh_cdw_star_schema AS
- /*
-   Package REFRESH_CDW_FACT_DIMS contains procedures for performing data refresh:
 
+ /*
+   Package PKG_REFRESH_CDW_STAR_SCHEMA contains stored procedures for performing data refresh of REF, STG, DIM and FACT Tables:
    History of changes (newest to oldest):
    ------------------------------------------------------------------------------
    09-MAY-2018, SG: created package
  */
  -- Procedure SP_START_REFRESH to start refresh process, in the order of REF, DIM, FACT and METRIC.
-PROCEDURE sp_start_refresh(p_refresh_type IN VARCHAR2, p_refresh_step VARCHAR2);
--- Procedure SP_REFRESH_REF_TABLES to refresh reference tables
-PROCEDURE sp_refresh_ref_tables;
--- Procedure SP_REFRESH_DIM_TABLES to refresh the dimension tables
-PROCEDURE sp_refresh_dim_tables;
--- Procedure SP_REFRESH_RX_FACT TABLES to refresh the prescription fact tables
-PROCEDURE sp_refresh_rx_fact_tables;
--- Procedure SP_REFRESH_FACT_VISITS_FULL to refresh the fact-visits tables
-PROCEDURE sp_refresh_fact_visits_full;
--- Procedure SP_REFRESH_FACT_TABLES to refresh the fact tables
-PROCEDURE sp_refresh_fact_tables;
--- Procedure SP_REFRESH_FACT_RESULTS_FULL to refresh the fact-results tables
-PROCEDURE sp_refresh_fact_results_full;
--- Procedure SP_REFRESH_METRIC_TABLES to refresh the fact-metric tables
-PROCEDURE sp_ref_fact_visit_metric_rslt;
--- Procedure SP_REFRESH_PATIENT_METRIC_DIAG to refresh the fact-metric tables
-PROCEDURE sp_refresh_patient_metric_diag;
--- Procedure  SP_FACT_VISIT_METRIC_FLAGS to refresh the fact-metric tables
-PROCEDURE sp_fact_visit_metric_flags;
---**************************************************************
+  PROCEDURE sp_start_refresh(p_refresh_type IN VARCHAR2, p_refresh_step VARCHAR2);
 
+  -- Procedure SP_REFRESH_REF_TABLES to refresh only reference tables
+  PROCEDURE sp_refresh_ref_tables;
+
+  -- Procedure SP_REFRESH_DIM_TABLES to refresh only dimension tables
+  PROCEDURE sp_refresh_dim_tables;
+
+  -- Procedure SP_REFRESH_RX_FACT TABLES to refresh only prescription fact tables
+  PROCEDURE sp_refresh_rx_fact_tables;
+
+  -- Procedure SP_REFRESH_FACT_VISITS_FULL to refresh only fact-visits tables
+  PROCEDURE sp_refresh_fact_visits_full;
+
+  -- Procedure SP_REFRESH_FACT_TABLES to refresh the fact tables other than fact_visits, fact_prescription and fact_results
+  PROCEDURE sp_refresh_fact_tables;
+
+  -- Procedure SP_REFRESH_FACT_RESULTS_FULL to refresh only fact-results tables
+  PROCEDURE sp_refresh_fact_results_full;
+
+  -- Procedure SP_REFRESH_METRIC_TABLES to refresh the fact-metric tables(Compass)
+  PROCEDURE sp_ref_fact_visit_metric_rslt;
+
+  -- Procedure SP_REFRESH_PATIENT_METRIC_DIAG to refresh the fact-metric tables(Compass)
+  PROCEDURE sp_refresh_patient_metric_diag;
+
+  -- Procedure  SP_FACT_VISIT_METRIC_FLAGS to refresh the fact-metric tables(Compass)
+  PROCEDURE sp_fact_visit_metric_flags;
+
+--**************************************************************
 END pkg_refresh_cdw_star_schema;
 /
 
-CREATE OR REPLACE PUBLIC SYNONYM RFS FOR PKG_REFRESH_CDW_STAR_SCHEMA;
---DROP PACKAGE BODY PKG_REFRESH_CDW_STAR_SCHEMA;
 
+CREATE OR REPLACE PUBLIC SYNONYM RFS FOR PKG_REFRESH_CDW_STAR_SCHEMA;
+
+
+--DROP PACKAGE BODY PKG_REFRESH_CDW_STAR_SCHEMA;
 CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
  /******************************************************************************
-    NAME:       PKG_REFRESH_CDW_CTAR_SCH
+    NAME:       PKG_REFRESH_CDW_STAR_SCHEMA
     PURPOSE:
 
     REVISIONS:
@@ -67,13 +78,11 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
 
  PROCEDURE sp_refresh_ref_tables IS
  BEGIN
-
   dwm.refresh_data('where etl_step_num >=710 and etl_step_num <=770');
  END;
 
  PROCEDURE sp_refresh_dim_tables IS
  BEGIN
-
   dwm.refresh_data('where etl_step_num >=820 and etl_step_num <=1020');
  END;
 
@@ -125,17 +134,17 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
    xl.open_log('Create Indexes/RTriggers For FACT_VISITS', 'Create Indexes For FACT_VISITS', TRUE);
 
   ---  CREATE CONSTRAINTS, INDEXES AND TRIGGERS BACK ----------
-  EXECUTE IMMEDIATE 'CREATE UNIQUE INDEX PK_FACT_VISITS ON FACT_VISITS(visit_key) LOCAL PARALLEL 32 ';
+  EXECUTE IMMEDIATE 'CREATE UNIQUE INDEX PK_FACT_VISITS ON FACT_VISITS(visit_key) PARALLEL 32 ';
   EXECUTE IMMEDIATE 'ALTER INDEX PK_FACT_VISITS  NOPARALLEL ';
   EXECUTE IMMEDIATE 'ALTER TABLE FACT_VISITS ADD CONSTRAINT PK_FACT_VISITS PRIMARY KEY(visit_key) USING INDEX PK_FACT_VISITS';
 
   EXECUTE IMMEDIATE 'CREATE UNIQUE INDEX UI_FACT_VISITS  ON FACT_VISITS(VISIT_ID, NETWORK) LOCAL PARALLEL 32';
   EXECUTE IMMEDIATE 'ALTER INDEX UI_FACT_VISITS NOPARALLEL';
 
-  EXECUTE IMMEDIATE 'CREATE INDEX IDX_FACT_VISIT_ADM_DTKEY ON FACT_VISITS(ADMISSION_DT_KEY) LOCAL PARALLEL 32';
+  EXECUTE IMMEDIATE 'CREATE INDEX IDX_FACT_VISIT_ADM_DTKEY ON FACT_VISITS(ADMISSION_DT_KEY) PARALLEL 32';
   EXECUTE IMMEDIATE 'ALTER INDEX IDX_FACT_VISIT_ADM_DTKEY NOPARALLEL';
 
-  EXECUTE IMMEDIATE 'CREATE INDEX IDX_FACT_VISIT_ADMISSION  ON FACT_VISITS(ADMISSION_DT)  LOCAL  PARALLEL 32';
+  EXECUTE IMMEDIATE 'CREATE INDEX IDX_FACT_VISIT_ADMISSION  ON FACT_VISITS(ADMISSION_DT) PARALLEL 32';
   EXECUTE IMMEDIATE 'ALTER INDEX IDX_FACT_VISIT_ADMISSION  NOPARALLEL';
 
 
@@ -231,14 +240,10 @@ END;
 
   --************   DROP INDEXES /TRIGGERES **************
   BEGIN
-   EXECUTE IMMEDIATE 'ALTER TABLE FACT_RESULTS_STG DROP CONSTRAINT PK_FACT_RESULTS';
-  EXCEPTION    WHEN OTHERS THEN
-    NULL;
-  END;
-
-  BEGIN
+   EXECUTE IMMEDIATE 'ALTER TABLE FACT_RESULTS DROP CONSTRAINT PK_FACT_RESULTS';
    EXECUTE IMMEDIATE 'DROP INDEX PK_FACT_RESULTS';
-  EXCEPTION WHEN OTHERS THEN
+   EXECUTE IMMEDIATE 'DROP INDEX IDX_FACT_RESULTS_VST_KEY'; 
+  EXCEPTION    WHEN OTHERS THEN
     NULL;
   END;
 
@@ -247,6 +252,7 @@ END;
   EXCEPTION WHEN OTHERS THEN
     NULL;
   END;
+
 
   xl.close_log('Successfully completed');
   --*************  LOAD TABLE  ***************************
@@ -261,13 +267,13 @@ END;
  
    xl.open_log('Create Indexes/RTriggers For Fact_Results', 'Create Indexes For Fact_Results', TRUE);
 
-  ---  CREATE INDEXEX AND TRIGGERS BACK ----------
+  ---  CREATE INDEXES AND TRIGGERS BACK ----------
   -- Indexes ---
-  EXECUTE IMMEDIATE
-   'CREATE UNIQUE INDEX pk_fact_results  ON fact_results( visit_id,event_id,data_element_id,result_report_number,multi_field_occurrence_number,item_number,network) LOCAL PARALLEL 32 ';
+  EXECUTE IMMEDIATE 'CREATE UNIQUE INDEX pk_fact_results  ON fact_results( visit_id,event_id,data_element_id,result_report_number,multi_field_occurrence_number,item_number,network) PARALLEL 32 ';
   EXECUTE IMMEDIATE 'ALTER INDEX pk_fact_results  NOPARALLEL ';
-  EXECUTE IMMEDIATE
-   'ALTER TABLE fact_results ADD CONSTRAINT pk_fact_results PRIMARY KEY(visit_id, event_id, data_element_id, result_report_number, multi_field_occurrence_number, item_number,network) USING INDEX pk_fact_results';
+  EXECUTE IMMEDIATE 'ALTER TABLE fact_results ADD CONSTRAINT pk_fact_results PRIMARY KEY(visit_id, event_id, data_element_id, result_report_number, multi_field_occurrence_number, item_number,network) USING INDEX pk_fact_results';
+  EXECUTE IMMEDIATE 'CREATE INDEX IDX_FACT_RESULTS_VST_KEY ON FACT_RESULTS(VISIT_KEY) PARALLEL 32';
+  EXECUTE IMMEDIATE 'ALTER INDEX UI_FACT_RESULTS_KEY NOPARALLEL';
   -- Tirgger
   EXECUTE IMMEDIATE
       'CREATE OR REPLACE TRIGGER tr_insert_fact_results '
@@ -388,22 +394,22 @@ END;
 
  PROCEDURE sp_refresh_patient_metric_diag AS
  BEGIN
-  xl.open_log('Sg_Patient_Metric_Results', 'Refreshing FACT_PATIENT_METRIC_DIAG', TRUE);
+  xl.open_log('sp_refresh_patient_metric_diag', 'Refreshing FACT_PATIENT_METRIC_DIAG', TRUE);
 
   EXECUTE IMMEDIATE 'ALTER SESSION ENABLE PARALLEL DML';
   EXECUTE IMMEDIATE 'TRUNCATE TABLE FACT_PATIENT_METRIC_DIAG';
-
-  FOR r IN (
-            SELECT
-             DISTINCT network
-            FROM
-             dim_hc_networks
-           )
-  LOOP
-   xl.begin_action('Processing ' || r.network);
-   xl.begin_action('Setting the Network');
-   dwm.set_parameter('NETWORK', r.network);
-   xl.end_action(SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK'));
+--
+--  FOR r IN (
+--            SELECT
+--             DISTINCT network
+--            FROM
+--             dim_hc_networks
+--           )
+--  LOOP
+--   xl.begin_action('Processing ' || r.network);
+--   xl.begin_action('Setting the Network');
+--   dwm.set_parameter('NETWORK', r.network);
+--   xl.end_action(SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK'));
 
    etl.add_data(
     p_operation => 'INSERT /*+ APPEND PARALLEL(48) */',
@@ -412,7 +418,7 @@ END;
     p_commit_at => -1);
 
    xl.end_action;
-  END LOOP;
+--  END LOOP;
 
   xl.close_log('Successfully completed');
  EXCEPTION
