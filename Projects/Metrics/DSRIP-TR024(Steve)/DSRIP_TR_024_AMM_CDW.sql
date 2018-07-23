@@ -11,6 +11,7 @@ CREATE TABLE dsrip_tr_024_amm_cdw
  visit_facility_name     VARCHAR2(64 BYTE) NULL,
  patient_id              NUMBER(12) NOT NULL,
  pat_lname               VARCHAR2(600 BYTE) NULL,
+ pat_fname               VARCHAR2(600 BYTE) NULL,
  mrn                     VARCHAR2(600 BYTE) NULL,
  birthdate               DATE NULL,
  age                     NUMBER NULL,
@@ -44,13 +45,12 @@ CREATE TABLE dsrip_tr_024_amm_cdw
  dosage                  VARCHAR2(2048 BYTE) NULL,
  frequency               VARCHAR2(2048 BYTE) NULL,
  daily_pills_cnt         NUMBER(6) NULL,
-rx_quantity             NUMBER(12) NULL,
- numerator_flag          NUMBER(2) NULL,
+ rx_quantity             NUMBER(12) NULL,
+ tr_024_num_flag         NUMBER(2) NULL,
  order_dt                DATE NULL,
  next_order_dt           DATE NULL,
  second_next_order_dt    DATE NULL,
  third_next_order_dt     DATE NULL,
-
  dsrip_report            VARCHAR2(255 BYTE) DEFAULT 'TR024 Antidepressant Medication Management' NULL,
  report_dt               DATE DEFAULT TRUNC(SYSDATE, 'MONTH') NULL,
  load_dt                 DATE DEFAULT SYSDATE NULL
@@ -82,3 +82,4 @@ ALTER TABLE dsrip_tr_024_amm_cdw  ADD (
   ENABLE VALIDATE);
 
 GRANT SELECT ON dsrip_tr_024_amm_cdw TO PUBLIC;
+CREATE  PUBLIC SYNONYM dsrip_tr_024_amm_cdw FOR dsrip_tr_024_amm_cdw;

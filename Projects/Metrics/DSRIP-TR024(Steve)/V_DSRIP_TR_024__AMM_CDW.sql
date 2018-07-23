@@ -98,7 +98,7 @@ CREATE OR REPLACE VIEW v_dsrip_tr_024_amm_cdw AS
     LEAD(order_dt, 4) OVER(PARTITION BY d.network, d.patient_id ORDER BY order_dt) AS fourth_next_order_dt,
     LEAD(order_dt, 5) OVER(PARTITION BY d.network, d.patient_id ORDER BY order_dt) AS fifth_next_order_dt,
     TRUNC(order_dt) - LAG(order_dt, 1) OVER(PARTITION BY d.network, d.patient_id ORDER BY order_dt) AS diff_days,
-     rep_start_dt
+    rep_start_dt
     FROM
          (
            SELECT
