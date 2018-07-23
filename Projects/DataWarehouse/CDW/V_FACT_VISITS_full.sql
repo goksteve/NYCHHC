@@ -1,11 +1,12 @@
 CREATE OR REPLACE VIEW v_fact_visits_full AS
 WITH
- --  2-May-2018, GK: fix for discharge_type_key, added missing dim_discharge_types JOIN condition.
- -- 13-Mar-2018, OK: new version
+ -- 11-July-2018, GK: Added new field ADDL_RESP_EMP_PROVIDER, this is per BA's request. When attending and resident provider is not avaialble, this provider can be helpful.
+ -- 02-May-2018,  GK: fix for discharge_type_key, added missing dim_discharge_types JOIN condition.
+ -- 13-Mar-2018,  OK: new version
   visit_info AS
   (
     SELECT --+ ordered use_hash(vs vl) materialize
-      n.network_key || v.visit_id  AS visit_key,
+      to_number(n.network_key || v.visit_id)  AS visit_key,
       v.network, 
       v.visit_id, 
       v.visit_number, 
@@ -13,6 +14,7 @@ WITH
       v.facility_id,
       v.attending_emp_provider_id,
       v.resident_emp_provider_id,
+      v.addl_resp_emp_provider_id,
       vs.admitting_emp_provider_id,
       vs.emp_provider_id, 
       v.discharge_type_id,
@@ -56,6 +58,7 @@ SELECT --+ ordered use_hash(p f d1 d2 pr1 pr2 pr3 pr4 vsp dp vsn)
   pr2.provider_key resident_provider_key,
   pr3.provider_key admitting_provider_key,
   pr4.provider_key visit_emp_provider_key,
+  pr5.provider_key addl_resp_emp_provider_key,
   dstyp.discharge_type_key,
   dp.payer_key first_payer_key,
   FLOOR((ADD_MONTHS(TRUNC(vi.admission_date_time,'YEAR'),12)-1 - p.birthdate)/365)  patient_age_at_admission,
@@ -85,6 +88,8 @@ LEFT JOIN dim_providers pr3
   ON pr3.network = vi.network AND pr3.provider_id = vi.admitting_emp_provider_id AND pr3.current_flag = 1 
 LEFT JOIN dim_providers pr4
   ON pr4.network = vi.network AND pr4.provider_id = vi.emp_provider_id AND pr4.current_flag = 1
+LEFT JOIN dim_providers pr5
+  ON pr5.network = vi.network AND pr5.provider_id = vi.addl_resp_emp_provider_id AND pr5.current_flag = 1
 LEFT JOIN dim_discharge_types dstyp 
   ON dstyp.network = vi.network AND dstyp.visit_type_id = vi.visit_type_id AND dstyp.discharge_type_id = vi.discharge_type_id
 LEFT JOIN visit_segment_payer vsp 
