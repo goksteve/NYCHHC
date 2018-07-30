@@ -78,7 +78,7 @@ SELECT
           SELECT
            p.network,
            p.visit_id,
-            a1c_final_calc_value,
+           p.a1c_final_calc_value,
            v.patient_id,
            v.facility_key,
            v.first_payer_key AS payer_key,
@@ -140,7 +140,7 @@ SELECT
      pp.patient_id,
      SUBSTR(pp.name, 1, INSTR(pp.name, ',', 1) - 1) AS pat_lname,
      SUBSTR(pp.name, INSTR(pp.name, ',') + 1) AS pat_fname,
-     NVL(psn.secondary_number, pp.medical_record_number) AS mrn,
+     NVL(psn.second_mrn, pp.medical_record_number) AS mrn,
      pp.birthdate,
      ROUND((NVL(r.admission_dt, pp.admission_dt) - pp.birthdate) / 365) AS age,
      pp.apt_suite,
@@ -186,24 +186,26 @@ SELECT
     LEFT JOIN dim_payers dp ON dp.payer_key = NVL(r.payer_key, pp.payer_key)
     LEFT JOIN ref_financial_class fc
      ON fc.network = NVL(r.network, pp.network) AND fc.financial_class_id = NVL(r.plan_id, pp.plan_id)
-     LEFT JOIN patient_secondary_number psn
-                         ON     psn.patient_id = pp.patient_id and psn.network = pp.network
-                            AND psn.secondary_nbr_type_id =
-                                   CASE
-                                      WHEN (pp.network = 'GP1' AND f.facility_id = 1) THEN 13
-                                      WHEN (pp.network = 'GP1' AND f.facility_id IN (2,4)) THEN 11
-                                      WHEN (pp.network = 'GP1' AND f.facility_id = 3) THEN 12
-                                      WHEN (pp.network = 'CBN' AND f.facility_id = 4) THEN 12
-                                      WHEN (pp.network = 'CBN' AND f.facility_id = 5) THEN 13
-                                      WHEN (pp.network = 'NBN' AND f.facility_id = 2) THEN 9
-                                      WHEN (pp.network = 'NBX' AND f.facility_id = 2) THEN 11
-                                      WHEN (pp.network = 'QHN' AND f.facility_id = 2) THEN 11
-                                      WHEN (pp.network = 'SBN' AND f.facility_id = 1) THEN 11
-                                      WHEN (pp.network = 'SMN' AND f.facility_id = 2) THEN 11
-                                      WHEN (pp.network = 'SMN' AND f.facility_id = 7) THEN 13
-                                      WHEN (pp.network = 'SMN' AND f.facility_id = 8) THEN 14
-                                      WHEN (pp.network = 'SMN' AND f.facility_id = 9) THEN 17
-                                   END
+LEFT JOIN ref_patient_secondary_mrn psn  ON   psn.NETWORK = pp.NETWORK AND psn.patient_id = pp.patient_id AND psn.facility_key = NVL(r.facility_key, pp.facility_key)
+
+--     LEFT JOIN patient_secondary_number psn
+--                         ON     psn.patient_id = pp.patient_id and psn.network = pp.network
+--                            AND psn.secondary_nbr_type_id =
+--                                   CASE
+--                                      WHEN (pp.network = 'GP1' AND f.facility_id = 1) THEN 13
+--                                      WHEN (pp.network = 'GP1' AND f.facility_id IN (2,4)) THEN 11
+--                                      WHEN (pp.network = 'GP1' AND f.facility_id = 3) THEN 12
+--                                      WHEN (pp.network = 'CBN' AND f.facility_id = 4) THEN 12
+--                                      WHEN (pp.network = 'CBN' AND f.facility_id = 5) THEN 13
+--                                      WHEN (pp.network = 'NBN' AND f.facility_id = 2) THEN 9
+--                                      WHEN (pp.network = 'NBX' AND f.facility_id = 2) THEN 11
+--                                      WHEN (pp.network = 'QHN' AND f.facility_id = 2) THEN 11
+--                                      WHEN (pp.network = 'SBN' AND f.facility_id = 1) THEN 11
+--                                      WHEN (pp.network = 'SMN' AND f.facility_id = 2) THEN 11
+--                                      WHEN (pp.network = 'SMN' AND f.facility_id = 7) THEN 13
+--                                      WHEN (pp.network = 'SMN' AND f.facility_id = 8) THEN 14
+--                                      WHEN (pp.network = 'SMN' AND f.facility_id = 9) THEN 17
+--                                   END
    WHERE
     visit_rnum = 1
 );

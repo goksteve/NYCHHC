@@ -1,10 +1,10 @@
-EXEC dbm.drop_tables('REF_DRUG_DESCRIPTIONS');
+EXEC dbm.drop_tables('REF_DRUG_DESCRIPTIONS_det');
 
-CREATE TABLE ref_drug_descriptions
+CREATE TABLE ref_drug_descriptions_det
 (
  drug_description   VARCHAR2(512),
  drug_type_id       NUMBER(6) NOT NULL,
- CONSTRAINT pk_ref_drug_descriptions PRIMARY KEY(drug_type_id, drug_description)
+ CONSTRAINT pk_ref_drug_descriptions_det PRIMARY KEY(drug_type_id, drug_description)
 )
 ORGANIZATION INDEX
 PARTITION BY LIST (drug_type_id)
@@ -35,5 +35,5 @@ PARTITION BY LIST (drug_type_id)
   PARTITION type_103 VALUES (103),
   PARTITION type_unknown VALUES (DEFAULT));
 
-GRANT SELECT ON ref_drug_descriptions TO PUBLIC WITH GRANT OPTION;
-CREATE OR REPLACE PUBLIC SYNONYM ref_drug_descriptions FOR cdw.ref_drug_descriptions;
+GRANT SELECT ON ref_drug_descriptions_det TO PUBLIC WITH GRANT OPTION;
+CREATE OR REPLACE PUBLIC SYNONYM ref_drug_descriptions_det FOR cdw.ref_drug_descriptions_det;

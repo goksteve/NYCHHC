@@ -9,7 +9,7 @@
 
 
 
-CREATE OR REPLACE VIEW V_DSRIP_TR_015_CARDIO_MON_CDW AS
+CREATE OR REPLACE VIEW V_DSRIP_TR015_CARDIO_MON_CDW AS
 WITH report_dates AS
       (SELECT --+ materialize
        -- ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -1)report_dt, 
@@ -133,7 +133,7 @@ SELECT /*+ Parallel (32 */
  res.patient_id,
  SUBSTR(pp.name, 1, INSTR(pp.name, ',', 1) - 1) AS pat_lname,
  SUBSTR(pp.name, INSTR(pp.name, ',') + 1) AS pat_fname,
- NVL(psn.secondary_number, pp.medical_record_number) AS mrn,
+ NVL(psn.second_mrn, pp.medical_record_number) AS mrn,
  pp.birthdate,
  ROUND((res.report_year - pp.birthdate) / 365) AS age,
  pp.apt_suite,
@@ -149,8 +149,8 @@ SELECT /*+ Parallel (32 */
  res.visit_number,
  res.visit_type_id,
  vt.NAME AS visit_type,
-res.admission_dt,
-res.discharge_dt,
+ res.admission_dt,
+ res.discharge_dt,
 CASE UPPER(TRIM(pm.payer_group)) WHEN 'MEDICAID' THEN 'Y' ELSE NULL END AS medicaid_ind,
            (CASE
                WHEN UPPER(TRIM(pm.payer_group)) = 'MEDICAID' THEN
@@ -170,7 +170,7 @@ pm.payer_name,
 res.plan_id,
 res.plan_name,
 res.latest_diag_codes AS ICD_CODE,
-res.latest_problem_comments,
+res.latest_problem_comments as problem_comments,
 res.ldl_test_dt,
 res.ldl_result_dt,
 res.calc_result_value,
@@ -183,22 +183,23 @@ JOIN dim_patients pp on pp.network = res.network and pp.patient_id  = res.patien
  AND FLOOR((res.report_year - pp.birthdate) / 365) BETWEEN 18 AND 64
 LEFT JOIN ref_visit_types vt ON vt.visit_type_id  = res.visit_type_id
 LEFT JOIN dim_payers pm on pm.payer_key  = res.payer_key
-LEFT JOIN patient_secondary_number psn
-             ON     psn.network = res.network
-                AND psn.patient_id = res.patient_id
-                AND psn.secondary_nbr_type_id =
-                       CASE
-                          WHEN (res.network = 'GP1' AND res.facility_id = 1) THEN 13
-                          WHEN (res.network = 'GP1' AND res.facility_id IN (2, 4)) THEN 11
-                          WHEN (res.network = 'GP1' AND res.facility_id = 3) THEN 12
-                          WHEN (res.network = 'CBN' AND res.facility_id = 4) THEN 12
-                          WHEN (res.network = 'CBN' AND res.facility_id = 5) THEN 13
-                          WHEN (res.network = 'NBN' AND res.facility_id = 2) THEN 9
-                          WHEN (res.network = 'NBX' AND res.facility_id = 2) THEN 11
-                          WHEN (res.network = 'QHN' AND res.facility_id = 2) THEN 11
-                          WHEN (res.network = 'SBN' AND res.facility_id = 1) THEN 11
-                          WHEN (res.network = 'SMN' AND res.facility_id = 2) THEN 11
-                          WHEN (res.network = 'SMN' AND res.facility_id = 7) THEN 13
-                          WHEN (res.network = 'SMN' AND res.facility_id = 8) THEN 14
-                          WHEN (res.network = 'SMN' AND res.facility_id = 9) THEN 17
-                       END
+LEFT JOIN ref_patient_secondary_mrn psn  ON   psn.NETWORK = res.NETWORK AND psn.patient_id = res.patient_id AND psn.facility_id = res.facility_id;
+--LEFT JOIN patient_secondary_number psn
+--             ON     psn.network = res.network
+--                AND psn.patient_id = res.patient_id
+--                AND psn.secondary_nbr_type_id =
+--                       CASE
+--                          WHEN (res.network = 'GP1' AND res.facility_id = 1) THEN 13
+--                          WHEN (res.network = 'GP1' AND res.facility_id IN (2, 4)) THEN 11
+--                          WHEN (res.network = 'GP1' AND res.facility_id = 3) THEN 12
+--                          WHEN (res.network = 'CBN' AND res.facility_id = 4) THEN 12
+--                          WHEN (res.network = 'CBN' AND res.facility_id = 5) THEN 13
+--                          WHEN (res.network = 'NBN' AND res.facility_id = 2) THEN 9
+--                          WHEN (res.network = 'NBX' AND res.facility_id = 2) THEN 11
+--                          WHEN (res.network = 'QHN' AND res.facility_id = 2) THEN 11
+--                          WHEN (res.network = 'SBN' AND res.facility_id = 1) THEN 11
+--                          WHEN (res.network = 'SMN' AND res.facility_id = 2) THEN 11
+--                          WHEN (res.network = 'SMN' AND res.facility_id = 7) THEN 13
+--                          WHEN (res.network = 'SMN' AND res.facility_id = 8) THEN 14
+--                          WHEN (res.network = 'SMN' AND res.facility_id = 9) THEN 17
+--                       END
