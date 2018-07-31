@@ -1,6 +1,7 @@
 CREATE OR REPLACE VIEW V_DSRIP_REPORT_TR010
 AS
 WITH 
+  -- 27-JUL-2018, GK: fixed initial_visit_types issue.
   -- 20-JUN-2018, GK: script using star schema tables.
   dt AS
   (
@@ -135,7 +136,7 @@ WITH
       )
       PIVOT
       (
-        COUNT(*) FOR initial_visit_type IN ('Clinic' clinic_visit_count, 'Emergency' emergency_visit_count,'Inpatient' inpatient_visit_count,'Outpatient' outpatient_visit_count)
+        COUNT(*) FOR initial_visit_type IN ('Clinic (CP)' clinic_visit_count, 'Emergency (EP)' emergency_visit_count,'Inpatient (IP)' inpatient_visit_count,'Outpatient (OP)' outpatient_visit_count)
       )
     )  
   ),
@@ -156,10 +157,10 @@ WITH
           DISTINCT rx.network, 
           rx.patient_id,
           rx.order_dt rx_order_time,
-          rx_exp_dt rx_exp_time,
+--          rx_exp_dt rx_exp_time,
           rx.drug_name derived_product_name,
           rx.rx_quantity,
-          rx.rx_dc_dt rx_dc_time,
+--          rx.rx_dc_dt rx_dc_time,
           dt.report_dt,
           dt.begin_dt,
           dt.report_dt as end_dt
@@ -187,10 +188,10 @@ WITH
           DISTINCT rx.network, 
           rx.patient_id,
           rx.order_dt rx_order_time,
-          rx_exp_dt rx_exp_time,
+--          rx_exp_dt rx_exp_time,
           rx.drug_name derived_product_name,
-          rx.rx_quantity,
-          rx.rx_dc_dt rx_dc_time
+          rx.rx_quantity
+--          rx.rx_dc_dt rx_dc_time
         FROM dt
         JOIN cdw.fact_patient_prescriptions rx
         ON rx.order_dt between dt.begin_dt and dt.report_dt --AND rx.patient_id = 1572634 AND rx.network = 'CBN'
@@ -215,10 +216,10 @@ WITH
           DISTINCT rx.network, 
           rx.patient_id,
           rx.order_dt rx_order_time,
-          rx_exp_dt rx_exp_time,
+--          rx_exp_dt rx_exp_time,
           rx.drug_name derived_product_name,
-          rx.rx_quantity,
-          rx.rx_dc_dt rx_dc_time
+          rx.rx_quantity
+--          rx.rx_dc_dt rx_dc_time
         FROM dt
         JOIN cdw.fact_patient_prescriptions rx
         ON rx.order_dt between dt.begin_dt and dt.report_dt --AND rx.patient_id = 1572634 AND rx.network = 'CBN'
@@ -247,7 +248,7 @@ SELECT
   ptnt.home_phone,
   ptnt.cell_phone,
   ptnt.birthdate, 
-  FLOOR((ADD_MONTHS(TRUNC(SYSDATE,'year'),12)-1 - ptnt.birthdate)/365) AS age,
+  FLOOR((ADD_MONTHS(TRUNC(a.report_dt,'YEAR'),12)-1 - ptnt.birthdate)/365) AS age,
   ptnt.pcp_provider_id AS pcp_id,
   ptnt.pcp_provider_name pcp_name,
   f.visit_id last_pcp_visit_id,
@@ -307,7 +308,7 @@ JOIN cdw.dim_patients ptnt
   ON ptnt.patient_id = a.patient_id
  AND ptnt.network = a.network 
  AND ptnt.current_flag=1  AND ptnt.date_of_death IS NULL
- AND (FLOOR((ADD_MONTHS(TRUNC(SYSDATE,'year'),12)-1 - ptnt.birthdate)/365) BETWEEN 5 AND 64)  
+ AND (FLOOR((ADD_MONTHS(TRUNC(a.report_dt,'YEAR'),12)-1 - ptnt.birthdate)/365) BETWEEN 5 AND 64)  
 LEFT JOIN cdw.dim_payers pm
   ON pm.payer_id=a.first_payer_key AND pm.network=a.network  
 LEFT JOIN cdw.ref_financial_class fin 

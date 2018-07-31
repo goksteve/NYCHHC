@@ -110,6 +110,7 @@ LEFT JOIN pcp_visits_all pcp
   ON a.network = pcp.network
  AND a.visit_id = pcp.pcp_visit_id
  AND a.source = pcp.source
+WHERE a.admission_dt < TRUNC (SYSDATE, 'MONTH') 
  
 UNION ALL
 
