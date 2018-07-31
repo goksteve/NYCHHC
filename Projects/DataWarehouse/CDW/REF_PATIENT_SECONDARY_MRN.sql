@@ -21,12 +21,12 @@ PARTITION BY LIST (network)
 
 COMPRESS BASIC;
 
-CREATE UNIQUE INDEX pk_second_mrn
- ON ref_patient_secondary_mrn (network,patient_id , second_mrn, facility_key)  PARALLEL 32  LOCAL;
 
-ALTER INDEX pk_second_mrn  NOPARALLEL;
+CREATE UNIQUE INDEX pk_second_mrn ON ref_patient_secondary_mrn(network, patient_id, facility_key) PARALLEL 32 LOCAL;
+ALTER INDEX pk_second_mrn NOPARALLEL;
 
-ALTER TABLE ref_patient_secondary_mrn
- ADD CONSTRAINT pk_second_mrn UNIQUE(network,patient_id , second_mrn, facility_key) USING INDEX pk_second_mrn;
+ALTER TABLE ref_patient_secondary_mrn ADD CONSTRAINT pk_second_mrn UNIQUE(network, patient_id, facility_key) USING INDEX pk_second_mrn;
 
-GRANT SELECT ON ref_patient_secondary_mrn TO PUBLIC;
+GRANT SELECT ON ref_patient_secondary_mrn TO PUBLIC WITH GRANT OPTION;
+
+CREATE OR REPLACE PUBLIC SYNONYM ref_patient_secondary_mrn FOR ref_patient_secondary_mrn;

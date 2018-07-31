@@ -1,6 +1,6 @@
-EXEC dbm.drop_tables('DSRIP_TR_015_CARDIO_MON_CDW');
+EXEC dbm.drop_tables('DSRIP_TR015_CARDIO_MON_CDW');
 
-CREATE TABLE dsrip_tr_015_cardio_mon_cdw
+CREATE TABLE dsrip_tr015_cardio_mon_cdw
 (
  network             VARCHAR2(3 BYTE) NULL,
  admission_dt_key    NUMBER(8),
@@ -37,7 +37,6 @@ CREATE TABLE dsrip_tr_015_cardio_mon_cdw
  problem_comments    VARCHAR2(1024 BYTE) NULL,
  ldl_test_dt         DATE,
  ldl_result_dt       DATE,
- orig_result_value   VARCHAR2(1023 BYTE) NULL,
  calc_result_value   VARCHAR2(1023 BYTE) NULL,
  dsrip_report        VARCHAR2(255 BYTE) NULL,
  report_dt           DATE NULL,
@@ -56,15 +55,16 @@ PARTITION BY LIST (network)
 NOCACHE
 MONITORING;
 
-CREATE UNIQUE INDEX pk_tr_015_cardio_mon_cdw
- ON dsrip_tr_015_cardio_mon_cdw(network, patient_id, report_dt)
+CREATE UNIQUE INDEX pk_tr015_cardio_mon_cdw
+ ON dsrip_tr015_cardio_mon_cdw(network, patient_id, report_dt)
  LOGGING;
 
-ALTER TABLE dsrip_tr_015_cardio_mon_cdw ADD (
-  CONSTRAINT pk_tr_015_cardio_mon_cdw
+ALTER TABLE dsrip_tr015_cardio_mon_cdw ADD (
+  CONSTRAINT pk_tr015_cardio_mon_cdw
   PRIMARY KEY
   (network, patient_id, report_dt)
-  USING INDEX pk_tr_015_cardio_mon_cdw
+  USING INDEX pk_tr015_cardio_mon_cdw
   ENABLE VALIDATE);
 
-GRANT SELECT ON dsrip_tr_015_cardio_mon_cdw TO PUBLIC;
+GRANT SELECT ON dsrip_tr015_cardio_mon_cdw TO PUBLIC;
+CREATE OR REPLACE PUBLIC SYNONYM dsrip_tr015_cardio_mon_cdw FOR dsrip_tr015_cardio_mon_cdw;

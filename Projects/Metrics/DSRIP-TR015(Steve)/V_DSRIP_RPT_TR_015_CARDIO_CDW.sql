@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW v_dsrip_rpt_tr_015_cardio_cdw AS
+CREATE OR REPLACE VIEW v_dsrip_rpt_tr015_cardio_cdw AS
  SELECT
   dsrip_report,
   report_dt,
@@ -24,9 +24,9 @@ CREATE OR REPLACE VIEW v_dsrip_rpt_tr_015_cardio_cdw AS
   problem_comments,
   ldl_test_dt,
   ldl_result_dt,
-  orig_result_value,
+  --orig_result_value,
   calc_result_value
  FROM
-  dsrip_tr_015_cardio_mon_cdw
+  dsrip_tr015_cardio_mon_cdw
  WHERE
-  report_dt = (SELECT MAX(report_dt) FROM dsrip_tr_015_cardio_mon_cdw)
+  report_dt = (SELECT MAX(report_dt) FROM dsrip_tr015_cardio_mon_cdw)
