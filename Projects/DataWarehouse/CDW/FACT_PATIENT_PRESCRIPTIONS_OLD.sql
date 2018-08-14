@@ -1,6 +1,6 @@
-EXEC dbm.drop_tables('fact_patient_prescrip_new');
+EXEC dbm.drop_tables('FACT_PATIENT_PRESCRIPTIONS');
 
-CREATE TABLE FACT_PATIENT_PRESCRIP_NEW
+CREATE TABLE fact_patient_prescriptions
 (
  network            VARCHAR2(3 BYTE) NOT NULL,
  patient_key        NUMBER(18) NOT NULL,
@@ -11,11 +11,13 @@ CREATE TABLE FACT_PATIENT_PRESCRIP_NEW
  order_dt           DATE NOT NULL,
  drug_name          VARCHAR2(175 BYTE),
  drug_description   VARCHAR2(512 BYTE),
+ rx_refills         NUMBER(12) NULL,
  rx_quantity        NUMBER(12),
  dosage             VARCHAR2(2048 BYTE),
  frequency          VARCHAR2(2048 BYTE),
- daily_cnt NUMBER(12),
- rx_refills NUMBER(12),
+ daily_cnt          NUMBER(3),
+ --rx_dc_dt           DATE,
+ --rx_exp_dt          DATE,
  load_dt            DATE DEFAULT TRUNC(SYSDATE)
 )
 COMPRESS BASIC
@@ -32,15 +34,12 @@ PARTITION BY LIST (network)
   PARTITION sbn VALUES ('SBN'),
   PARTITION smn VALUES ('SMN'));
 
-
-
 CREATE BITMAP INDEX bmi_patient_prescriptions
- ON fact_patient_prescrip_new(drug_description)
+ ON fact_patient_prescriptions(drug_description)
  PARALLEL 32
  LOCAL;
 
 ALTER INDEX bmi_patient_prescriptions
  NOPARALLEL;
 
-GRANT SELECT ON fact_patient_prescrip_new TO PUBLIC;
-
+GRANT SELECT ON fact_patient_prescriptions TO PUBLIC;

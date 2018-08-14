@@ -1,6 +1,7 @@
 CREATE OR REPLACE VIEW v_tst_gk_dsrip_report_tr016
 AS
 WITH
+   -- 31-July-2018 SG remove  NVL(pr.rx_dc_dt, DATE '9999-12-31') AS stop_dt,
   -- 10-Apr-2018, GK: Converting into CDW Star schema
   -- 07-Feb-2018, OK: included psychotic diagnoses
   -- 16-Jan-2018, OK: added USE_HASH hints into the main query
@@ -23,7 +24,7 @@ WITH
       NVL(dnm.drug_type_id, dscr.drug_type_id) AS drug_type_id,
       NVL(dnm.drug_name, dscr.drug_description) medication,
       pr.order_dt AS start_dt,
-      NVL(pr.rx_dc_dt, DATE '9999-12-31') AS stop_dt,
+     -- NVL(pr.rx_dc_dt, DATE '9999-12-31') AS stop_dt,
       ROW_NUMBER() OVER(PARTITION BY NVL(TO_CHAR(mdm.eid), pr.network||'-'||pr.patient_id), NVL(dnm.drug_type_id, dscr.drug_type_id) ORDER BY pr.order_dt DESC) rnum
     FROM report_dates rd
     JOIN FACT_PATIENT_PRESCRIPTIONS pr
@@ -81,7 +82,7 @@ WITH
   diabetes_prescriptions AS
   (
     SELECT --+ materialize
-      patient_gid, MIN(start_dt) start_dt, MAX(stop_dt) stop_dt
+      patient_gid, MIN(start_dt) start_dt  --, --MAX(stop_dt) stop_dt
     FROM prescriptions
     WHERE drug_type_id = 33 -- Diabetes Prescriptions
     GROUP BY patient_gid

@@ -1,0 +1,12 @@
+REPORT_CD        NUM     CRITERION_ID   DENOM_NUMERATOR_IND       INCLUDE_EXCLUDE_IND
+DSRIP-TR026      4                         108                                                       D                                              E
+DSRIP-TR026      3                           107                                                    D                                    E
+DSRIP-TR026      2                              106                                                D                                                      E
+DSRIP-TR026      1                            105                                                   D                 I
+
+
+CRITERION_ID      CRITERION_CD     DESCRIPTION
+108    MEDICATIONS:ANTIPSYCHOTIC INJECTABLE MEDICATION 14 DAYS         List of Antipsychotic Injectable medications 14 days cover 
+107    MEDICATIONS:ANTIPSYCHOTIC INJECTABLE MEDICATION 28 DAYS         List of Antipsychotic Injectable medications 28 days cover 
+106    MEDICATIONS:ANTIPSYCHOTIC ORAL MEDICATION     List of Antipsychotic oral medications
+105    DIAGNOSES:DEMENTIA  List of  Dimentia Diagnoses

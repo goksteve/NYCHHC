@@ -26,10 +26,10 @@ SELECT  --+ materialize
  (
   (
     (
-      SELECT network, patient_id FROM pat_diag
+      SELECT network,  patient_id FROM pat_diag
       WHERE   crit_id = 1 AND ind = 'I'
       UNION
-      SELECT  d.network, d.patient_id
+      SELECT  d.network,patient_id as patient_id
       FROM fact_patient_prescriptions d
       JOIN ref_drug_descriptions rd
       ON TRIM(rd.drug_description) = TRIM(d.drug_description) AND rd.drug_type_id = 33
@@ -42,7 +42,9 @@ SELECT  --+ materialize
     SELECT DISTINCT network, patient_id
     FROM pat_diag  WHERE   ind = 'E'
  )p
- ),
+ ) ,
+
+
 tmp_pcp_bh
 AS(
     SELECT --+ materialize 
@@ -269,22 +271,3 @@ LEFT JOIN ref_visit_types vt ON vt.visit_type_id  = res.visit_type_id
 LEFT JOIN ref_patient_secondary_mrn psn  ON   psn.NETWORK = res.NETWORK AND psn.patient_id = res.patient_id AND psn.facility_id = res.visit_facility_id;
 
 
---LEFT JOIN patient_secondary_number psn
---             ON     psn.network = res.network
---                AND psn.patient_id = res.patient_id
---                AND psn.secondary_nbr_type_id =
---                       CASE
---                          WHEN (res.network = 'GP1' AND res.visit_facility_id = 1) THEN 13
---                          WHEN (res.network = 'GP1' AND res.visit_facility_id IN (2, 4)) THEN 11
---                          WHEN (res.network = 'GP1' AND res.visit_facility_id = 3) THEN 12
---                          WHEN (res.network = 'CBN' AND res.visit_facility_id = 4) THEN 12
---                          WHEN (res.network = 'CBN' AND res.visit_facility_id = 5) THEN 13
---                          WHEN (res.network = 'NBN' AND res.visit_facility_id = 2) THEN 9
---                          WHEN (res.network = 'NBX' AND res.visit_facility_id = 2) THEN 11
---                          WHEN (res.network = 'QHN' AND res.visit_facility_id = 2) THEN 11
---                          WHEN (res.network = 'SBN' AND res.visit_facility_id = 1) THEN 11
---                          WHEN (res.network = 'SMN' AND res.visit_facility_id = 2) THEN 11
---                          WHEN (res.network = 'SMN' AND res.visit_facility_id = 7) THEN 13
---                          WHEN (res.network = 'SMN' AND res.visit_facility_id = 8) THEN 14
---                          WHEN (res.network = 'SMN' AND res.visit_facility_id = 9) THEN 17
---                       END

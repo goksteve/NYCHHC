@@ -1,11 +1,5 @@
 CREATE OR REPLACE VIEW V_DSRIP_TR024_025_CDW AS
  WITH report_dates AS
---*CREATED  25-JUNe-2018
---*******************************************************
---ANTIDEPRESSANT MEDICATIONS                 103	List of ANTIDEPRESSANT MEDICATIONS
---DIAGNOSES:Major Depression Diagnose        104	List of Major Depression Diagnose diagnoses
---*******************************************************
-
    (
       SELECT --+ materialize
     -- ADD_MONTHS(TRUNC(SYSDATE, 'MONTH'), -1)report_dt,
@@ -91,9 +85,6 @@ CREATE OR REPLACE VIEW V_DSRIP_TR024_025_CDW AS
     SELECT --+ materialize
     d.network,
     d.patient_id,
-    d.prescriber_id, 
-    d.prescriber_name, 
-    d.prescriber_dept,
     d.drug_name,
     d.drug_description,
     d.dosage,
@@ -119,9 +110,6 @@ CREATE OR REPLACE VIEW V_DSRIP_TR024_025_CDW AS
            SELECT
              d.network,
              d.patient_id,
-             d.provider_id as prescriber_id,
-             provider_name AS prescriber_name,
-             physician_service_name_1 AS prescriber_dept,
              d.drug_name,
              d.drug_description,
              d.dosage,
@@ -130,7 +118,7 @@ CREATE OR REPLACE VIEW V_DSRIP_TR024_025_CDW AS
              a.drug_frequency_num_val AS daily_cnt,
              TRUNC(d.order_dt) AS order_dt,
              ROW_NUMBER()
-              OVER(PARTITION BY d.network, patient_id, TRUNC(d.order_dt) ORDER BY TRUNC(order_dt) ASC, rx_quantity DESC)
+              OVER(PARTITION BY network, patient_id, TRUNC(d.order_dt) ORDER BY TRUNC(order_dt) ASC, rx_quantity DESC)
               cnt,
              dt.start_dt AS rep_start_dt
             FROM
@@ -138,7 +126,6 @@ CREATE OR REPLACE VIEW V_DSRIP_TR024_025_CDW AS
              CROSS JOIN fact_patient_prescriptions d
              JOIN ref_drug_descriptions rd  ON rd.drug_description = d.drug_description AND rd.drug_type_id = 103
              LEFT JOIN ref_drug_frequency a  ON d.frequency LIKE a.drug_frequency
-             LEFT JOIN DIM_PROVIDERS prov on prov.network  = d.network and prov.provider_id  = d.provider_id and prov.current_flag  = 1
             WHERE
              order_dt >= drug_calc_dt AND order_dt < dt.report_dt
           ) d
@@ -149,13 +136,11 @@ CREATE OR REPLACE VIEW V_DSRIP_TR024_025_CDW AS
  tmp_drug_pat
 AS
     (
-     SELECT --+ materialize
-      network, patient_id, 
-     prescriber_id, 
-     prescriber_name, 
-     prescriber_dept, 
-     drug_name, 
-     drug_description,
+      SELECT --+ materialize
+       network,
+       patient_id,
+       drug_name,
+       drug_description,
        dosage,
        rx_quantity,
        frequency,
@@ -190,9 +175,6 @@ AS
    SELECT --+ materialize
          network,
          patient_id,
-         prescriber_id, 
-         prescriber_name, 
-         prescriber_dept, 
          drug_name,
          drug_description,
          dosage,
@@ -234,9 +216,6 @@ AS
        SELECT
         network,
         patient_id,
-        prescriber_id, 
-        prescriber_name, 
-        prescriber_dept, 
         drug_name,
         drug_description,
         dosage,
@@ -300,13 +279,9 @@ SELECT
   v.plan_id,
   v.plan_name,
   dept.service_type pcp_bh_flag,
-  dept.activation_time AS pcp_bh_service_dt,
   v.icd_code,
   v.problem_comments,
   v.diagnosis_dt,
-  p.prescriber_id, 
-  p.prescriber_name, 
-  p.prescriber_dept, 
   p.drug_name,
   p.drug_description,
   p.dosage,
@@ -325,16 +300,6 @@ SELECT
   p.seven_next_order_dt
 FROM
  visit_pat v JOIN final_drug_pat p ON p.network = v.network AND p.patient_id = v.patient_id
- LEFT JOIN 
-  (
-    SELECT 
-     pat.network, pat.visit_id, pat.visit_key, pat.location_id,
-     activation_time, dept.service_type,
-     row_number() over (partition by   pat.visit_key order by activation_time DESC) loc_cnt
-    FROM
-     fact_visit_segment_locations pat
-     JOIN dim_hc_departments dept  ON dept.network = pat.network AND dept.location_id = pat.location_id AND dept.service_type IN ('PCP', 'BH')
-   ) dept on dept.network = v.network and dept.visit_id  =  v.visit_id and loc_cnt = 1
-
+ LEFT JOIN dim_hc_departments dept  ON dept.department_key = v.last_department_key   AND dept.service_type IN ('PCP', 'BH')
 WHERE
  v.cnt = 1  AND ABS(p.order_dt - diagnosis_dt) >= 60

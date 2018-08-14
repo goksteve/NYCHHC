@@ -1,6 +1,6 @@
-DROP TABLE DSRIP_TR024_025_CDW CASCADE CONSTRAINTS;
+DROP TABLE dsrip_tr024_025_cdw CASCADE CONSTRAINTS;
 
-CREATE TABLE DSRIP_TR024_025_CDW
+CREATE TABLE dsrip_tr024_025_cdw
 (
  network                 VARCHAR2(3 BYTE) NOT NULL,
  admission_dt_key        NUMBER(8) NOT NULL,
@@ -38,9 +38,13 @@ CREATE TABLE DSRIP_TR024_025_CDW
  plan_id                 NUMBER(12) NULL,
  plan_name               VARCHAR2(100 BYTE) NULL,
  pcp_bh_flag             VARCHAR2(100 BYTE) NULL,
+ pcp_bh_service_dt       DATE,
  icd_code                VARCHAR2(100 BYTE) NOT NULL,
  problem_comments        VARCHAR2(1024 BYTE) NULL,
  diagnosis_dt            DATE NOT NULL,
+ prescriber_id           NUMBER(12),
+ prescriber_name         VARCHAR2(255 BYTE),
+ prescriber_dept         VARCHAR2(1028 BYTE),
  drug_name               VARCHAR2(175 BYTE) NULL,
  drug_description        VARCHAR2(512 BYTE) NULL,
  dosage                  VARCHAR2(2048 BYTE) NULL,
@@ -73,19 +77,19 @@ PARTITION BY LIST (network)
   PARTITION smn VALUES ('SMN'));
 
 CREATE UNIQUE INDEX pk_dsrip_tr_025_amm_cdw
- ON DSRIP_TR024_025_CDW(
+ ON dsrip_tr024_025_cdw(
   network,
   visit_id,
   patient_id,
   report_dt)
  LOGGING;
 
-ALTER TABLE DSRIP_TR024_025_CDW  ADD (
+ALTER TABLE dsrip_tr024_025_cdw  ADD (
   CONSTRAINT pk_dsrip_tr_025_amm_cdw
   PRIMARY KEY
   (network, visit_id, patient_id,  report_dt)
   USING INDEX pk_dsrip_tr_025_amm_cdw
   ENABLE VALIDATE);
 
-GRANT SELECT ON DSRIP_TR024_025_CDW TO PUBLIC;
-CREATE OR REPLACE   PUBLIC SYNONYM DSRIP_TR024_025_CDW FOR DSRIP_TR024_025_CDW;
+GRANT SELECT ON dsrip_tr024_025_cdw TO PUBLIC;
+CREATE OR REPLACE   PUBLIC SYNONYM dsrip_tr024_025_cdw FOR dsrip_tr024_025_cdw;

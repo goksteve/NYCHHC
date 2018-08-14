@@ -6,7 +6,7 @@ CREATE OR REPLACE VIEW v_fact_visit_metric_results AS
   (
     SELECT --+ materialize
     network,     criterion_id,
-    VALUE,  
+    value, value_description, 
    CASE WHEN criterion_id = 13 THEN
    CASE WHEN UPPER(value_description) LIKE '%SYS%' THEN 'S' -- systolic
          WHEN UPPER(value_description) LIKE '%DIAS%' THEN 'D' -- diastolic
@@ -26,7 +26,9 @@ metric_result AS
       r.patient_id,result_dt,
       data_element_id,
       TRIM(r.result_value) AS result_value,
-      c.criterion_id,test_type
+      c.criterion_id,
+      c.value_description,
+      test_type
       FROM crit_metric c
       JOIN fact_results r ON r.data_element_id = c.VALUE AND r.network = c.network
       AND r.event_status_id IN (6, 11)
@@ -43,12 +45,12 @@ metric_result AS
       r.patient_id,
       result_dt,
       result_value,
-      c.criterion_id,
-      ROW_NUMBER() OVER(PARTITION BY r.network, r.visit_id, c.criterion_id ORDER BY result_dt DESC) rnum
+      r.criterion_id,
+      ROW_NUMBER() OVER(PARTITION BY r.network, r.visit_id, r.criterion_id ORDER BY result_dt DESC) rnum
       FROM
-      crit_metric c JOIN metric_result r ON r.data_element_id = c.VALUE AND r.network = c.network
+      metric_result r
       WHERE
-      c.criterion_id IN (4,10,23,13)
+      r.criterion_id IN (4,10,23,13)
       AND REGEXP_REPLACE(TRIM(r.result_value),
         '(([[:digit:]]{1,2})-([[:alpha:]]{2,9})-([[:digit:]]{2,4}))|(([[:digit:]]{1,2}) ([[:alpha:]]{2,9}) ([[:digit:]]{2,4}))|(([[:digit:]]{1,2})\/([[:digit:]]{1,2})\/([[:digit:]]{2,4}))|
       (([[:alpha:]]{2,9}) ([[:digit:]]{1,2}),([[:digit:]]{2,4}))|(([[:digit:]]{1,2})([[:alpha:]]{3,9})([[:digit:]]{2,4})|([[:digit:]]{4,10})|([^[:digit:]]))')
@@ -65,11 +67,11 @@ metric_result AS
           r.network,         r.visit_id,
           r.patient_key,         r.patient_id,
           result_dt,         result_value,
-          c.criterion_id,
-          ROW_NUMBER() OVER(PARTITION BY r.network, r.visit_id, c.criterion_id ORDER BY result_dt DESC) rnum
-          FROM         crit_metric c JOIN metric_result r ON r.data_element_id = c.VALUE AND r.network = c.network
+          r.criterion_id,
+          ROW_NUMBER() OVER(PARTITION BY r.network, r.visit_id, r.criterion_id ORDER BY CASE when lower(value_description) like '%result%' then 1 else 2 END ,result_DT DESC) rnum
+          FROM  metric_result r 
           WHERE
-          c.criterion_id IN (66, 68)
+          r.criterion_id IN (66, 68)
       UNION ALL
           SELECT       r.network,
           r.visit_id,      patient_key,
@@ -89,18 +91,17 @@ metric_result AS
     r.event_id,
     r.result_dt,
     CASE
-    WHEN lkp.test_type = 'C' THEN
+    WHEN r.test_type = 'C' THEN
     TO_NUMBER(REGEXP_SUBSTR(r.result_value, '^[^0-9]*([0-9]{2,})/([0-9]{2,})', 1,1,'x',1))
-    WHEN lkp.test_type = 'S' THEN  TO_NUMBER(REGEXP_SUBSTR(r.result_value,'^[^0-9]*([0-9]{2,})',1,1,'',1))
+    WHEN r.test_type = 'S' THEN  TO_NUMBER(REGEXP_SUBSTR(r.result_value,'^[^0-9]*([0-9]{2,})',1,1,'',1))
     END AS bp_calc_systolic,
-    CASE WHEN lkp.test_type = 'C' THEN 
+    CASE WHEN r.test_type = 'C' THEN 
     TO_NUMBER(REGEXP_SUBSTR(r.result_value,'^[^0-9]*([0-9]{2,})/([0-9]{2,})',1,1,'x',2))
-    WHEN lkp.test_type = 'D' THEN TO_NUMBER(REGEXP_SUBSTR(r.result_value,'^[^0-9]*([0-9]{2,})',1,1,'',1))
+    WHEN r.test_type = 'D' THEN TO_NUMBER(REGEXP_SUBSTR(r.result_value,'^[^0-9]*([0-9]{2,})',1,1,'',1))
     END AS bp_calc_diastolic
     FROM
-    crit_metric lkp 
-    JOIN metric_result r ON r.data_element_id = lkp.VALUE AND r.network = lkp.network
-    WHERE lkp.criterion_id = 13
+      metric_result r 
+    WHERE r.criterion_id = 13
   ),
       bp_final_tb AS
   (
@@ -121,7 +122,8 @@ metric_result AS
        )
  ),
       calc_result AS
-       (SELECT --+ materialize
+       (
+         SELECT --+ materialize
          v.network,
          v.visit_id,
          v.visit_key,
@@ -137,24 +139,27 @@ metric_result AS
          v.first_payer_key,
          v.initial_visit_type_id,
          v.final_visit_type_id,
-         p.asthma_ind,
-         p.bh_ind,
-         p.breast_cancer_ind,
-         p.diabetes_ind,
-         p.heart_failure_ind,
-         p.hypertension_ind,
-         p.kidney_diseases_ind,
-         p.smoker_ind,
-         p.pregnancy_ind,
-         pregnancy_onset_dt,
-         p.flu_vaccine_ind,
-         p.flu_vaccine_onset_dt,
-         p.pna_vaccine_ind,
-         p.pna_vaccine_onset_dt,
-         p.bronchitis_ind,
-         p.bronchitis_onset_dt,
-         p.tabacco_scr_diag_ind,
-         p.tabacco_scr_diag_onset_dt,
+         CASE WHEN p.asthma_f_onset_dt  >= v.admission_dt THEN 1 ELSE 0  END AS asthma_ind,
+         CASE WHEN  p.bh_f_onset_dt    >= admission_dt THEN 1 ELSE 0  END AS bh_ind,
+         CASE WHEN breast_cancer_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS     breast_cancer_ind,
+         CASE WHEN diabetes_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS     diabetes_ind,
+         CASE WHEN heart_failure_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    heart_failure_ind,
+         CASE WHEN schizophrenia_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS      schizophrenia_ind,
+         CASE WHEN bipolar_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS            bipolar_ind,
+         CASE WHEN htn_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    hypertension_ind,
+         CASE WHEN kidney_dz_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS  kidney_diseases_ind,
+         CASE WHEN smoker_f_onset_dt>= admission_dt THEN 1 ELSE 0  END AS    smoker_ind,
+         CASE WHEN pregnancy_l_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    pregnancy_ind,
+         CASE WHEN pregnancy_l_onset_dt >= admission_dt THEN p.pregnancy_l_onset_dt ELSE NULL  END AS pregnancy_onset_dt,
+         CASE WHEN flu_vaccine_l_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    flu_vaccine_ind,
+         CASE WHEN flu_vaccine_l_onset_dt >= admission_dt THEN flu_vaccine_l_onset_dt  ELSE NULL END AS flu_vaccine_onset_dt,
+         CASE WHEN pna_vaccine_l_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    pna_vaccine_ind,
+         CASE WHEN pna_vaccine_l_onset_dt >= admission_dt THEN pna_vaccine_l_onset_dt ELSE NULL  END AS     pna_vaccine_onset_dt,
+         CASE WHEN bronchitis_l_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    bronchitis_ind,
+         CASE WHEN bronchitis_l_onset_dt >= admission_dt THEN bronchitis_l_onset_dt ELSE NULL  END AS     bronchitis_onset_dt,
+         CASE WHEN tabacco_diag_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS     tabacco_scr_diag_ind,
+         CASE WHEN tabacco_diag_f_onset_dt >= admission_dt THEN tabacco_diag_f_onset_dt  ELSE NULL  END AS     tabacco_scr_diag_onset_dt,
+         CASE WHEN major_depression_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    major_depression_ind,
          TRUNC(q.result_dt) AS result_dt,
          q.criterion_id,
          q.result_value,
@@ -197,7 +202,8 @@ metric_result AS
          LEFT JOIN fact_patient_metric_diag p ON p.patient_id = v.patient_id AND p.network = v.network
          LEFT JOIN rslt q ON q.visit_id = v.visit_id AND q.network = v.network AND q.rnum = 1
         WHERE
-         v.network = SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK') AND admission_dt >= DATE '2014-01-01'),
+         v.network = SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK') AND admission_dt >= DATE '2014-01-01'
+       ),
       final_calc_tb AS
        (SELECT --+ materialize
          network,
@@ -220,6 +226,8 @@ metric_result AS
          breast_cancer_ind,
          diabetes_ind,
          heart_failure_ind,
+         schizophrenia_ind,
+         bipolar_ind,
          hypertension_ind,
          kidney_diseases_ind,
          smoker_ind,
@@ -233,6 +241,7 @@ metric_result AS
          bronchitis_onset_dt,
          tabacco_scr_diag_ind,
          tabacco_scr_diag_onset_dt,
+         major_depression_ind,
          neph_final_result_dt,
          neph_final_orig_value,
          neph_final_calc_value,
@@ -256,12 +265,16 @@ metric_result AS
         FROM
          calc_result
          PIVOT
-          (MAX(result_dt)
-          AS final_result_dt, MAX(result_value)
-          AS final_orig_value, MAX(calc_value)
-          AS final_calc_value
+          (
+          MAX(result_dt)AS final_result_dt, 
+           MAX( CASE WHEN criterion_id  = 68 THEN
+                CASE   WHEN lower(result_value) like '%abnormal%' then 'abnormal'
+                       WHEN lower(result_value) like '%normal%'   then 'normal'  ELSE  'N/A' END END) AS final_orig_value, -- 'N/A' upper case for max/min purposes
+          MAX(calc_value) AS final_calc_value
           FOR criterion_id
-          IN (4 AS a1c, 23 AS gluc, 10 AS ldl, 13 AS bp, 66 AS neph, 68 AS retinal, 98 AS tabacco)))
+          IN (4 AS a1c, 23 AS gluc, 10 AS ldl, 13 AS bp, 66 AS neph, 68 AS retinal, 98 AS tabacco)
+         )
+    )
  SELECT --+  PARALLEL (48)
   a.network,
   a.visit_id,
@@ -283,6 +296,8 @@ metric_result AS
   NVL(a.breast_cancer_ind, 0) breast_cancer_ind,
   NVL(a.diabetes_ind, 0) diabetes_ind,
   NVL(a.heart_failure_ind, 0) heart_failure_ind,
+  NVL(a.schizophrenia_ind, 0) AS schizophrenia_ind,
+  NVL(a.bipolar_ind, 0) AS bipolar_ind,
   NVL(a.hypertension_ind, 0) hypertension_ind,
   NVL(a.kidney_diseases_ind, 0) kidney_diseases_ind,
   NVL(smoker_ind, 0) AS smoker_ind,
@@ -296,10 +311,12 @@ metric_result AS
   bronchitis_onset_dt,
   NVL(tabacco_scr_diag_ind, 0) AS tabacco_scr_diag_ind,
   tabacco_scr_diag_onset_dt,
+  NVL(a.major_depression_ind, 0) AS major_depression_ind,
   NVL(a.neph_final_calc_value, 0) AS nephropathy_screen_ind,
   neph_final_result_dt AS nephropathy_final_result_dt,
   NVL(a.retinal_final_calc_value, 0) AS retinal_dil_eye_exam_ind,
-  retinal_final_result_dt,
+  a.retinal_final_result_dt,
+  a.retinal_final_orig_value AS retinal_eye_exam_value, -- 'N/A' upper case for max/min purposes
   NVL(a.tabacco_final_calc_value, 0) AS tabacco_screen_proc_ind,
   tabacco_final_result_dt,
   a.a1c_final_result_dt,
@@ -322,6 +339,8 @@ metric_result AS
   OR NVL(a.breast_cancer_ind, 0) <> 0
   OR NVL(a.diabetes_ind, 0) <> 0
   OR NVL(a.heart_failure_ind, 0) <> 0
+  OR NVL(a.schizophrenia_ind, 0) <> 0
+  OR NVL(a.bipolar_ind, 0) <> 0
   OR NVL(a.hypertension_ind, 0) <> 0
   OR NVL(a.kidney_diseases_ind, 0) <> 0
   OR NVL(smoker_ind, 0) <> 0
@@ -330,12 +349,13 @@ metric_result AS
   OR NVL(pna_vaccine_ind, 0) <> 0
   OR NVL(bronchitis_ind, 0) <> 0
   OR NVL(tabacco_scr_diag_ind, 0) <> 0
+  OR NVL(a.major_depression_ind, 0) <> 0
   OR NVL(a.neph_final_calc_value, 0) <> 0
   OR NVL(a.retinal_final_calc_value, 0) <> 0
   OR NVL(a.tabacco_final_calc_value, 0) <> 0
   OR a.a1c_final_orig_value IS NOT NULL
   OR a.gluc_final_orig_value IS NOT NULL
   OR a.ldl_final_orig_value IS NOT NULL
-  OR a.neph_final_orig_value IS NOT NULL
-  OR a.retinal_final_orig_value IS NOT NULL
+  --  OR a.neph_final_orig_value IS NOT NULL
+  -- OR a.retinal_final_orig_value IS NOT NULL
   OR NVL(b.bp_final_calc_value, a.bp_final_calc_value) IS NOT NULL;
