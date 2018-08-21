@@ -6,7 +6,9 @@ CREATE OR REPLACE PACKAGE pkg_refresh_cdw_star_schema AS
    09-MAY-2018, SG: created package
  */
  -- Procedure SP_START_REFRESH to start refresh process, in the order of REF, DIM, FACT and METRIC.
- PROCEDURE sp_start_refresh /*(p_refresh_type IN VARCHAR2, p_refresh_step VARCHAR2)*/ ;
+
+  PROCEDURE sp_start_refresh/*(p_refresh_type IN VARCHAR2, p_refresh_step VARCHAR2)*/;
+
 
  -- Procedure SP_REFRESH_REF_TABLES to refresh only reference tables
  PROCEDURE sp_refresh_ref_tables;
@@ -51,15 +53,15 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
     1.0        05/10/2018      goreliks1       1. Created this package body.
  ******************************************************************************/
 
- PROCEDURE sp_start_refresh /*(p_refresh_type IN VARCHAR2, p_refresh_step VARCHAR2)*/
-                           IS
- -- *******  DESCRIPTION ******************************
- -- p_refresh_type  => 'F' - full  / 'I' - incremental
- -- p_refresh_step => 'ALL', 'REF','DIM', 'FACT', 'METRIC'
- --*****************************************************
- --  v_type   VARCHAR2(2) := p_refresh_type;
- --  v_step   VARCHAR2(10) := p_refresh_type;
+ PROCEDURE sp_start_refresh/*(p_refresh_type IN VARCHAR2, p_refresh_step VARCHAR2)*/ IS
+  -- *******  DESCRIPTION ******************************
+  -- p_refresh_type  => 'F' - full  / 'I' - incremental
+  -- p_refresh_step => 'ALL', 'REF','DIM', 'FACT', 'METRIC'
+  --*****************************************************
+--  v_type   VARCHAR2(2) := p_refresh_type;
+--  v_step   VARCHAR2(10) := p_refresh_type;
  BEGIN
+<<<<<<< HEAD
   --  IF v_type = 'F' THEN
   --   IF v_step = 'ALL' THEN
   sp_refresh_ref_tables;
@@ -72,6 +74,20 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
 
  --   END IF;
  --  END IF;
+=======
+--  IF v_type = 'F' THEN
+--   IF v_step = 'ALL' THEN
+    rfs.sp_refresh_ref_tables;
+    rfs.sp_refresh_dim_tables;
+    sp_refresh_rx_fact_tables;
+    rfs.sp_refresh_fact_visits_full;
+    rfs.sp_refresh_fact_tables;
+    rfs.sp_refresh_fact_results_full;
+
+--   END IF;
+--  END IF;
+
+>>>>>>> 01321003164494235139afdf3133c8a9edca5861
  END;
 
  PROCEDURE sp_refresh_ref_tables IS

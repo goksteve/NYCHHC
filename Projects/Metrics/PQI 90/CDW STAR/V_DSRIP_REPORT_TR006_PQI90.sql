@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW v_dsrip_report_pqi90
+CREATE OR REPLACE VIEW v_dsrip_report_tr006_pqi90
 AS
 WITH
   dt AS

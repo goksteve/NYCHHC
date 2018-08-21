@@ -1,6 +1,6 @@
-exec dbm.drop_tables('DSRIP_REPORT_PQI90');
+exec dbm.drop_tables('DSRIP_REPORT_TR006_PQI90');
 
-CREATE TABLE DSRIP_REPORT_PQI90
+CREATE TABLE DSRIP_REPORT_TR006_PQI90
 (
   report_period_start_dt         DATE,
   network                        CHAR(3 BYTE)   NOT NULL,
@@ -52,6 +52,9 @@ CREATE TABLE DSRIP_REPORT_PQI90
   asthma_yng_adlt_exclusion      VARCHAR2(2000 CHAR),
   amputation_diab_diagnoses      VARCHAR2(2000 CHAR),
   amputation_diab_exclusion      VARCHAR2(2000 CHAR),
-  CONSTRAINT dsrip_report_pqi90 PRIMARY KEY(report_period_start_dt, network, visit_id) USING INDEX COMPRESS
+  CONSTRAINT dsrip_report_pqi90_pk PRIMARY KEY(report_period_start_dt, network, visit_id) USING INDEX COMPRESS
 )
 COMPRESS BASIC;
+
+
+GRANT SELECT ON DSRIP_REPORT_TR006_PQI90 TO PUBLIC;

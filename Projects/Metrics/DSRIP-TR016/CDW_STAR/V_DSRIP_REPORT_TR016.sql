@@ -2,7 +2,8 @@ DROP VIEW PT005.V_DSRIP_REPORT_TR016;
 
 CREATE OR REPLACE FORCE VIEW pt005.v_dsrip_report_tr016
 AS
-WITH
+WITH                 
+  -- 17-Aug-2018, GK: added dim_facilities join fact_prescription, as newly constructed fact_prescription is missing facility_key
   -- 15-May-2018, GK: fixing network cross joining issue
   -- 10-Apr-2018, GK: Converting into CDW Star schema
   -- 07-Feb-2018, OK: included psychotic diagnoses
@@ -21,11 +22,17 @@ WITH
   (
     SELECT --+ materialize
       pr.network,
-      pr.facility_key,
+      fclty.facility_key,
       pr.patient_id,
+
+--      pr.mrn,
+      NVL (TO_CHAR (mdm.eid), pr.network || '-' || pr.patient_id) AS patient_gid,
+      NVL (dnm.drug_type_id, dscr.drug_type_id) AS drug_type_id, 
+
       pr.mrn,
       NVL(TO_CHAR(mdm.eid), pr.network||'-'||pr.patient_id) AS patient_gid, 
       NVL(dnm.drug_type_id, dscr.drug_type_id) AS drug_type_id,
+
       NVL (dnm.drug_name, dscr.drug_description) AS medication,
       pr.order_dt AS start_dt,
      -- NVL(pr.rx_dc_dt, DATE '9999-12-31') AS stop_dt,
@@ -34,6 +41,8 @@ WITH
     JOIN cdw.fact_patient_prescriptions pr
       ON pr.order_dt <= rd.year_back_dt
      AND pr.network NOT IN ('QHN', 'SBN') -- exclude Networks that have switched to EPIC
+    JOIN cdw.dim_hc_facilities fclty
+      ON pr.network = fclty.network AND pr.facility_id = fclty.facility_id
     LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
       ON mdm.network = pr.network
      AND mdm.patientid = TO_CHAR (pr.patient_id)
