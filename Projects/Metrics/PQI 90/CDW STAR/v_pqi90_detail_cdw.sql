@@ -70,6 +70,6 @@ SELECT
   CASE WHEN asthma_yng_adlt_exclusion LIKE '%--%' THEN '"'||asthma_yng_adlt_exclusion||'"' ELSE asthma_yng_adlt_exclusion END asthma_yng_adlt_exclusion,
   CASE WHEN amputation_diab_diagnoses LIKE '%--%' THEN '"'||amputation_diab_diagnoses||'"' ELSE amputation_diab_diagnoses END amputation_diab_diagnoses,
   CASE WHEN amputation_diab_exclusion LIKE '%--%' THEN '"'||amputation_diab_exclusion||'"' ELSE amputation_diab_exclusion END amputation_diab_exclusion
-FROM dsrip_report_pqi90 rpt
-WHERE report_period_start_dt = NVL(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER'), (SELECT MAX(report_period_start_dt) FROM dsrip_report_pqi90)) 
+FROM dsrip_report_tr006_pqi90 rpt
+WHERE report_period_start_dt = NVL(SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER'), (SELECT MAX(report_period_start_dt) FROM dsrip_report_tr006_pqi90)) 
 ORDER BY last_name, first_name, discharge_dt;

@@ -9,7 +9,7 @@ CREATE OR REPLACE PACKAGE pkg_refresh_cdw_star_schema AS
    09-MAY-2018, SG: created package
  */
  -- Procedure SP_START_REFRESH to start refresh process, in the order of REF, DIM, FACT and METRIC.
-  PROCEDURE sp_start_refresh(p_refresh_type IN VARCHAR2, p_refresh_step VARCHAR2);
+  PROCEDURE sp_start_refresh/*(p_refresh_type IN VARCHAR2, p_refresh_step VARCHAR2)*/;
 
   -- Procedure SP_REFRESH_REF_TABLES to refresh only reference tables
   PROCEDURE sp_refresh_ref_tables;
@@ -57,23 +57,25 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
     ---------  ----------  ---------------  ------------------------------------
     1.0        05/10/2018      goreliks1       1. Created this package body.
  ******************************************************************************/
- PROCEDURE sp_start_refresh(p_refresh_type IN VARCHAR2, p_refresh_step VARCHAR2) IS
+ PROCEDURE sp_start_refresh/*(p_refresh_type IN VARCHAR2, p_refresh_step VARCHAR2)*/ IS
   -- *******  DESCRIPTION ******************************
   -- p_refresh_type  => 'F' - full  / 'I' - incremental
   -- p_refresh_step => 'ALL', 'REF','DIM', 'FACT', 'METRIC'
   --*****************************************************
-  v_type   VARCHAR2(2) := p_refresh_type;
-  v_step   VARCHAR2(10) := p_refresh_type;
+--  v_type   VARCHAR2(2) := p_refresh_type;
+--  v_step   VARCHAR2(10) := p_refresh_type;
  BEGIN
-  IF v_type = 'F' THEN
-   IF v_step = 'ALL' THEN
-    -- dwm.refresh_data('where etl_step_num = 770');
-    sp_refresh_ref_tables;
-    sp_refresh_dim_tables;
-   --   sp_refresh_fact_tables;
+--  IF v_type = 'F' THEN
+--   IF v_step = 'ALL' THEN
+    rfs.sp_refresh_ref_tables;
+    rfs.sp_refresh_dim_tables;
+    sp_refresh_rx_fact_tables;
+    rfs.sp_refresh_fact_visits_full;
+    rfs.sp_refresh_fact_tables;
+    rfs.sp_refresh_fact_results_full;
 
-   END IF;
-  END IF;
+--   END IF;
+--  END IF;
  END;
 
  PROCEDURE sp_refresh_ref_tables IS
@@ -88,7 +90,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
 
  PROCEDURE sp_refresh_rx_fact_tables IS
  BEGIN
-  dwm.refresh_data('where etl_step_num >=1101 and etl_step_num <=1104');
+  dwm.refresh_data('where etl_step_num >=1101 and etl_step_num <=1106');
  END;
 
   PROCEDURE sp_refresh_fact_visits_full IS
