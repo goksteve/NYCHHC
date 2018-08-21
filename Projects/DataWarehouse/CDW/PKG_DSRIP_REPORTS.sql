@@ -15,7 +15,7 @@ procedure sp_start_all;
  PROCEDURE sp_dsrip_tr022;
  PROCEDURE sp_dsrip_tr024_025;
  PROCEDURE sp_dsrip_tr044;
-PROCEDURE sp_dsrip_tr047;
+ PROCEDURE sp_dsrip_tr047;
 
 END;
 /
@@ -40,18 +40,61 @@ CREATE OR REPLACE PACKAGE BODY CDW.PKG_DSRIP_REPORTS AS
 PROCEDURE sp_start_all AS
  n_step   VARCHAR2(255 BYTE);
 BEGIN
- n_step := 'sp_dsrip_tr002_023';
- sp_dsrip_tr002_023;
- n_step := 'sp_dsrip_tr015';
- sp_dsrip_tr015;
- n_step := 'sp_dsrip_tr017';
- sp_dsrip_tr017;
- n_step := 'sp_dsrip_tr022';
- sp_dsrip_tr022;
- n_step := 'sp_dsrip_tr024-025';
- sp_dsrip_tr024_025;
- n_step := 'sp_dsrip_tr044';
- sp_dsrip_tr044;
+--Author: GK
+  n_step := 'DSRIP_REPORT_TR001';
+  PT005.PREPARE_DSRIP_REPORT_TR001;
+
+--Author: SG
+  n_step := 'sp_dsrip_tr002_023';
+  sp_dsrip_tr002_023;
+
+--Author: GK  
+  n_step := 'DSRIP_REPORT_TR006';
+  pt005.prepare_dsrip_tr006_pqi90_rpt;
+
+--Author: GK
+  n_step := 'DSRIP_REPORT_TR010';
+  PT005.PREPARE_DSRIP_REPORT_TR010;
+
+--Author: GK
+  n_step := 'DSRIP_REPORT_TR013_014';
+  PT005.PREPARE_DSRIP_REPORT_TR013_014;
+
+--Author: SG
+  n_step := 'sp_dsrip_tr015';
+  sp_dsrip_tr015;
+
+--Author: GK
+  n_step := 'DSRIP_REPORT_TR016';
+  PT005.PREPARE_DSRIP_REPORT_TR016;
+
+--Author: SG
+  n_step := 'sp_dsrip_tr017';
+  sp_dsrip_tr017;
+
+--Author: GK
+  n_step := 'DSRIP_REPORT_TR018';
+  PT005.PREPARE_DSRIP_REPORT_TR018;
+
+--Author: GK
+  n_step := 'DSRIP_PQI90_REPORTS_7_8';
+  PT005.PREPARE_PQI90_REPORTS_7_8;
+
+--Author: SG
+  n_step := 'sp_dsrip_tr022';
+  sp_dsrip_tr022;
+
+--Author: SG
+  n_step := 'sp_dsrip_tr024-025';
+  sp_dsrip_tr024_025;
+
+--Author: GK
+  n_step := 'PREPARE_DSRIP_REPORT_TR043';
+  cdw.prepare_dsrip_report_tr043;
+
+--Author: SG
+  n_step := 'sp_dsrip_tr044';
+  sp_dsrip_tr044;
 EXCEPTION
  WHEN OTHERS THEN
   raise_application_error(
