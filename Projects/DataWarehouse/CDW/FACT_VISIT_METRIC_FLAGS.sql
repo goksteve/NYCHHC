@@ -1,3 +1,5 @@
+DROP TABLE fact_visit_metric_flags CASCADE CONSTRAINTS PURGE;
+
 CREATE TABLE fact_visit_metric_flags
 (
  network                     CHAR(3 BYTE) NOT NULL,
@@ -20,6 +22,8 @@ CREATE TABLE fact_visit_metric_flags
  breast_cancer_ind           NUMBER(3),
  diabetes_ind                NUMBER(3),
  heart_failure_ind           NUMBER(3),
+ schizophrenia_ind           NUMBER(3),
+ bipolar_ind                 NUMBER(3),
  hypertansion_ind            NUMBER(3),
  kidney_diseases_ind         NUMBER(3),
  smoker_ind                  NUMBER(3),
@@ -33,8 +37,10 @@ CREATE TABLE fact_visit_metric_flags
  bronchitis_onset_dt         DATE,
  tabacco_scr_diag_ind        NUMBER(3),
  tabacco_scr_diag_onset_dt   DATE,
+ major_depression_ind        NUMBER(3),
  nephropathy_screen_ind      NUMBER(3),
  retinal_dil_eye_exam_ind    NUMBER(3),
+ retinal_eye_exam_rslt       VARCHAR2(20 BYTE),
  tabacco_screen_proc_ind     NUMBER(3),
  a1c_final_result_dt         DATE,
  a1c_final_orig_value        VARCHAR2(1023 BYTE),
@@ -62,6 +68,10 @@ PARTITION BY LIST (network)
   PARTITION qhn VALUES ('QHN'),
   PARTITION sbn VALUES ('SBN'),
   PARTITION smn VALUES ('SMN'));
+
+CREATE UNIQUE INDEX IDX_FACT_VISIT_METRIC_FLAGS ON FACT_VISIT_METRIC_FLAGS
+(NETWORK, VISIT_ID, PATIENT_ID)
+LOGGING;
 
 GRANT SELECT ON fact_visit_metric_flags TO PUBLIC;
 CREATE OR REPLACE   PUBLIC SYNONYM fact_visit_metric_flags FOR cdw.fact_visit_metric_flags;

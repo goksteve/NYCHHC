@@ -24,13 +24,19 @@ WITH
       pr.network,
       fclty.facility_key,
       pr.patient_id,
+
 --      pr.mrn,
       NVL (TO_CHAR (mdm.eid), pr.network || '-' || pr.patient_id) AS patient_gid,
       NVL (dnm.drug_type_id, dscr.drug_type_id) AS drug_type_id, 
+
+      pr.mrn,
+      NVL(TO_CHAR(mdm.eid), pr.network||'-'||pr.patient_id) AS patient_gid, 
+      NVL(dnm.drug_type_id, dscr.drug_type_id) AS drug_type_id,
+
       NVL (dnm.drug_name, dscr.drug_description) AS medication,
       pr.order_dt AS start_dt,
---      NVL (pr.rx_dc_dt, DATE '9999-12-31') AS stop_dt,
-      ROW_NUMBER () OVER (PARTITION BY NVL (TO_CHAR (mdm.eid), pr.network || '-' || pr.patient_id), NVL (dnm.drug_type_id, dscr.drug_type_id) ORDER BY pr.order_dt DESC) AS rnum
+     -- NVL(pr.rx_dc_dt, DATE '9999-12-31') AS stop_dt,
+      ROW_NUMBER() OVER(PARTITION BY NVL(TO_CHAR(mdm.eid), pr.network||'-'||pr.patient_id), NVL(dnm.drug_type_id, dscr.drug_type_id) ORDER BY pr.order_dt DESC) rnum
     FROM report_dates rd
     JOIN cdw.fact_patient_prescriptions pr
       ON pr.order_dt <= rd.year_back_dt
@@ -47,21 +53,21 @@ WITH
       ON dscr.drug_description = pr.drug_description
     WHERE dnm.drug_type_id IN (33, 34) OR dscr.drug_type_id IN (33, 34) -- Diabetes and Antipsychotic Medications
   ),
-  diagnoses AS 
+  diagnoses AS
   (
     SELECT --+ materialize
       NVL (TO_CHAR (mdm.eid), pd.network || '-' || pd.patient_id)
       patient_gid,
-      lkp.criterion_id diag_type_id,
+      lkp.criterion_id diag_type_id, 
       DECODE (pd.diag_coding_scheme, '5', 'ICD-9', 'ICD-10')
       coding_scheme,
-      pd.diag_code,
-      pd.problem_comments diag_description,
+      pd.diag_code, 
+      pd.problem_comments diag_description, 
       pd.onset_date onset_dt
 --      pd.end_date stop_dt
     FROM cdw.fact_patient_diagnoses pd
     JOIN meta_conditions lkp
-      ON lkp.qualifier = DECODE (pd.diag_coding_scheme, 'ICD-9', 'ICD-9', 'ICD-10')
+      ON lkp.qualifier = DECODE(pd.diag_coding_scheme, 'ICD-9', 'ICD-9', 'ICD-10')
      AND lkp.VALUE = pd.diag_code
      AND lkp.criterion_id IN (6, 31, 32) -- 6-DIABETES, 31-SCHIZOPHRENIA, 32-BIPOLAR
     LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
@@ -70,16 +76,16 @@ WITH
      AND mdm.epic_flag = 'N'
     WHERE pd.network NOT IN ('QHN', 'SBN')
       AND pd.diag_coding_scheme IN ('ICD-10', 'ICD-9') --AND pd.current_flag = '1'
-      AND pd.end_date IS NULL
+    AND pd.end_date IS NULL
   ),
-  rslt_meta_data AS 
+  rslt_meta_data AS
   (
     SELECT --+ materialize
-      dt.report_dt, dt.year_back_dt, mc.*
+      dt.report_dt, dt.year_back_dt,mc.*
     FROM report_dates dt CROSS JOIN meta_conditions mc
-    WHERE mc.criterion_id IN (4, 23)
+    WHERE mc.criterion_id IN (4, 23)   
   ),
-  diabetes_diagnoses AS 
+  diabetes_diagnoses AS
   (
     SELECT --+ materialize
       patient_gid, MIN (onset_dt) onset_dt--, MAX (stop_dt) stop_dt
@@ -87,7 +93,7 @@ WITH
     WHERE diag_type_id = 6
     GROUP BY patient_gid
   ),
-  psychotic_diagnoses AS 
+  psychotic_diagnoses AS
   (
     SELECT --+ materialize
       patient_gid,
@@ -98,15 +104,15 @@ WITH
     FROM diagnoses
     WHERE diag_type_id IN (31, 32)
   ),
-  diabetes_prescriptions  AS 
-  (  
+  diabetes_prescriptions AS
+  (
     SELECT --+ materialize
-      patient_gid, MIN (start_dt) start_dt--, MAX (stop_dt) stop_dt
+      patient_gid, MIN(start_dt) start_dt  --, --MAX(stop_dt) stop_dt
     FROM prescriptions
-    WHERE drug_type_id = 33                    -- Diabetes Prescriptions
+    WHERE drug_type_id = 33 -- Diabetes Prescriptions
     GROUP BY patient_gid
   ),
-  a1c_glucose_tests AS 
+  a1c_glucose_tests AS
   (
     SELECT --+ materialize
       NVL (TO_CHAR (mdm.eid), a.network || '-' || a.patient_id)
@@ -133,7 +139,7 @@ WITH
       a.network || '-' || a.patient_id)
       ORDER BY a.result_dt DESC)
       rnum
-    FROM 
+    FROM
     (
       SELECT -- ordered use_hash(r v)
         v.network,
@@ -153,7 +159,7 @@ WITH
         r.data_element_id,
         r.result_value,
         ROW_NUMBER () OVER (PARTITION BY v.network, v.patient_id ORDER BY r.event_id DESC, r.data_element_id) AS evnt_rnum
-      FROM rslt_meta_data mc
+        FROM rslt_meta_data mc
       JOIN cdw.fact_results r
         ON r.network = mc.network
        AND r.data_element_id = mc.VALUE -- A1C and Glucose Level results
@@ -162,7 +168,7 @@ WITH
       JOIN cdw.fact_visits v
         ON v.network = r.network AND v.visit_id = r.visit_id --AND v.admission_dt >= mc.year_back_dt AND v.admission_dt < mc.report_dt
       LEFT JOIN cdw.ref_visit_types vt
-        ON vt.visit_type_id = v.final_visit_type_id
+          ON vt.visit_type_id = v.final_visit_type_id    
     ) a
     LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
       ON mdm.network = a.network
@@ -174,10 +180,10 @@ WITH
   AS 
   (
     SELECT --+ materialize
-      p.network,
+    p.network, 
       NVL (TO_CHAR (mdm.eid), p.network || '-' || p.patient_id)
       patient_gid,
-      p.pcp_provider_name prim_care_provider,
+    p.pcp_provider_name prim_care_provider,
       v.visit_id,
       f.facility_name pcp_visit_facility,
       v.visit_number pcp_visit_number,
@@ -193,23 +199,23 @@ WITH
      AND d.service_type = 'PCP'
     LEFT JOIN cdw.dim_hc_facilities f
       ON f.facility_key = v.facility_key
-    LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm
+    LEFT JOIN dconv.mdm_qcpr_pt_02122016 mdm 
       ON mdm.network = p.network
      AND TO_NUMBER (mdm.patientid) = p.patient_id
      AND p.current_flag = 1
      AND mdm.epic_flag = 'N'
   )
-SELECT --+ parallel(32) /*USE_HASH(f pd pr)*/
+SELECT --+ parallel(32) /*USE_HASH(f pd pr)*/ 
   dt.report_dt AS report_period_start_dt,
   amed.patient_gid,
   amed.network,
   f.facility_id,
-  NVL (f.facility_name, 'Unknown') facility_name,
+  NVL(f.facility_name, 'Unknown') facility_name,
   amed.patient_id,
   pd.name AS patient_name,
   pd.medical_record_number,
   pd.birthdate,
-  TRUNC (MONTHS_BETWEEN (dt.report_dt, pd.birthdate) / 12) age,
+  TRUNC(MONTHS_BETWEEN(dt.report_dt, pd.birthdate)/12) age,
   amed.medication,
   tst.visit_id,
   tst.visit_number,
@@ -228,14 +234,14 @@ SELECT --+ parallel(32) /*USE_HASH(f pd pr)*/
   pd.apt_suite,
   pd.city,
   pd.state,
-  pd.mailing_code zip_code,
+  pd.mailing_code zip_code,  
   pcp.prim_care_provider,
-  pcp.pcp_visit_dt AS last_pcp_visit_dt,
+  pcp.pcp_visit_dt AS last_pcp_visit_dt,  
   CASE
     WHEN psych.coding_scheme IS NOT NULL
     THEN psych.coding_scheme || ': ' || psych.diag_code
   END AS bh_diag_code,
-  psych.diag_description bh_diagnosis,
+  psych.diag_description bh_diagnosis,  
   ROW_NUMBER () OVER (PARTITION BY amed.patient_gid, tst.network, tst.visit_id ORDER BY CASE WHEN pr.payer_group = 'Medicaid' THEN 1 ELSE 2 END) AS rnum
 FROM prescriptions amed
 CROSS JOIN report_dates dt
@@ -252,18 +258,18 @@ LEFT JOIN a1c_glucose_tests tst
 LEFT JOIN cdw.dim_patients pd
   ON pd.network = amed.network
  AND pd.patient_id = amed.patient_id
- AND pd.current_flag = 1
+ AND pd.current_flag = 1 
 LEFT JOIN cdw.dim_hc_facilities f
   ON f.facility_key = amed.facility_key
 LEFT JOIN cdw.dim_payers pr
   ON pr.payer_key = tst.first_payer_key
 WHERE amed.rnum = 1
  AND amed.drug_type_id = 34 -- Antipsychotic Medications
- AND pd.birthdate > ADD_MONTHS (dt.report_dt, -12 * 65) -- not 65 yet
- AND pd.birthdate <= ADD_MONTHS (dt.report_dt, -12 * 18) -- 18 or older
- AND pd.date_of_death IS NULL
+AND pd.birthdate > ADD_MONTHS(dt.report_dt, -12*65) -- not 65 yet
+AND pd.birthdate <= ADD_MONTHS(dt.report_dt, -12*18) -- 18 or older
+AND pd.date_of_death IS NULL
  AND ((diab.onset_dt IS NULL OR diab.onset_dt > dt.year_back_dt) -- no Diabetes prior to last year
- AND (dmed.start_dt IS NULL OR dmed.start_dt > dt.year_back_dt) -- no Diabetes Medications taken prior to last year
+  AND (dmed.start_dt IS NULL OR dmed.start_dt > dt.year_back_dt) -- no Diabetes Medications taken prior to last year
 );
 
 

@@ -159,10 +159,10 @@ WITH
           DISTINCT rx.network, 
           rx.patient_id,
           rx.order_dt rx_order_time,
-          rx_exp_dt rx_exp_time,
+         -- rx_exp_dt rx_exp_time,
           rx.drug_name derived_product_name,
           rx.rx_quantity,
-          rx.rx_dc_dt rx_dc_time,
+         -- rx.rx_dc_dt rx_dc_time,
           dt.report_dt,
           dt.begin_dt,
           dt.end_dt
@@ -193,10 +193,10 @@ WITH
           DISTINCT rx.network, 
           rx.patient_id,
           rx.order_dt rx_order_time,
-          rx_exp_dt rx_exp_time,
+         -- rx_exp_dt rx_exp_time,
           rx.drug_name derived_product_name,
-          rx.rx_quantity,
-          rx.rx_dc_dt rx_dc_time
+          rx.rx_quantity --,
+         -- rx.rx_dc_dt rx_dc_time
         FROM dt
         JOIN cdw.fact_patient_prescriptions rx
         ON rx.order_dt between dt.begin_dt and dt.end_dt --AND rx.patient_id = 1572634 AND rx.network = 'CBN'
@@ -222,10 +222,10 @@ WITH
           DISTINCT rx.network, 
           rx.patient_id,
           rx.order_dt rx_order_time,
-          rx_exp_dt rx_exp_time,
+      --    rx_exp_dt rx_exp_time,
           rx.drug_name derived_product_name,
-          rx.rx_quantity,
-          rx.rx_dc_dt rx_dc_time
+          rx.rx_quantity --,
+        --  rx.rx_dc_dt rx_dc_time
         FROM dt
         JOIN cdw.fact_patient_prescriptions rx
         ON rx.order_dt between dt.begin_dt and dt.end_dt --AND rx.patient_id = 1572634 AND rx.network = 'CBN'
@@ -288,7 +288,7 @@ WITH
         rx.frequency,	
         nvl(t2.drug_frequency_num_val,1) drug_frequency_num_val,
         nvl(t3.drug_frequency_num_val,1) dosage_num_val,
-        rx.rx_exp_dt,	
+      --  rx.rx_exp_dt,	
         rd.route
       FROM cdw.fact_patient_prescriptions rx 
       JOIN pt005.tr13_ref_drug_descriptions rd

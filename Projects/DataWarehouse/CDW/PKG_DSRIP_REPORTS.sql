@@ -15,6 +15,8 @@ procedure sp_start_all;
  PROCEDURE sp_dsrip_tr022;
  PROCEDURE sp_dsrip_tr024_025;
  PROCEDURE sp_dsrip_tr044;
+PROCEDURE sp_dsrip_tr047;
+
 END;
 /
 
@@ -163,8 +165,8 @@ PROCEDURE sp_dsrip_tr002_023 AS
    xl.begin_action('RUNNING QCPR');
   etl.add_data(
    p_operation => 'INSERT /*+ Parallel(32)  */',
-   p_tgt => 'DSRIP_TR_022_DIAB_SCREEN_CDW',
-   p_src => 'V_DSRIP_TR_022_DIAB_SCREEN_CDW',
+   p_tgt => 'DSRIP_TR022_DIAB_SCREEN_CDW',
+   p_src => 'V_DSRIP_TR022_DIAB_SCREEN_CDW',
    p_whr => 'Where 1= 1 ',
    p_commit_at => -1);
   xl.end_action('COMPLETE DSRIP_TR_022_CDW');
@@ -223,6 +225,31 @@ PROCEDURE sp_dsrip_tr044 AS
    xl.close_log(SQLERRM, TRUE);
    RAISE;
  END;
+--***********************************
+PROCEDURE sp_dsrip_tr047 AS
+BEGIN
+
+ EXECUTE IMMEDIATE 'ALTER SESSION enable parallel DML';
+
+ xl.open_log('sp_dsrip_tr_047', 'DSRIP_TR_047', TRUE);
+
+ xl.begin_action('RUNNING QCPR');
+ etl.add_data(
+  p_operation => 'INSERT /*+ Parallel(32)  */',
+  p_tgt => 'DSRIP_TR047_STAT_PHARM_CDW',
+  p_src => 'V_DSRIP_TR047_STAT_PHARM_CDW',
+  p_whr => 'Where 1= 1 ',
+  p_commit_at => -1);
+
+ xl.end_action('COMPLETE DSRIP_TR_047');
+ xl.close_log('COMPLETE DSRIP_TR_047 OK ');
+EXCEPTION
+ WHEN OTHERS THEN
+  xl.close_log(SQLERRM, TRUE);
+  RAISE;
+END;
+
+
 
 
 END pkg_dsrip_reports;

@@ -32,9 +32,10 @@ CREATE OR REPLACE FORCE VIEW v_dsrip_rpt_tr002_023_cdw AS
   onset_date,
   icd_code,
   problem_comments,
-  a1c_final_orig_value
+  latest_result_dt,
+  latest_result
  FROM
   dsrip_tr002_023_a1c_cdw t
  WHERE
   TRUNC(t.report_dt) = (SELECT MAX(TRUNC(report_dt)) FROM dsrip_tr002_023_a1c_cdw)
- AND  admission_dt_key is not null;
+  AND admission_dt_key IS NOT NULL;

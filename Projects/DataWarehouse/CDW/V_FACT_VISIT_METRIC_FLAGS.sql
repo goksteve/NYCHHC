@@ -7,10 +7,8 @@ CREATE OR REPLACE VIEW v_fact_visit_metric_flags AS
     SELECT --+ materialize 
     network, criterion_id, VALUE
     FROM meta_conditions
-    WHERE criterion_id IN (4,10,23,13,66,68)   ), -- A1C, LDL, Glucose,  BP, Neph, eye eaxm
-
-
-
+    WHERE criterion_id IN (4,10,23,13,66,68)
+     ), -- A1C, LDL, Glucose,  BP, Neph, eye eaxm
 rslt
 As
   (SELECT --+ materialize
@@ -57,24 +55,28 @@ SELECT --+ materialize
  v.first_payer_key,
  v.initial_visit_type_id,
  v.final_visit_type_id,
- p.asthma_ind,
- p.bh_ind,
- p.breast_cancer_ind,
- p.diabetes_ind,
- p.heart_failure_ind,
- p.hypertension_ind,
- p.kidney_diseases_ind,
- p.smoker_ind,
- p.pregnancy_ind,
- pregnancy_onset_dt,
- p.flu_vaccine_ind,
- p.flu_vaccine_onset_dt, 
- p.pna_vaccine_ind, 
- p.pna_vaccine_onset_dt,
- p.bronchitis_ind,	
- p.bronchitis_onset_dt,
- p.tabacco_scr_diag_ind,       
- p.tabacco_scr_diag_onset_dt, 
+ CASE WHEN p.asthma_f_onset_dt  >= admission_dt THEN 1 ELSE 0  END AS asthma_ind,
+ CASE WHEN  p.bh_f_onset_dt    >= admission_dt THEN 1 ELSE 0  END AS bh_ind,
+ CASE WHEN breast_cancer_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS     breast_cancer_ind,
+ CASE WHEN diabetes_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS     diabetes_ind,
+ CASE WHEN heart_failure_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    heart_failure_ind,
+ CASE WHEN schizophrenia_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS      schizophrenia_ind,
+ CASE WHEN bipolar_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS            bipolar_ind,
+ CASE WHEN htn_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    hypertension_ind,
+ CASE WHEN kidney_dz_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS  kidney_diseases_ind,
+ CASE WHEN smoker_f_onset_dt>= admission_dt THEN 1 ELSE 0  END AS    smoker_ind,
+ CASE WHEN pregnancy_l_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    pregnancy_ind,
+ CASE WHEN pregnancy_l_onset_dt >= admission_dt THEN p.pregnancy_l_onset_dt ELSE NULL  END AS pregnancy_onset_dt,
+ CASE WHEN flu_vaccine_l_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    flu_vaccine_ind,
+ CASE WHEN flu_vaccine_l_onset_dt >= admission_dt THEN flu_vaccine_l_onset_dt  ELSE NULL END AS flu_vaccine_onset_dt,
+ CASE WHEN pna_vaccine_l_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    pna_vaccine_ind,
+ CASE WHEN pna_vaccine_l_onset_dt >= admission_dt THEN pna_vaccine_l_onset_dt ELSE NULL  END AS     pna_vaccine_onset_dt,
+ CASE WHEN bronchitis_l_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    bronchitis_ind,
+ CASE WHEN bronchitis_l_onset_dt >= admission_dt THEN bronchitis_l_onset_dt ELSE NULL  END AS     bronchitis_onset_dt,
+ CASE WHEN tabacco_diag_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS     tabacco_scr_diag_ind,
+ CASE WHEN tabacco_diag_f_onset_dt >= admission_dt THEN tabacco_diag_f_onset_dt  ELSE NULL  END AS     tabacco_scr_diag_onset_dt,
+ CASE WHEN major_depression_f_onset_dt >= admission_dt THEN 1 ELSE 0  END AS    major_depression_ind,
+ --CASE WHEN major_depression_f_onset_dt >= admission_dt THEN major_depression_f_onset_dt ELSE NULL  END AS    major_depression_onset_dt,
  TRUNC(q.result_dt) AS result_dt,
  q.criterion_id,
  q.result_value,
@@ -84,7 +86,7 @@ SELECT --+ materialize
   LEFT JOIN  fact_patient_metric_diag p ON p.patient_id = v.patient_id AND p.network = v.network  
   LEFT  JOIN rslt q ON q.visit_id = v.visit_id AND q.network = v.network AND q.rnum = 1
   WHERE  v.network =   SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK')
-  AND Admission_dt >= DATE '2014-01-01'
+  AND admission_dt >= DATE '2014-01-01'
 ),
 
 
@@ -112,6 +114,8 @@ AS
     breast_cancer_ind,
     diabetes_ind,
     heart_failure_ind,
+    schizophrenia_ind,
+    bipolar_ind,
     hypertension_ind,
     kidney_diseases_ind,
     smoker_ind,
@@ -124,7 +128,8 @@ AS
     bronchitis_ind,	
     bronchitis_onset_dt,
     tabacco_scr_diag_ind,       
-    tabacco_scr_diag_onset_dt, 
+    tabacco_scr_diag_onset_dt,
+    major_depression_ind, 
 	  neph_final_result_dt,
     neph_final_orig_value,
     neph_flag,
@@ -149,7 +154,9 @@ FROM
  calc_result
   PIVOT
    ( MAX(result_dt) AS final_result_dt,
-     MAX(result_value) AS final_orig_value, 
+     MAX( CASE WHEN criterion_id  = 68 THEN
+     CASE   WHEN lower(result_value) like '%abnormal%' then 'abnormal'
+       WHEN lower(result_value) like '%normal%'   then 'normal'  ELSE  'N/A' END END) AS final_orig_value, 
      MAX(flag) as flag
      FOR criterion_id
    IN (4 AS a1c, 23 AS gluc, 10 AS ldl, 13 AS bp, 66 as neph, 68 as retinal , 98 as tabacco ))
@@ -175,7 +182,9 @@ FROM
   NVL(a.bh_ind, 0) bh_ind,
   NVL(a.breast_cancer_ind, 0) breast_cancer_ind,
   NVL(a.diabetes_ind, 0) diabetes_ind,
-  NVL(a.heart_failure_ind, 0) heart_failure_ind,
+  NVL(a.heart_failure_ind, 0) as heart_failure_ind,
+  NVL(a.schizophrenia_ind,0) as schizophrenia_ind,
+  NVL(a.bipolar_ind,0) as bipolar_ind,
   NVL(a.hypertension_ind, 0) hypertansion_ind,
   NVL(a.kidney_diseases_ind, 0) kidney_diseases_ind,
   NVL(smoker_ind, 0) AS smoker_ind,
@@ -188,9 +197,11 @@ FROM
   NVL(bronchitis_ind, 0) AS bronchitis_ind,
   bronchitis_onset_dt,
   NVL(tabacco_scr_diag_ind,0) AS tabacco_scr_diag_ind,     
-  tabacco_scr_diag_onset_dt, 
+  tabacco_scr_diag_onset_dt,
+  NVL(a.major_depression_ind,0)   as major_depression_ind,
   NVL(a.neph_flag, 0) AS nephropathy_screen_ind,
   NVL(a.retinal_flag, 0) AS retinal_dil_eye_exam_ind,
+  retinal_final_orig_value as retinal_eye_exam_rslt,
   NVL( a.tabacco_flag, 0)AS tabacco_screen_proc_ind, 
   a.a1c_final_result_dt,
   a1c_final_orig_value,
@@ -212,6 +223,8 @@ WHERE
  OR NVL(a.breast_cancer_ind, 0) <> 0
  OR NVL(a.diabetes_ind, 0) <> 0
  OR NVL(a.heart_failure_ind, 0) <> 0
+ OR NVL(a.schizophrenia_ind,0) <> 0
+ OR NVL(a.bipolar_ind,0) <> 0
  OR NVL(a.hypertension_ind, 0) <> 0
  OR NVL(a.kidney_diseases_ind, 0) <> 0
  OR NVL(smoker_ind, 0) <> 0
@@ -220,6 +233,7 @@ WHERE
  OR NVL(pna_vaccine_ind, 0) <> 0
  OR NVL(bronchitis_ind, 0) <> 0
  OR  NVL(tabacco_scr_diag_ind,0) <> 0
+ OR NVL(a.major_depression_ind,0) <> 0
  OR NVL(a.neph_flag, 0) <> 0
  OR NVL(a.retinal_flag, 0) <> 0
  OR NVL(a.tabacco_flag, 0) <> 0

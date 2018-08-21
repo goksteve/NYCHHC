@@ -156,14 +156,17 @@ SELECT /*+  parallel (32) */
  NVL(kid.kidney_diag_num_flag, 0) AS kidney_diag_num_flag,
  NVL(eye.eye_exam_num_flag, 0) AS eye_exam_num_flag,
  eye_exam_latest_result_dt,
+ eye.eye_exam_result,
  NVL(neph.nephropathy_num_flag, 0) AS nephropathy_num_flag,
  nephropathy_final_result_dt as nephropathy_latest_result_dt ,
  NVL(a1c.hba1c_num_flag, 0) AS hba1c_num_flag,
  a1c.hba1c_latest_result,
  a1c.hba1c_latest_result_dt,
  NVL(ace.ace_arb_ind, 0) AS ace_arb_ind,
--- dept.service_type pcp_bh_flag,
- pat.report_dt
+ dept.service_type    AS pcp_bh_flag,
+ dept.activation_time AS pcp_bh_service_dt,
+ pat.report_dt,
+'QCPR' as source
 FROM
  denom_pat pat
 LEFT JOIN
@@ -183,7 +186,7 @@ LEFT JOIN
       ) diab ON diab.NETWORK = pat.NETWORK AND diab.patient_id  = pat.patient_id AND diab_cnt = 1
 LEFT JOIN
     ( SELECT network, patient_id,  kidney_diseases_ind as kidney_diag_num_flag ,
-      ROW_NUMBER() OVER (PARTITION BY NETWORK, patient_id ORDER BY admission_dt) kid_cnt
+      ROW_NUMBER() OVER (PARTITION BY NETWORK, patient_id ORDER BY admission_dt DESC) kid_cnt
       FROM report_dates dt CROSS JOIN fact_visit_metric_results
       WHERE (admission_dt >=  dt.start_dt AND  admission_dt <  dt.report_dt)
       AND kidney_diseases_ind <> 0
@@ -191,8 +194,9 @@ LEFT JOIN
 LEFT JOIN
     (
     SELECT
-    network, patient_id, retinal_dil_eye_exam_ind as eye_exam_num_flag , retinal_final_result_dt as eye_exam_latest_result_dt,
-    row_number() over (partition by network, patient_id order by admission_dt) eye_cnt
+    network, patient_id, retinal_dil_eye_exam_ind as eye_exam_num_flag , 
+    retinal_final_result_dt as eye_exam_latest_result_dt, retinal_eye_exam_value as eye_exam_result ,
+    row_number() over (partition by network, patient_id order by admission_dt desc) eye_cnt
     FROM  report_dates dt CROSS JOIN fact_visit_metric_results
     WHERE (admission_dt >=  dt.start_dt AND  admission_dt <  dt.report_dt)
     AND retinal_dil_eye_exam_ind <> 0
@@ -201,7 +205,7 @@ LEFT JOIN
    (
     SELECT
     network, patient_id,  nephropathy_screen_ind  as nephropathy_num_flag , nephropathy_final_result_dt,
-    row_number() over (partition by network, patient_id order by admission_dt) neph_cnt
+    row_number() over (partition by network, patient_id order by admission_dt DESC) neph_cnt
     FROM report_dates dt CROSS JOIN  fact_visit_metric_results
     WHERE (admission_dt >=  dt.start_dt AND  admission_dt <  dt.report_dt)
     AND nephropathy_screen_ind <> 0
@@ -212,7 +216,7 @@ LEFT JOIN
   network, patient_id,   decode(NVL(a1c_final_calc_value,0),0,0,1) as hba1c_num_flag ,
   DECODE(a1c_final_calc_value, 0, NULL, a1c_final_calc_value) AS hba1c_latest_result,
   a1c_final_result_dt as hba1c_latest_result_dt, 
-  row_number() over (partition by network, patient_id order by admission_dt) a1c_cnt
+  row_number() over (partition by network, patient_id order by admission_dt DESC) a1c_cnt
   FROM report_dates dt CROSS JOIN  fact_visit_metric_results
   WHERE (admission_dt >=  dt.start_dt AND  admission_dt <  dt.report_dt)
   AND a1c_final_calc_value IS NOT NULL
@@ -227,9 +231,26 @@ LEFT JOIN
   ON TRIM(rd.drug_description) = TRIM(d.drug_description) AND rd.drug_type_id = 33
   WHERE order_dt >= dt.start_dt  AND order_dt < dt.report_dt
  ) dmed  ON dmed.NETWORK = pat.NETWORK AND dmed.patient_id  = pat.patient_id 
---  LEFT JOIN dim_hc_departments dept  ON dept.department_key = pat.last_department_key   AND dept.service_type IN ('PCP', 'BH')
-WHERE
- pat.cnt = 1;
 
-GRANT SELECT ON V_DSRIP_TR_022_DIAB_SCREEN_CDW TO PUBLIC;
+ LEFT JOIN 
+  (
+    SELECT 
+     pat.network, pat.visit_id, pat.visit_key, pat.location_id,
+     activation_time, dept.service_type,
+     row_number() over (partition by   pat.visit_key order by activation_time DESC) loc_cnt
+    FROM
+     fact_visit_segment_locations pat
+     JOIN dim_hc_departments dept  ON dept.network = pat.network AND dept.location_id = pat.location_id AND dept.service_type IN ('PCP', 'BH')
+ ) dept on dept.network = pat.network and dept.visit_id  =  pat.visit_id and loc_cnt = 1
+
+WHERE
+ pat.cnt = 1
+
+ AND (pat.admission_dt <=
+        CASE
+         WHEN pat.network = 'QHN' THEN DATE '2016-04-01'
+         WHEN pat.network = 'SBN' THEN DATE '2017-02-25'
+         ELSE  pat.report_dt END );
+
+GRANT SELECT ON V_DSRIP_TR022_DIAB_SCREEN_CDW TO PUBLIC;
 /

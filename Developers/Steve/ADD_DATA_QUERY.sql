@@ -20,7 +20,7 @@ ALTER SESSION ENABLE parallel DML;
 --end;
 --**********************************************
 --*******FACT_VISITS *****************************
---EXECUTE dwm.refresh_data('where etl_step_num = 2120')  
+--EXECUTE dwm.refresh_data('where etl_step_num = 1101')  
 --EXECUTE dwm.refresh_data('where etl_step_num = 4110')  
 
 --**********************************************
