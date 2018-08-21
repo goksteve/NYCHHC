@@ -173,8 +173,8 @@ PROCEDURE sp_dsrip_tr002_023 AS
   xl.begin_action('RUNNING QCPR');
   etl.add_data(
    p_operation => 'INSERT /*+ Parallel(32)  */',
-   p_tgt => 'DSRIP_TR_017_DIAB_MON_CDW',
-   p_src => 'V_DSRIP_TR_017_DIAB_MON_CDW',
+   p_tgt => 'DSRIP_TR017_DIAB_MON_CDW',
+   p_src => 'V_DSRIP_TR017_DIAB_MON_CDW',
    p_whr => 'Where 1= 1 ',
    p_commit_at => -1);
 
@@ -183,8 +183,8 @@ PROCEDURE sp_dsrip_tr002_023 AS
   xl.begin_action('RUNNING EPIC');
   etl.add_data(
    p_operation => 'INSERT /*+ Parallel(32)  */',
-   p_tgt => 'DSRIP_TR_017_DIAB_MON_EPIC',
-   p_src => 'V_DSRIP_TR_017_DIAB_MON_EPIC',
+   p_tgt => 'DSRIP_TR017_DIAB_MON_EPIC',
+   p_src => 'V_DSRIP_TR017_DIAB_MON_EPIC',
    p_whr => 'Where 1= 1 ',
    p_commit_at => -1);
 

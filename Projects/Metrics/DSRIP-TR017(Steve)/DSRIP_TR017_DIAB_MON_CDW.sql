@@ -1,4 +1,5 @@
-ALTER TABLE dsrip_tr017_diab_mon_cdw  DROP PRIMARY KEY CASCADE;
+ALTER TABLE dsrip_tr017_diab_mon_cdw
+ DROP PRIMARY KEY CASCADE;
 
 DROP TABLE dsrip_tr017_diab_mon_cdw CASCADE CONSTRAINTS;
 
@@ -6,9 +7,6 @@ CREATE TABLE dsrip_tr017_diab_mon_cdw
 (
  network                VARCHAR2(3 BYTE) NULL,
  admission_dt_key       NUMBER(8),
- comb_ind               NUMBER(1) NULL,
- a1c_ind                NUMBER(1) NULL,
- ldl_ind                NUMBER(1) NULL,
  facility_id            NUMBER(12) NULL,
  facility_name          VARCHAR2(100 BYTE) NULL,
  patient_id             NUMBER(12) NULL,
@@ -38,16 +36,21 @@ CREATE TABLE dsrip_tr017_diab_mon_cdw
  payer_name             CHAR(100 BYTE) NULL,
  plan_id                NUMBER(12) NULL,
  plan_name              VARCHAR2(255 BYTE) NULL,
- test_type              VARCHAR2(12 BYTE) NULL,
- calc_result_value      VARCHAR2(1023 BYTE) NULL,
  last_pcp_facility      VARCHAR2(255 BYTE) NULL,
- last_pcp_visit_dt    DATE NULL,
+ last_pcp_visit_dt      DATE NULL,
  last_pcp_provider_id   NUMBER(12) NULL,
  last_pcp_provider      VARCHAR2(255 BYTE) NULL,
  last_bh_facility       VARCHAR2(255 BYTE) NULL,
- last_bh_visit_dt     DATE NULL,
+ last_bh_visit_dt       DATE NULL,
  last_bh_provider_id    NUMBER(12) NULL,
  last_bh_provider       VARCHAR2(255 BYTE) NULL,
+ comb_ind               NUMBER(1) NULL,
+ a1c_ind                NUMBER(1) NULL,
+ ldl_ind                NUMBER(1) NULL,
+ a1c_result_dt          DATE,
+ a1c_result             NUMBER(6, 2),
+ ldl_result_dt          DATE,
+ ldl_result             NUMBER(6, 2),
  dsrip_report           VARCHAR2(255 BYTE) NULL,
  report_dt              DATE NULL,
  load_dt                DATE DEFAULT SYSDATE NULL

@@ -8,13 +8,13 @@ WITH rx AS
         pp.patient_key,
         fclty.facility_id,
         fclty.facility_name,
-        TO_NUMBER(TO_CHAR(NVL(rx.order_time, DATE '1995-01-01'), 'YYYYMMDD')) AS datenum_order_dt_key,
+        TO_NUMBER(TO_CHAR(rx.order_time, 'YYYYMMDD')) AS datenum_order_dt_key,
         prvdr.provider_id,
         rx.patient_id,
         rx.order_visit_id,
         rx.order_event_id,
         rx.order_span_id,
-        NVL(TRUNC(rx.order_time), DATE '1995-01-01') AS order_dt,
+        TRUNC(rx.order_time) AS order_dt,
         NVL(LOWER(rx.misc_name), 'n/a') AS drug_description,
         rx.dosage,
         rx.frequency,
@@ -42,6 +42,7 @@ WITH rx AS
         LEFT JOIN prescription_type rx_type ON rx_type.network = rx.network AND rx_type.prescription_type_id = rx.prescription_type_id
         LEFT JOIN proc prc ON prc.network = rx.network AND prc.proc_id = rx.proc_id
         LEFT JOIN dim_hc_facilities fclty ON fclty.network = rx.network AND fclty.facility_id = rx.facility_id
+       WHERE rx.order_time IS NOT NULL AND rx.rx_quantity IS NOT NULL
      ),
   rx_brg AS
     (
@@ -75,7 +76,7 @@ WITH rx AS
      OR p.product_name IS NOT NULL 
      OR md.medf_drug_name IS NOT NULL
  )
-    SELECT /*+ PARALLEl (32) */
+    SELECT  /*+ PARALLEl (32) */ DISTINCT
      rx.network,
      rx.patient_key,
      rx.facility_id,
@@ -114,26 +115,26 @@ WITH rx AS
      TRUNC(SYSDATE) AS load_dt
     FROM
      rx LEFT JOIN dervd_name dn ON dn.network = rx.network AND dn.rx_id = rx.rx_id
-UNION
-      SELECT
-       NVL(x.network, 'EPIC') AS network,
+UNION ALL
+      SELECT DISTINCT
+       NVL(x.network, 'EPC') AS network,
        9999999999 AS patient_key,
        x.facility_id,
        x.facility_name,
-       TO_NUMBER(TO_CHAR(NVL(a.ordering_date,DATE '1995-01-01'), 'YYYYMMDD')) AS datenum_order_dt_key,
+       TO_NUMBER(TO_CHAR(a.ordering_date, 'YYYYMMDD')) AS datenum_order_dt_key,
        TO_NUMBER(NVL(REGEXP_REPLACE(a.ord_prov_id, '[^0-9]'), 999999999999)) AS ord_prov_id,
        to_number(ltrim(a.pat_id, 'Z')) AS patient_id, 
       -- a.pat_id AS patient_id,
        TO_NUMBER(REGEXP_REPLACE(a.pat_enc_csn_id, '[^[:digit:]]')) AS order_visit_id,
        CASE
         WHEN CAST(a.ordering_date AS DATE) IS NOT NULL THEN
-         TO_NUMBER(TO_CHAR(CAST(NVL(a.ordering_date,DATE '1995-01-01') AS DATE), 'YYYYMMDD'))
+         TO_NUMBER(TO_CHAR(CAST(a.ordering_date AS DATE), 'YYYYMMDD'))
         ELSE
          NULL
        END
         AS order_event_id,
        9999999999 AS order_span_id,
-       NVL(CAST(a.ordering_date AS DATE),DATE '1995-01-01') AS opder_dt,
+       CAST(a.ordering_date AS DATE) AS opder_dt,
        NVL(LOWER(a.description), 'n/a') AS orig_drug_description,
        a.dosage AS dosage,
        a.sig AS frequency,
@@ -170,22 +171,23 @@ UNION
       WHERE
        (b.is_test_pat_yn <> 'Y')
        AND a.ordering_mode_c != 2 -- REMOVING INPATIENTS
-       AND CAST(a.ordering_date AS DATE) BETWEEN '01-APR-2016' AND TRUNC(SYSDATE, 'MM') -- FOR APPEND DATA NEXT MONTH
+       AND CAST(a.ordering_date AS DATE) >= '01-APR-2016' 
+       and a.quantity is not null
        AND a.pend_action_c IN (2,6,1,5,7) --Reorder,Reorder from Order Review,Change,Reorder from Medication Activity,Reorder from Reports
-UNION 
-       SELECT
+UNION  ALL
+       SELECT DISTINCT
        pm.network,
        pp.patient_key,
        9999999999 AS facility_id,
        'N/A' AS facility_name,
-       TO_NUMBER(TO_CHAR(NVL(pm.order_date_time, DATE '1995-01-01'), 'YYYYMMDD')) AS datenum_order_dt_key,
+       TO_NUMBER(TO_CHAR(pm.order_date_time,'YYYYMMDD')) AS datenum_order_dt_key,
        999999999 AS provider_id,
     --   CAST(pm.patient_id AS VARCHAR2(256)) patient_id,
        pm.patient_id,
        pma.assoc_visit_id AS order_visit_id,
        -99 AS order_event_id,
        -99 AS order_span_id,
-      NVL( TRUNC(pm.order_date_time), DATE '1995-01-01') AS order_dt,
+       TRUNC(pm.order_date_time) AS order_dt,
         NVL(LOWER( pm.dkv_drug_name), 'n/a') AS orig_drug_description,
        pm.dosage,
        pm.frequency,
@@ -215,4 +217,4 @@ UNION
        JOIN patient_med_archive pma ON pmam.patient_id = pma.patient_id  AND pmam.network = pma.network  AND pmam.medication_archive_id = pma.medication_archive_id
        LEFT JOIN e_rx_status st ON pm.e_rx_status_id = st.e_rx_status_id AND pm.network = st.network
       WHERE (pma.archive_date_time >= '01-NOV-2017' OR pmam.order_date_time >= '01-NOV-2017')
-       AND pmam.last_action_taken_id <> 4;
+       AND pmam.last_action_taken_id <> 4  AND pm.order_date_time is not null and  NVL( pm.quantity, 0) > 0 ;

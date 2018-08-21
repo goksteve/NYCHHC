@@ -174,6 +174,7 @@ res.latest_problem_comments as problem_comments,
 res.ldl_test_dt,
 res.ldl_result_dt,
 res.calc_result_value,
+DECODE( res.calc_result_value, NULL, 0, 1) as numerator_flag,
 'DSRIP_TR015_CARDIO_MONITORING' as dsrip_report,
 res.report_dt,
  trim(sysdate) as load_dt
@@ -184,22 +185,3 @@ JOIN dim_patients pp on pp.network = res.network and pp.patient_id  = res.patien
 LEFT JOIN ref_visit_types vt ON vt.visit_type_id  = res.visit_type_id
 LEFT JOIN dim_payers pm on pm.payer_key  = res.payer_key
 LEFT JOIN ref_patient_secondary_mrn psn  ON   psn.NETWORK = res.NETWORK AND psn.patient_id = res.patient_id AND psn.facility_id = res.facility_id;
---LEFT JOIN patient_secondary_number psn
---             ON     psn.network = res.network
---                AND psn.patient_id = res.patient_id
---                AND psn.secondary_nbr_type_id =
---                       CASE
---                          WHEN (res.network = 'GP1' AND res.facility_id = 1) THEN 13
---                          WHEN (res.network = 'GP1' AND res.facility_id IN (2, 4)) THEN 11
---                          WHEN (res.network = 'GP1' AND res.facility_id = 3) THEN 12
---                          WHEN (res.network = 'CBN' AND res.facility_id = 4) THEN 12
---                          WHEN (res.network = 'CBN' AND res.facility_id = 5) THEN 13
---                          WHEN (res.network = 'NBN' AND res.facility_id = 2) THEN 9
---                          WHEN (res.network = 'NBX' AND res.facility_id = 2) THEN 11
---                          WHEN (res.network = 'QHN' AND res.facility_id = 2) THEN 11
---                          WHEN (res.network = 'SBN' AND res.facility_id = 1) THEN 11
---                          WHEN (res.network = 'SMN' AND res.facility_id = 2) THEN 11
---                          WHEN (res.network = 'SMN' AND res.facility_id = 7) THEN 13
---                          WHEN (res.network = 'SMN' AND res.facility_id = 8) THEN 14
---                          WHEN (res.network = 'SMN' AND res.facility_id = 9) THEN 17
---                       END
