@@ -39,8 +39,8 @@ select  * from  DBG_LOG_DATA where action like '%steve%';
 --**************************************************************
 select a.*, DBMS_LOB.substr(comment_txt, 250) from DBG_LOG_DATA a
 where
-tstamp > date '2018-06-5'
-and proc_id   > 600
+tstamp > date '2018-08-15'
+and proc_id   > 886
 order by proc_id DESC ,tstamp desc;
 --************************************************************
 
@@ -69,3 +69,11 @@ END;
 BEGIN
  rfs.sp_refresh_dim_tables(); ---  BETWEEN 820 AND 1020 ---
 END;
+
+
+
+CREATE BITMAP INDEX bidx_result_history_dtelem_id ON result_history_cdw(data_element_id, network) local parallel 32;
+CREATE INDEX idx_result_history_cdw_cid  ON result_history_cdw(cid, network) LOCAL parallel 32 ;
+CREATE UNIQUE INDEX pk_result_history_cdw ON result_history_cdw(  visit_id,  data_element_id,  event_id,  result_history_cdw_report_number,  multi_field_occurrence_number,  item_number,  network) local parallel 32;
+ALTER TABLE result_history_cdw ADD (   CONSTRAINT pk_result_history_cdw  PRIMARY KEY  (network, visit_id, event_id, data_element_id, result_history_cdw_report_number, multi_field_occurrence_number, item_number)  USING INDEX LOCAL 
+  ENABLE VALIDATE);

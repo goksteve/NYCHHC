@@ -38,6 +38,7 @@ CREATE TABLE dsrip_tr015_cardio_mon_cdw
  ldl_test_dt         DATE,
  ldl_result_dt       DATE,
  calc_result_value   VARCHAR2(1023 BYTE) NULL,
+ numerator_flag      NUMBER(3),
  dsrip_report        VARCHAR2(255 BYTE) NULL,
  report_dt           DATE NULL,
  load_dt             DATE DEFAULT SYSDATE NULL

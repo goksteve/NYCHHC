@@ -110,6 +110,8 @@ v.first_payer_key ,
 v.visit_status_id,
 d.report_dt,   
 d.report_year,
+d.start_dt,
+res_start_date,
 row_number() over (partition by v.network, v.patient_id order by v.admission_dt DESC) v_cnt
 FROM  report_dates d
 CROSS JOIN fact_visits v
@@ -121,43 +123,49 @@ JOIN sel_pat_diag p ON  p.network =  v.network and p.patient_id  = v.patient_id
     AND v.visit_status_id NOT IN (8,9,10,11)
     AND v.final_visit_type_id NOT IN (8,5,7,-1)
 ),
-a1c_ldl AS
-(
-   SELECT  --+ materialize  
-    network, visit_id,
-   patient_id, admission_dt,
-   test_type,
-   calc_result_value, report_dt, report_year,
-   ROW_NUMBER() OVER(PARTITION BY network, patient_id, test_type ORDER BY admission_dt DESC) cnt
-  FROM
-   (
-     SELECT network, visit_id,
-     patient_id, admission_dt, test_type,
-     calc_result_value,
-     report_dt, report_year
-    FROM
-     (
-      SELECT --+ materialize
-       r.network, visit_id,   r.patient_id,
-       admission_dt,
-       a1c_final_calc_value,
-       ldl_final_calc_value,d.report_dt,   d.report_year
-      FROM
-      report_dates d
-      CROSS JOIN fact_visit_metric_results r
-      JOIN sel_pat_diag p ON  p.network =  r.network and p.patient_id  = r.patient_id
-      WHERE
-        admission_dt >= start_dt AND admission_dt < report_dt
-    AND( ldl_final_calc_value IS NOT NULL OR a1c_final_calc_value IS NOT NULL)
-     )
-   UNPIVOT
-    (calc_result_value
-    FOR test_type
-    IN (a1c_final_calc_value AS 'A1C',
-       ldl_final_calc_value AS  'LDL')
-   )
-)
-),
+Pat_visit_a1c_ldl AS
+    ( 
+    select  --+ materialize
+    v.network,
+    v.patient_id,
+    v.visit_id,
+    v.visit_number,
+    v.final_visit_type_id ,
+    v.admission_dt,
+    v.discharge_dt,
+    v.facility_key,
+    v.financial_class_id,
+    v.attending_provider_key,
+    v.first_payer_key ,
+    v.visit_status_id,
+    b.a1c_final_result_dt,
+    b.a1c_final_calc_value,
+    c.ldl_final_result_dt,
+    c.ldl_final_calc_value,
+    v.report_dt,   
+    v.report_year,
+    v.start_dt,
+    v.res_start_date
+    FROM 
+    pat_visits v
+    LEFT JOIN  (
+              SELECT --+ materialize
+              r.network, r.patient_id, a1c_final_result_dt, a1c_final_calc_value,
+              ROW_NUMBER() OVER (PARTITION BY r.network, r.patient_id ORDER BY r.admission_dt DESC) a1c_cnt
+              FROM fact_visit_metric_results r
+              WHERE ( r.network, r.patient_id) IN ( SELECT DISTINCT network, patient_id FROM pat_visits)
+              AND  a1c_final_calc_value IS NOT NULL
+              ) b on  b.network = v.network and b.patient_id  = v.patient_id and a1c_cnt = 1
+    LEFT JOIN (
+                SELECT --+ materialize
+                r.network, r.patient_id, ldl_final_result_dt, ldl_final_calc_value,
+                ROW_NUMBER() OVER (PARTITION BY r.network, r.patient_id ORDER BY r.admission_dt DESC) ldl_cnt
+                FROM fact_visit_metric_results r
+                WHERE ( r.network, r.patient_id) IN ( SELECT DISTINCT network, patient_id FROM pat_visits)
+                AND  LDL_final_calc_value IS NOT NULL
+              ) c on  c.network = v.network and c.patient_id  = v.patient_id and ldl_cnt = 1
+    where  v_cnt = 1
+    ),
 
  tmp_res
 as
@@ -183,32 +191,25 @@ as
      lst.last_bh_visit_dt,
      lst.last_bh_provider_id,
      lst.last_bh_provider,
-     NVL(r.test_type,'NONE') as test_type,
-     r.calc_result_value,
+     v.a1c_final_result_dt a1c_result_dt,
+     DECODE(v.a1c_final_calc_value, 0 , NULL ,v.a1c_final_calc_value) a1c_result ,
+     CASE when NVL (v.a1c_final_calc_value,0 ) > 1 then  1 END a1c_ind,
+     v.ldl_final_result_dt ldl_result_dt ,
+     DECODE(v.ldl_final_calc_value, 0 , NULL ,v.ldl_final_calc_value) ldl_result,
+     CASE when NVL (v.ldl_final_calc_value,0 ) > 1 then  1 END ldl_ind,
      v.report_dt,
      v.report_year,
-     TRIM(SYSDATE) load_dt,
-     COUNT(DISTINCT NVL(r.test_type,'NONE')) OVER (PARTITION BY r.NETWORK , r.patient_id) pat_rslt_cnt
-     FROM  pat_visits v
-     LEFT JOIN (SELECT * FROM  a1c_ldl  where cnt  = 1)r    ON r.NETWORK = v.NETWORK AND r.patient_id = v.patient_id
+     TRIM(SYSDATE) load_dt
+     FROM  Pat_visit_a1c_ldl v
      LEFT JOIN tmp_pcp_bh lst ON  v.NETWORK = lst.NETWORK AND v.patient_id = lst.patient_id
      LEFT JOIN dim_hc_facilities f   ON f.facility_key = v.facility_key
      LEFT JOIN ref_financial_class fc   ON fc.NETWORK = v.NETWORK AND fc.financial_class_id = v.financial_class_id
      LEFT JOIN dim_providers P ON p.provider_key = v.attending_provider_key
-    WHERE v_cnt = 1
-   
   )
-    
-
 --************************************************************
-
 SELECT /*+ Parallel (32) */
  res.network,
  TO_NUMBER(TO_CHAR(res.admission_dt, 'YYYYMMDD')) AS admission_dt_key,
- CASE WHEN res.pat_rslt_cnt > 1 THEN 1 END AS comb_ind,
- CASE WHEN pat_rslt_cnt < 2 AND test_type = 'A1C'   THEN 1 END AS a1c_ind,
- CASE WHEN pat_rslt_cnt < 2 AND test_type = 'LDL'   THEN 1 END AS ldl_ind,
- --CASE WHEN pat_rslt_cnt < 2 AND test_type = 'NONE'   THEN 1 END AS NO_ind,
  res.visit_facility_id AS facility_id,
  res.visit_facility_name AS facility_name,
  res.patient_id,
@@ -250,8 +251,8 @@ SELECT /*+ Parallel (32) */
  pm.payer_name,
  res.plan_id,
  res.plan_name,
- res.test_type,
- res.calc_result_value,
+-- res.test_type,
+-- res.calc_result_value,
  res.last_pcp_facility,
  res.last_pcp_visit_dt,
  res.last_pcp_provider_id,
@@ -260,7 +261,14 @@ SELECT /*+ Parallel (32) */
  res.last_bh_visit_dt,
  res.last_bh_provider_id,
  res.last_bh_provider,
- 'DSRIP_TR017_DIABETES_MONITORING' As DSRIP_REPORT,
+ CASE WHEN a1c_ind + ldl_ind  > 1 THEN 1 END AS comb_ind,
+ CASE WHEN a1c_ind + ldl_ind  > 1 then NULL ELSE  a1c_ind END AS a1c_ind,
+ CASE  WHEN a1c_ind + ldl_ind  > 1 then NULL ELSE  ldl_ind END AS ldl_ind,
+ a1c_result_dt,
+ a1c_result,
+ ldl_result_dt,
+ ldl_result,
+'DSRIP_TR017_DIABETES_MONITORING' As DSRIP_REPORT,
  res.report_dt,
  res.load_dt
 FROM tmp_res res
@@ -269,5 +277,3 @@ FROM tmp_res res
 LEFT JOIN dim_payers pm on pm.payer_key  = res.payer_key
 LEFT JOIN ref_visit_types vt ON vt.visit_type_id  = res.visit_type_id
 LEFT JOIN ref_patient_secondary_mrn psn  ON   psn.NETWORK = res.NETWORK AND psn.patient_id = res.patient_id AND psn.facility_id = res.visit_facility_id;
-
-

@@ -23,7 +23,7 @@ CREATE OR REPLACE PACKAGE pkg_refresh_cdw_star_schema AS
  -- Procedure SP_REFRESH_FACT_TABLES to refresh the fact tables other than fact_visits, fact_prescription and fact_results
  PROCEDURE sp_refresh_fact_tables;
 
- -- Procedure SP_REFRESH_FACT_RESULTS_FULL to refresh only fact-results tables
+ -- Procedure SP_REFRESH_FACT_RESULTS_FULL to refresh only fact_results table
  PROCEDURE sp_refresh_fact_results_full;
 
  -- Procedure SP_REFRESH_METRIC_TABLES to refresh the fact-metric tables(Compass)
@@ -62,12 +62,13 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
  BEGIN
   --  IF v_type = 'F' THEN
   --   IF v_step = 'ALL' THEN
-  rfs.sp_refresh_ref_tables;
-  rfs.sp_refresh_dim_tables;
+  sp_refresh_ref_tables;
+  sp_refresh_dim_tables;
   sp_refresh_rx_fact_tables;
-  rfs.sp_refresh_fact_visits_full;
-  rfs.sp_refresh_fact_tables;
-  rfs.sp_refresh_fact_results_full;
+  sp_refresh_fact_visits_full;
+  sp_refresh_fact_tables;
+  sp_refresh_fact_results_full;
+  
 
  --   END IF;
  --  END IF;
@@ -301,24 +302,14 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
 --***************** SP_REFRESH_FACT_RESULTS_FULL ************************
 
  PROCEDURE sp_refresh_fact_results_full IS
- --  v_table   VARCHAR2(100) := 'FACT_RESULTS';
- --  n_cnt     NUMBER;
  BEGIN
-
-  xl.
-   open_log(
-   'FACT_RESULTS - RESET MAX CID NUMBERS AND DROP INDEXES',
-   SYS_CONTEXT('USERENV', 'OS_USER') || ': reset max cid numbers and drop indexes for FACT_RESULTS',
-   TRUE);
-
-  UPDATE
-   log_incremental_data_load
-  SET
-   max_cid = 0
-  WHERE
-   table_name = 'FACT_RESULTS';
+  xl.open_log(   'FACT_RESULTS - RESET MAX CID NUMBERS AND DROP INDEXES',   SYS_CONTEXT('USERENV', 'OS_USER') ||
+               ': reset max cid numbers and drop indexes for FACT_RESULTS',   TRUE);
+  UPDATE  log_incremental_data_load
+         SET max_cid = 0 WHERE table_name = 'FACT_RESULTS';
   COMMIT;
-
+  
+   EXECUTE IMMEDIATE 'ALTER TABLE FACT_RESULTS NOLOGGING';
   --************   DROP INDEXES /TRIGGERES **************
   BEGIN
    EXECUTE IMMEDIATE 'ALTER TABLE FACT_RESULTS DROP CONSTRAINT PK_FACT_RESULTS';
@@ -335,8 +326,8 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
    WHEN OTHERS THEN
     NULL;
   END;
-
   xl.close_log('Successfully completed');
+
   --*************  LOAD TABLE  ***************************
   -- IF n_cnt > 0 THEN
   dwm.refresh_data('where etl_step_num = 3110');
@@ -346,11 +337,45 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
   dwm.refresh_data('where etl_step_num = 3150');
   dwm.refresh_data('where etl_step_num = 3160');
 
- --*****INSERTING DATA FROM PROC_EVENT_TABLE ********
-  dwm.refresh_data('where etl_step_num = 3165') ;
-  --******************************************************
 
-  xl.open_log('Create Indexes/RTriggers For Fact_Results', 'Create Indexes For Fact_Results', TRUE);
+ BEGIN
+  xl.open_log(' BEGIN INSERTING MISSING VISITS INTO FACT_RESULTS', 'INSERT MISSING VISITS INTO FACT_RESULTS', TRUE);
+  EXECUTE IMMEDIATE 'ALTER SESSION ENABLE PARALLEL DML';
+
+ EXECUTE IMMEDIATE 'TRUNCATE TABLE STG_PROC_RESULTS'; 
+
+
+  FOR r IN (
+            SELECT DISTINCT network FROM dim_hc_networks
+           )
+  LOOP
+   xl.begin_action('Setting the Network');
+   dwm.set_parameter('NETWORK', r.network);
+   xl.end_action(SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK'));
+   xl.begin_action('Start insert from  ' || r.network);
+   etl.add_data(
+    p_operation => 'INSERT /*+ APPEND PARALLEL(48) */',
+    p_tgt => 'STG_PROC_RESULTS',
+    p_src => 'V_STG_PROC_RESULTS',
+    p_commit_at => -1);
+   xl.end_action;
+  END LOOP;
+
+etl.add_data(
+    p_operation => 'INSERT /*+ APPEND PARALLEL(48) */',
+    p_tgt => 'FACT_RESULTS',
+    p_src => 'STG_PROC_RESULTS',
+    p_commit_at => -1);
+
+  xl.close_log('Successfully completed inserting missing visits into fact_results from proc_event');
+ EXCEPTION
+  WHEN OTHERS THEN
+   ROLLBACK;
+   xl.close_log(SQLERRM, TRUE);
+
+   RAISE;
+ END;
+  xl.open_log('Create Indexes/Triggers For Fact_Results', 'Create Indexes For Fact_Results', TRUE);
 
   ---  CREATE INDEXES AND TRIGGERS BACK ----------
   -- Indexes ---
@@ -360,7 +385,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
   EXECUTE IMMEDIATE
    'ALTER TABLE fact_results ADD CONSTRAINT pk_fact_results PRIMARY KEY(visit_id, event_id, data_element_id, result_report_number, multi_field_occurrence_number, item_number,network) USING INDEX pk_fact_results';
   EXECUTE IMMEDIATE 'CREATE INDEX IDX_FACT_RESULTS_VST_KEY ON FACT_RESULTS(VISIT_KEY) PARALLEL 32';
-  EXECUTE IMMEDIATE 'ALTER INDEX UI_FACT_RESULTS_KEY NOPARALLEL';
+  EXECUTE IMMEDIATE 'ALTER INDEX IDX_FACT_RESULTS_VST_KEY  NOPARALLEL';
   -- Tirgger
   EXECUTE IMMEDIATE
       'CREATE OR REPLACE TRIGGER tr_insert_fact_results '
@@ -381,108 +406,45 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
    || 'END AFTER STATEMENT; '
    || ' END tr_insert_fact_results; ';
 
+  EXECUTE IMMEDIATE 'ALTER TABLE FACT_RESULTS LOGGING';
+
   ---- update  log_incremental_data_load table
   xl.begin_action('Updateing log_incremental_data_load table with CID for fact_results');
 
-  BEGIN
-   UPDATE /*+ PARALLEL(32) */
+   BEGIN
+  UPDATE /*+ PARALLEL(32) */
     log_incremental_data_load
-   SET
-    max_cid =
-     (
-      SELECT
-       MAX(cid) AS max_cid
-      FROM
-       fact_results PARTITION(cbn)
-     )
-   WHERE
-    table_name = 'FACT_RESULTS' AND network = 'CBN';
-
-   UPDATE /*+ PARALLEL(32) */
+    SET   max_cid =( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(cbn))
+  WHERE table_name = 'FACT_RESULTS' AND network = 'CBN';
+  UPDATE /*+ PARALLEL(32) */
     log_incremental_data_load
-   SET
-    max_cid =
-     (
-      SELECT
-       MAX(cid) AS max_cid
-      FROM
-       fact_results PARTITION(gp1)
-     )
-   WHERE
-    table_name = 'FACT_RESULTS' AND network = 'GP1';
-   UPDATE /*+ PARALLEL(32) */
+    SET max_cid =( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(gp1) )
+  WHERE table_name = 'FACT_RESULTS' AND network = 'GP1';
+  UPDATE /*+ PARALLEL(32) */
+    log_incremental_data_load 
+    SET max_cid = ( SELECT MAX(cid) AS max_cid FROM fact_results PARTITION(gp2))
+  WHERE table_name = 'FACT_RESULTS' AND network = 'GP2';
+  UPDATE /*+ PARALLEL(32) */
     log_incremental_data_load
-   SET
-    max_cid =
-     (
-      SELECT
-       MAX(cid) AS max_cid
-      FROM
-       fact_results PARTITION(gp2)
-     )
-   WHERE
-    table_name = 'FACT_RESULTS' AND network = 'GP2';
-   UPDATE /*+ PARALLEL(32) */
+    SET  max_cid =  (  SELECT  MAX(cid) AS max_cid  FROM  fact_results PARTITION(nbn)  )
+  WHERE  table_name = 'FACT_RESULTS' AND network = 'NBN';
+  UPDATE /*+ PARALLEL(32) */
     log_incremental_data_load
-   SET
-    max_cid =
-     (
-      SELECT
-       MAX(cid) AS max_cid
-      FROM
-       fact_results PARTITION(nbn)
-     )
-   WHERE
-    table_name = 'FACT_RESULTS' AND network = 'NBN';
-   UPDATE /*+ PARALLEL(32) */
+    SET  max_cid =  (  SELECT  MAX(cid) AS max_cid  FROM  fact_results PARTITION(nbx)  )
+  WHERE  table_name = 'FACT_RESULTS' AND network = 'NBX';
+  UPDATE /*+ PARALLEL(32) */
     log_incremental_data_load
-   SET
-    max_cid =
-     (
-      SELECT
-       MAX(cid) AS max_cid
-      FROM
-       fact_results PARTITION(nbx)
-     )
-   WHERE
-    table_name = 'FACT_RESULTS' AND network = 'NBX';
-   UPDATE /*+ PARALLEL(32) */
+    SET  max_cid =  (  SELECT  MAX(cid) AS max_cid  FROM  fact_results PARTITION(qhn)  )
+  WHERE  table_name = 'FACT_RESULTS' AND network = 'QHN';
+  UPDATE /*+ PARALLEL(32) */
     log_incremental_data_load
-   SET
-    max_cid =
-     (
-      SELECT
-       MAX(cid) AS max_cid
-      FROM
-       fact_results PARTITION(qhn)
-     )
-   WHERE
-    table_name = 'FACT_RESULTS' AND network = 'QHN';
-   UPDATE /*+ PARALLEL(32) */
+    SET  max_cid =  (  SELECT  MAX(cid) AS max_cid  FROM  fact_results PARTITION(sbn)  )
+  WHERE  table_name = 'FACT_RESULTS' AND network = 'SBN';
+  UPDATE /*+ PARALLEL(32) */
     log_incremental_data_load
-   SET
-    max_cid =
-     (
-      SELECT
-       MAX(cid) AS max_cid
-      FROM
-       fact_results PARTITION(sbn)
-     )
-   WHERE
-    table_name = 'FACT_RESULTS' AND network = 'SBN';
-   UPDATE /*+ PARALLEL(32) */
-    log_incremental_data_load
-   SET
-    max_cid =
-     (
-      SELECT
-       MAX(cid) AS max_cid
-      FROM
-       fact_results PARTITION(smn)
-     )
-   WHERE
-    table_name = 'FACT_RESULTS' AND network = 'SMN';
-  END;
+    SET  max_cid =  (  SELECT  MAX(cid) AS max_cid  FROM  fact_results PARTITION(smn)  )
+  WHERE  table_name = 'FACT_RESULTS' AND network = 'SMN';
+ END;
 
   xl.end_action;
   COMMIT;
@@ -492,6 +454,49 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
    ROLLBACK;
    xl.close_log(SQLERRM, TRUE);
  END;
+--**************************************************************
+ --*****INSERT DATA FROM PROC_EVENT_TABLE ********
+ -- dwm.refresh_data('where etl_step_num = 3165') ;
+  --******************************************************
+
+--PROCEDURE sp_ins_proc_event_results IS
+-- BEGIN
+--  xl.open_log(' BEGIN INSERTING MISSING VISITS INTO FACT_RESULTS', 'INSERT MISSING VISITS INTO FACT_RESULTS', TRUE);
+--  EXECUTE IMMEDIATE 'ALTER SESSION ENABLE PARALLEL DML';
+--
+-- EXECUTE IMMEDIATE 'TRUNCATE TABLE STG_PROC_RESULTS'; 
+--
+--
+--  FOR r IN (
+--            SELECT DISTINCT network FROM dim_hc_networks
+--           )
+--  LOOP
+--   xl.begin_action('Setting the Network');
+--   dwm.set_parameter('NETWORK', r.network);
+--   xl.end_action(SYS_CONTEXT('CTX_CDW_MAINTENANCE', 'NETWORK'));
+--   xl.begin_action('Start insert from  ' || r.network);
+--   etl.add_data(
+--    p_operation => 'INSERT /*+ APPEND PARALLEL(48) */',
+--    p_tgt => 'STG_PROC_RESULTS',
+--    p_src => 'V_STG_PROC_RESULTS',
+--    p_commit_at => -1);
+--   xl.end_action;
+--  END LOOP;
+--
+--etl.add_data(
+--    p_operation => 'INSERT /*+ APPEND PARALLEL(48) */',
+--    p_tgt => 'FACT_RESULTS',
+--    p_src => 'STG_PROC_RESULTS',
+--    p_commit_at => -1);
+--
+--  xl.close_log('Successfully completed inserting missing visits into fact_results from proc_event');
+-- EXCEPTION
+--  WHEN OTHERS THEN
+--   ROLLBACK;
+--   xl.close_log(SQLERRM, TRUE);
+--
+--   RAISE;
+-- END;
 --*************** SP_REF_FACT_VISIT_METRIC_RSLT ****************
  PROCEDURE sp_ref_fact_visit_metric_rslt IS
  BEGIN

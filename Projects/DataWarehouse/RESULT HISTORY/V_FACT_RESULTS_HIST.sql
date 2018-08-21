@@ -32,7 +32,7 @@ JOIN proc_event_history pe ON pe.network = v.network AND pe.visit_id = v.visit_i
 JOIN dim_procedures prc
  ON prc.network = pe.network AND prc.src_proc_id = pe.proc_id AND prc.source = 'QCPR'
 JOIN event_history e ON e.network = pe.network AND e.visit_id = pe.visit_id AND e.event_id = pe.event_id
-JOIN result_history r ON r.network = e.network AND r.visit_id = e.visit_id AND r.event_id = e.event_id
+JOIN result_history_cdw r ON r.network = e.network AND r.visit_id = e.visit_id AND r.event_id = e.event_id
 JOIN result_field rf ON rf.network = r.network AND rf.data_element_id = r.data_element_id
 LEFT JOIN dim_hc_facilities pef ON pef.network = pe.network AND pef.facility_id = pe.facility_id
 LEFT JOIN value_decode vd
