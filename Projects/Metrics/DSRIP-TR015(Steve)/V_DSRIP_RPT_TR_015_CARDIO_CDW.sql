@@ -24,8 +24,8 @@ CREATE OR REPLACE VIEW v_dsrip_rpt_tr015_cardio_cdw AS
   problem_comments,
   ldl_test_dt,
   ldl_result_dt,
-  --orig_result_value,
-  calc_result_value
+  calc_result_value,
+  numerator_flag
  FROM
   dsrip_tr015_cardio_mon_cdw
  WHERE
