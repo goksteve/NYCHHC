@@ -8,14 +8,22 @@ CREATE OR REPLACE PACKAGE CDW.pkg_dsrip_reports AS
     ---------  ----------  ---------------  ------------------------------------
     1.0        06/21/2018      goreliks1       1. Created this package.
  ******************************************************************************/
-procedure sp_start_all;
- PROCEDURE sp_dsrip_tr002_023 ;
- PROCEDURE sp_dsrip_tr015;
- PROCEDURE sp_dsrip_tr017; 
- PROCEDURE sp_dsrip_tr022;
- PROCEDURE sp_dsrip_tr024_025;
- PROCEDURE sp_dsrip_tr044;
- PROCEDURE sp_dsrip_tr047;
+  PROCEDURE sp_start_all;
+  PROCEDURE sp_dsrip_tr001;
+  PROCEDURE sp_dsrip_tr002_023;
+  PROCEDURE sp_dsrip_tr006;
+  PROCEDURE sp_dsrip_tr007;
+  PROCEDURE sp_dsrip_tr010;  
+  PROCEDURE sp_dsrip_tr013_014;
+  PROCEDURE sp_dsrip_tr015;
+  PROCEDURE sp_dsrip_tr016;  
+  PROCEDURE sp_dsrip_tr017; 
+  PROCEDURE sp_dsrip_tr018; 
+  PROCEDURE sp_dsrip_tr022;
+  PROCEDURE sp_dsrip_tr024_025;
+  PROCEDURE sp_dsrip_tr043;
+  PROCEDURE sp_dsrip_tr044;
+  PROCEDURE sp_dsrip_tr047;
 
 END;
 /
@@ -42,7 +50,7 @@ PROCEDURE sp_start_all AS
 BEGIN
 --Author: GK
   n_step := 'DSRIP_REPORT_TR001';
-  PT005.PREPARE_DSRIP_REPORT_TR001;
+  sp_dsrip_tr001;
 
 --Author: SG
   n_step := 'sp_dsrip_tr002_023';
@@ -50,15 +58,19 @@ BEGIN
 
 --Author: GK  
   n_step := 'DSRIP_REPORT_TR006';
-  pt005.prepare_dsrip_tr006_pqi90_rpt;
+  sp_dsrip_tr006;
+
+--Author: GK
+  n_step := 'DSRIP_REPORT_TR007';
+  sp_dsrip_tr007;
 
 --Author: GK
   n_step := 'DSRIP_REPORT_TR010';
-  PT005.PREPARE_DSRIP_REPORT_TR010;
+  sp_dsrip_tr010;
 
 --Author: GK
   n_step := 'DSRIP_REPORT_TR013_014';
-  PT005.PREPARE_DSRIP_REPORT_TR013_014;
+  sp_dsrip_tr013_014;
 
 --Author: SG
   n_step := 'sp_dsrip_tr015';
@@ -66,7 +78,7 @@ BEGIN
 
 --Author: GK
   n_step := 'DSRIP_REPORT_TR016';
-  PT005.PREPARE_DSRIP_REPORT_TR016;
+  sp_dsrip_tr016;
 
 --Author: SG
   n_step := 'sp_dsrip_tr017';
@@ -74,7 +86,7 @@ BEGIN
 
 --Author: GK
   n_step := 'DSRIP_REPORT_TR018';
-  PT005.PREPARE_DSRIP_REPORT_TR018;
+  sp_dsrip_tr018;
 
 --Author: GK
   n_step := 'DSRIP_PQI90_REPORTS_7_8';
@@ -90,11 +102,13 @@ BEGIN
 
 --Author: GK
   n_step := 'PREPARE_DSRIP_REPORT_TR043';
-  cdw.prepare_dsrip_report_tr043;
+  sp_dsrip_tr043;
 
 --Author: SG
   n_step := 'sp_dsrip_tr044';
   sp_dsrip_tr044;
+
+
 EXCEPTION
  WHEN OTHERS THEN
   raise_application_error(
@@ -102,6 +116,17 @@ EXCEPTION
    'An error was encountered - ' || n_step || ' SQLCODE: ' || SQLCODE || ' -ERROR- ' || SQLERRM);
   RAISE;
 END;
+
+ --****************  SP_DSRIP_TR001 *******************************
+
+PROCEDURE sp_dsrip_tr001 AS
+ BEGIN
+    PT005.PREPARE_DSRIP_REPORT_TR001;
+ EXCEPTION
+  WHEN OTHERS THEN
+   xl.close_log(SQLERRM, TRUE);
+   RAISE;
+ END;
 
 --****************  SP_DSRIP_TR002_023  *******************************
 
@@ -139,6 +164,57 @@ PROCEDURE sp_dsrip_tr002_023 AS
    xl.close_log(SQLERRM, TRUE);
    RAISE;
  END;
+ 
+ 
+  --****************  SP_DSRIP_TR006 *******************************
+
+PROCEDURE sp_dsrip_tr006 AS
+ BEGIN
+    PT005.PREPARE_DSRIP_TR006_PQI90_RPT;
+ EXCEPTION
+  WHEN OTHERS THEN
+   xl.close_log(SQLERRM, TRUE);
+   RAISE;
+ END;
+ 
+ 
+ --****************  SP_DSRIP_TR007 *******************************
+
+PROCEDURE sp_dsrip_tr007 AS
+ -- 2018-MAY-23 SG Create
+ BEGIN
+  PREPARE_DSRIP_REPORT_TR007;
+ EXCEPTION
+  WHEN OTHERS THEN
+   xl.close_log(SQLERRM, TRUE);
+   RAISE;
+ END;
+ 
+
+  --****************  SP_DSRIP_TR010 *******************************
+
+PROCEDURE sp_dsrip_tr010 AS
+ BEGIN
+    pt005.prepare_dsrip_report_tr010;
+ EXCEPTION
+  WHEN OTHERS THEN
+   xl.close_log(SQLERRM, TRUE);
+   RAISE;
+ END;
+ 
+ 
+  --****************  SP_DSRIP_TR013_014 *******************************
+
+PROCEDURE sp_dsrip_tr013_014 AS
+ BEGIN
+    pt005.prepare_dsrip_report_tr013_014;
+ EXCEPTION
+  WHEN OTHERS THEN
+   xl.close_log(SQLERRM, TRUE);
+   RAISE;
+ END;
+  
+ 
  --****************  SP_DSRIP_TR015 ****************
  PROCEDURE sp_dsrip_tr015 AS
  -- 2018-july-23 SG Create
@@ -161,6 +237,19 @@ PROCEDURE sp_dsrip_tr002_023 AS
    xl.close_log(SQLERRM, TRUE);
    RAISE;
  END;
+ 
+  --****************  SP_DSRIP_TR016 *******************************
+
+PROCEDURE sp_dsrip_tr016 AS
+ BEGIN
+    pt005.prepare_dsrip_report_tr016;
+ EXCEPTION
+  WHEN OTHERS THEN
+   xl.close_log(SQLERRM, TRUE);
+   RAISE;
+ END;
+  
+ 
  --**************** SP_DSRIP_TR017 *****************
  PROCEDURE sp_dsrip_tr017 AS
  -- 2018-MAY-23 SG Create
@@ -196,6 +285,19 @@ PROCEDURE sp_dsrip_tr002_023 AS
    xl.close_log(SQLERRM, TRUE);
    RAISE;
  END;
+ 
+  --****************  SP_DSRIP_TR018 *******************************
+
+PROCEDURE sp_dsrip_tr018 AS
+ BEGIN
+    pt005.prepare_dsrip_report_tr018;
+ EXCEPTION
+  WHEN OTHERS THEN
+   xl.close_log(SQLERRM, TRUE);
+   RAISE;
+ END;
+  
+ 
  --**************** SP_DSRIP_TR022 *****************
 
  PROCEDURE sp_dsrip_tr022 AS
@@ -244,6 +346,20 @@ PROCEDURE sp_dsrip_tr002_023 AS
    xl.close_log(SQLERRM, TRUE);
    RAISE;
  END;
+ 
+ 
+   --****************  SP_DSRIP_TR043 *******************************
+
+PROCEDURE sp_dsrip_tr043 AS
+ BEGIN
+    cdw.prepare_dsrip_report_tr043;
+ EXCEPTION
+  WHEN OTHERS THEN
+   xl.close_log(SQLERRM, TRUE);
+   RAISE;
+ END;
+ 
+ 
 --******************* DSRIP_TR044_STAT_CARDIO_CDW *************
 PROCEDURE sp_dsrip_tr044 AS
  
