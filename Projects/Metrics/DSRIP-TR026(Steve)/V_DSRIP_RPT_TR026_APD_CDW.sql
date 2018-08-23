@@ -1,0 +1,39 @@
+CREATE OR REPLACE VIEW V_DSRIP_RPT_TR026_APD_CDW AS
+ SELECT
+  network,
+  patient_id,
+  facility_name,
+  pat_lname,
+  pat_fname,
+  mrn,
+  birthdate,
+  age,
+  apt_suite,
+  street_address,
+  city,
+  state,
+  country,
+  mailing_code,
+  home_phone,
+  day_phone,
+  visit_type,
+  admission_dt,
+  discharge_dt,
+  medicaid_ind,
+  payer_group,
+  payer_name,
+  plan_name,
+  earliest_prescribed_dt,
+  drug_description,
+  days_covered,
+  total_refils,
+  treatment_period,
+  pdc_ratio,
+  less_80_flag,
+  dsrip_report,
+  report_dt,
+  source load_dt
+ FROM
+  dsrip_tr026_apd_cdw
+ WHERE
+  report_dt = (SELECT MAX(report_dt) FROM dsrip_tr026_apd_cdw)

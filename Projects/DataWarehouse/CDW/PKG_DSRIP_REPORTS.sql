@@ -8,6 +8,7 @@ CREATE OR REPLACE PACKAGE CDW.pkg_dsrip_reports AS
     ---------  ----------  ---------------  ------------------------------------
     1.0        06/21/2018      goreliks1       1. Created this package.
  ******************************************************************************/
+
   PROCEDURE sp_start_all;
   PROCEDURE sp_dsrip_tr001;
   PROCEDURE sp_dsrip_tr002_023;
@@ -21,6 +22,7 @@ CREATE OR REPLACE PACKAGE CDW.pkg_dsrip_reports AS
   PROCEDURE sp_dsrip_tr018; 
   PROCEDURE sp_dsrip_tr022;
   PROCEDURE sp_dsrip_tr024_025;
+  PROCEDURE SP_DSRIP_TR026;
   PROCEDURE sp_dsrip_tr043;
   PROCEDURE sp_dsrip_tr044;
   PROCEDURE sp_dsrip_tr047;
@@ -93,12 +95,16 @@ BEGIN
   PT005.PREPARE_PQI90_REPORTS_7_8;
 
 --Author: SG
-  n_step := 'sp_dsrip_tr022';
+  n_step := 'SP_DSRIP_TR022';
   sp_dsrip_tr022;
 
 --Author: SG
-  n_step := 'sp_dsrip_tr024-025';
+  n_step := 'SP_DSRIP_TR024-025';
   sp_dsrip_tr024_025;
+
+--Author: SG
+  n_step := 'SP_DSRIP_TR026_CDW';
+  SP_DSRIP_TR026;
 
 --Author: GK
   n_step := 'PREPARE_DSRIP_REPORT_TR043';
@@ -321,7 +327,7 @@ PROCEDURE sp_dsrip_tr018 AS
    xl.close_log(SQLERRM, TRUE);
    RAISE;
  END;
- --****** sp_DSRIP_tr024_025 *********************
+ --****** SP_DSRIP_TR024_025 *********************
 
  PROCEDURE sp_dsrip_tr024_025 AS
  -- 2018-june-28 SG Create
@@ -346,8 +352,9 @@ PROCEDURE sp_dsrip_tr018 AS
    xl.close_log(SQLERRM, TRUE);
    RAISE;
  END;
+
  
- 
+
    --****************  SP_DSRIP_TR043 *******************************
 
 PROCEDURE sp_dsrip_tr043 AS
@@ -359,7 +366,35 @@ PROCEDURE sp_dsrip_tr043 AS
    RAISE;
  END;
  
- 
+    
+    
+--***************  SP_DSRIP_TR026 ****************************
+ PROCEDURE SP_DSRIP_TR026 AS
+ -- 2018-AUG-24 SG Create
+ BEGIN
+
+  EXECUTE IMMEDIATE 'ALTER SESSION enable parallel DML';
+
+  xl.open_log('SP_DSRIP_TR026_CDW', 'SP_DSRIP_TR026_CDW', TRUE);
+
+  xl.begin_action('RUNNING QCPR');
+  etl.add_data(
+   p_operation => 'INSERT /*+ Parallel(32)  */',
+   p_tgt => 'DSRIP_TR026_APD_CDW',
+   p_src => 'V_DSRIP_TR026_APD_CDW',
+   p_whr => 'Where 1= 1 ',
+   p_commit_at => -1);
+
+  xl.end_action('COMPLETE DSRIP_TR026_APD_CDW');
+  xl.close_log('COMPLETE DSRIP_TR026_APD_CDW...OK ');
+
+ EXCEPTION
+  WHEN OTHERS THEN
+   xl.close_log(SQLERRM, TRUE);
+   RAISE;
+ END;
+
+
 --******************* DSRIP_TR044_STAT_CARDIO_CDW *************
 PROCEDURE sp_dsrip_tr044 AS
  
@@ -387,11 +422,8 @@ PROCEDURE sp_dsrip_tr044 AS
 --***********************************
 PROCEDURE sp_dsrip_tr047 AS
 BEGIN
-
  EXECUTE IMMEDIATE 'ALTER SESSION enable parallel DML';
-
  xl.open_log('sp_dsrip_tr_047', 'DSRIP_TR_047', TRUE);
-
  xl.begin_action('RUNNING QCPR');
  etl.add_data(
   p_operation => 'INSERT /*+ Parallel(32)  */',
@@ -399,7 +431,6 @@ BEGIN
   p_src => 'V_DSRIP_TR047_STAT_PHARM_CDW',
   p_whr => 'Where 1= 1 ',
   p_commit_at => -1);
-
  xl.end_action('COMPLETE DSRIP_TR_047');
  xl.close_log('COMPLETE DSRIP_TR_047 OK ');
 EXCEPTION
@@ -407,9 +438,6 @@ EXCEPTION
   xl.close_log(SQLERRM, TRUE);
   RAISE;
 END;
-
-
-
 
 END pkg_dsrip_reports;
 /

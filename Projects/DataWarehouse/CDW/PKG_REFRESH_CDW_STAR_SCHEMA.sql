@@ -61,20 +61,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
 --  v_type   VARCHAR2(2) := p_refresh_type;
 --  v_step   VARCHAR2(10) := p_refresh_type;
  BEGIN
-<<<<<<< HEAD
-  --  IF v_type = 'F' THEN
-  --   IF v_step = 'ALL' THEN
-  sp_refresh_ref_tables;
-  sp_refresh_dim_tables;
-  sp_refresh_rx_fact_tables;
-  sp_refresh_fact_visits_full;
-  sp_refresh_fact_tables;
-  sp_refresh_fact_results_full;
-  
-
- --   END IF;
- --  END IF;
-=======
 --  IF v_type = 'F' THEN
 --   IF v_step = 'ALL' THEN
     rfs.sp_refresh_ref_tables;
@@ -87,7 +73,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_refresh_cdw_star_schema AS
 --   END IF;
 --  END IF;
 
->>>>>>> 01321003164494235139afdf3133c8a9edca5861
  END;
 
  PROCEDURE sp_refresh_ref_tables IS
